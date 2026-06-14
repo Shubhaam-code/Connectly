@@ -1,4 +1,4 @@
-
+import sendMail from "../config/Mail.js"
 import genToken from "../config/token.js"
 import User from "../models/user.model.js"
 import bcrypt from "bcryptjs"

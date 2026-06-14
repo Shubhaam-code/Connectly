@@ -8,7 +8,7 @@ import { serverUrl } from '../App';
 import { ClipLoader } from "react-spinners"; // agar sign up loading hota ha uske liya hota ha ye
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-// import { setUserData } from '../redux/userSlice';
+import { setUserData } from '../redux/userSlice';
 function SignUp() {
 const [inputClicked,setInputClicked]=useState({
     name:false,
@@ -24,14 +24,14 @@ const [err,setErr]=useState("")
 const [email,setEmail]=useState("")
 const [password,setPassword]=useState("")
 const navigate=useNavigate()
-// const dispatch=useDispatch()
+const dispatch=useDispatch()
 const handleSignUp=async ()=>{
   setLoading(true)
   setErr("")
 
   try {
     const result=await axios.post(`${serverUrl}/api/auth/signup`,{name,userName,email,password},{withCredentials:true})
-    // dispatch(setUserData(result.data))
+    dispatch(setUserData(result.data))
     setLoading(false)
   } catch (error) {
     setErr(error.response?.data?.message)

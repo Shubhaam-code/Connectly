@@ -68,6 +68,7 @@ const handleStep3=async ()=>{
 
   return (
     <div className='w-full h-screen bg-gradient-to-b from-black to-gray-900 flex flex-col justify-center items-center'>
+    {/*  agar set 1 pe ha to div ke andar wala css show hoga screen pe */}
     {step==1 && <div className='w-[90%] max-w-[500px]  h-[500px] bg-white rounded-2xl flex justify-center items-center flex-col   border-[#1a1f23]'>
 <h2 className='text-[30px] font-semibold'>Forgot Password</h2>
 <div className='relative flex items-center mt-[30px] justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,email:true})}>
@@ -79,7 +80,7 @@ const handleStep3=async ()=>{
 {err && <p className='text-red-500'>{err}</p>}
 <button className='w-[70%] px-[20px] py-[10px] bg-black text-white font-semibold h-[50px] cursor-pointer rounded-2xl mt-[30px]'  disabled={loading} onClick={handleStep1}>{loading?<ClipLoader size={30} color='white'/>:"Send OTP"}</button>
       </div>}
-
+         {/*  agar set 2 pe ha to div ke andar wala css show hoga screen pe */}
       {step==2 && <div className='w-[90%] max-w-[500px]  h-[500px] bg-white rounded-2xl flex justify-center items-center flex-col   border-[#1a1f23]'>
 <h2 className='text-[30px] font-semibold'>Forgot Password</h2>
 <div className='relative flex items-center mt-[30px] justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,otp:true})}>
@@ -90,7 +91,7 @@ const handleStep3=async ()=>{
 {err && <p className='text-red-500'>{err}</p>}
 <button className='w-[70%] px-[20px] py-[10px] bg-black text-white font-semibold h-[50px] cursor-pointer rounded-2xl mt-[30px]'  disabled={loading} onClick={handleStep2}>{loading?<ClipLoader size={30} color='white'/>:"Submit"}</button>
       </div>}
-
+         {/* agar set 3 pe ha to div ke andar wala css show hoga screen pe */}
       {step==3 && <div className='w-[90%] max-w-[500px]  h-[500px] bg-white rounded-2xl flex justify-center items-center flex-col   border-[#1a1f23]'>
 <h2 className='text-[30px] font-semibold'>Reset Password</h2>
 <div className='relative flex items-center mt-[30px] justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,newPassword:true})}>

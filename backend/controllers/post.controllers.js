@@ -19,7 +19,7 @@ export const uploadPost = async (req, res) => {
         const user = await User.findById(req.userId)
         user.posts.push(post._id)
         await user.save()
-        const populatedPost = await Post.findById(post._id).populate("author", "name userName profileImage") // "name userName profileImage" bss author se ye field lega
+        const populatedPost = await Post.findById(post._id).populate("author", "name userName profileImage")
         return res.status(201).json(populatedPost)
     } catch (error) {
         return res.status(500).json({ message: `uploadPost error ${error}` })

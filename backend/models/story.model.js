@@ -23,7 +23,6 @@ const storySchema=new mongoose.Schema({
         }
     ]
     ,
-    // 24 hr ke baad story delete karne kaliya
     createdAt:{
         type:Date,
         default:Date.now(),

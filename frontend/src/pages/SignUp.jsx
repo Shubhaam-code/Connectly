@@ -1,87 +1,189 @@
 import React, { useState } from 'react'
-import logo from "../assets/logo2.png"
-import logo1 from "../assets/logo.png"
-import { IoIosEye } from "react-icons/io";
-import { IoIosEyeOff } from "react-icons/io";
+import { IoIosEye, IoIosEyeOff } from "react-icons/io"
+import { FcGoogle } from "react-icons/fc"
+import { SiApple } from "react-icons/si"
+import { FaFacebook } from "react-icons/fa"
 import axios from "axios"
-import { serverUrl } from '../App';
-import { ClipLoader } from "react-spinners"; // agar sign up loading hota ha uske liya hota ha ye
-import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { setUserData } from '../redux/userSlice';
+import { serverUrl } from '../App'
+import { ClipLoader } from "react-spinners"
+import { useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { setUserData } from '../redux/userSlice'
+
+// HINGLISH: InputField bahar define kiya — warna har state change pe remount hota tha aur focus utta tha
+const InputField = ({ icon, placeholder, type = "text", value, onChange, onKeyDown }) => (
+  <div className="relative">
+    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">{icon}</div>
+    <input
+      type={type}
+      placeholder={placeholder}
+      className="w-full h-[50px] rounded-xl pl-11 pr-4 text-sm"
+      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+      onChange={onChange}
+      value={value}
+      onKeyDown={onKeyDown}
+      onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
+      onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
+    />
+  </div>
+)
+
+// HINGLISH: SignUp page — nayi account banane ka premium screen
 function SignUp() {
-const [inputClicked,setInputClicked]=useState({
-    name:false,
-    userName:false,
-    email:false,
-    password:false
-})
-const [showPassword,setShowPassword]=useState(false)
-const [loading,setLoading]=useState(false) //usestate banye ha agar sign up time laga to loading icon show kar denge
-const [name,setName]=useState("")
-const [userName,setUserName]=useState("")
-const [err,setErr]=useState("")
-const [email,setEmail]=useState("")
-const [password,setPassword]=useState("")
-const navigate=useNavigate()
-const dispatch=useDispatch()
-const handleSignUp=async ()=>{
-  setLoading(true)
-  setErr("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [name, setName] = useState("")
+  const [userName, setUserName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [err, setErr] = useState("")
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
 
-  try {
-    const result=await axios.post(`${serverUrl}/api/auth/signup`,{name,userName,email,password},{withCredentials:true})
-    dispatch(setUserData(result.data))
-    setLoading(false)
-  } catch (error) {
-    setErr(error.response?.data?.message)
-    console.log(error)
-    setLoading(false)
+  const handleSignUp = async () => {
+    setLoading(true)
+    setErr("")
+    try {
+      const result = await axios.post(`${serverUrl}/api/auth/signup`, { name, userName, email, password }, { withCredentials: true })
+      dispatch(setUserData(result.data))
+      setLoading(false)
+    } catch (error) {
+      setErr(error.response?.data?.message || "Something went wrong")
+      setLoading(false)
+    }
   }
-}
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') handleSignUp()
+  }
+
+  // HINGLISH: InputField ab bahar define hai — yahan sirf use kar rahe hain
 
   return (
-    <div className='w-full h-screen bg-gradient-to-b from-black to-gray-900 flex flex-col justify-center items-center'>
-      <div className='w-[90%] lg:max-w-[60%]  h-[600px] bg-white rounded-2xl flex justify-center items-center overflow-hidden border-2 border-[#1a1f23]'>
-<div className='w-full lg:w-[50%] h-full bg-white flex flex-col items-center p-[10px] gap-[20px]'>
+    // HINGLISH: Full screen dark background with animated orbs
+    <div className="w-full min-h-screen flex items-center justify-center relative overflow-hidden py-8"
+      style={{ background: 'linear-gradient(135deg, #0D1117 0%, #1a0d2e 50%, #0D1117 100%)' }}>
 
-<div className='flex gap-[10px] items-center text-[20px] font-semibold mt-[40px]'>
-    <span>Sign Up to </span>
-    <img src={logo} alt="" className='w-[70px]'/>
-</div>
+      {/* HINGLISH: Background blobs */}
+      <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full orb-float"
+        style={{ background: 'radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)' }} />
+      <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full orb-float-delay"
+        style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)' }} />
 
-<div className='relative flex items-center justify-start w-[90%] h-[50px] rounded-2xl mt-[30px] border-2 border-black' onClick={()=>setInputClicked({...inputClicked,name:true})}>
-    <label htmlFor='name' className={`text-gray-700 absolute left-[20px] p-[5px] bg-white text-[15px] ${inputClicked.name?"top-[-15px]":""}`}> Enter Your Name</label>
-        <input type="text" id='name' className='w-[100%] h-[100%] rounded-2xl px-[20px] outline-none border-0' required onChange={(e)=>setName(e.target.value)} value={name}/>
-    
-</div>
-<div className='relative flex items-center justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,userName:true})}>
-    <label htmlFor='userName' className={`text-gray-700 absolute left-[20px] p-[5px] bg-white text-[15px] ${inputClicked.userName?"top-[-15px]":""}`}> Enter Username</label>
-        <input type="text" id='userName' className='w-[100%] h-[100%] rounded-2xl px-[20px] outline-none border-0' required onChange={(e)=>setUserName(e.target.value)} value={userName}/>
-    
-</div>
-<div className='relative flex items-center justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,email:true})}>
-    <label htmlFor='email' className={`text-gray-700 absolute left-[20px] p-[5px] bg-white text-[15px] ${inputClicked.email?"top-[-15px]":""}`}> Enter Email</label>
-        <input type="email" id='email' className='w-[100%] h-[100%] rounded-2xl px-[20px] outline-none border-0' required onChange={(e)=>setEmail(e.target.value)} value={email}/>
-    
-</div>
-<div className='relative flex items-center justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,password:true})}>
-    <label htmlFor='password' className={`text-gray-700 absolute left-[20px] p-[5px] bg-white text-[15px] ${inputClicked.password?"top-[-15px]":""}`}> Enter password</label>
-        <input type={showPassword?"text":"password"} id='password' className='w-[100%] h-[100%] rounded-2xl px-[20px] outline-none border-0' required onChange={(e)=>setPassword(e.target.value)} value={password}/>
-        {!showPassword?<IoIosEye className='absolute cursor-pointer right-[20px] w-[25px] h-[25px]' onClick={()=>setShowPassword(true)}/>:<IoIosEyeOff className='absolute cursor-pointer right-[20px] w-[25px] h-[25px]' onClick={()=>setShowPassword(false)}/>} 
-</div>
-{err && <p className='text-red-500'>{err}</p>}
+      {/* HINGLISH: Sign up card */}
+      <div className="w-full max-w-[420px] mx-4 fade-in" style={{ zIndex: 10 }}>
+        <div className="rounded-3xl p-8" style={{
+          background: 'rgba(28, 35, 51, 0.75)',
+          backdropFilter: 'blur(30px)',
+          border: '1px solid rgba(124, 58, 237, 0.3)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.1)'
+        }}>
 
+          {/* HINGLISH: Header section */}
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold gradient-text mb-1">CONNECTLY</h1>
+            <p className="text-sm" style={{ color: '#9CA3AF' }}>Connect. Express. Be you.</p>
+            <div className="mt-3">
+              <h2 className="text-xl font-semibold text-white">Create account ✨</h2>
+              <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Join VYNK today</p>
+            </div>
+          </div>
 
-<button className='w-[70%] px-[20px] py-[10px] bg-black text-white font-semibold h-[50px] cursor-pointer rounded-2xl mt-[30px]' onClick={handleSignUp} disabled={loading}>{loading?<ClipLoader size={30} color='white'/>:"Sign Up"}</button>
-<p className='cursor-pointer text-gray-800' onClick={()=>navigate("/signin")}>Already Have An Account ? <span className='border-b-2 border-b-black pb-[3px] text-black'>Sign In</span></p>
-</div>
-<div className='md:w-[50%] h-full hidden lg:flex justify-center items-center bg-[#000000] flex-col gap-[10px] text-white text-[16px] font-semibold rounded-l-[30px] shadow-2xl shadow-black'>
+          {/* HINGLISH: Input fields */}
+          <div className="flex flex-col gap-3 mb-5">
+            <InputField
+              icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>}
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <InputField
+              icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>}
+              placeholder="Username"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <InputField
+              icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>}
+              placeholder="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
 
-<img src={logo1} alt="" className='w-[40%]'/>
-<p >Not Just A Platform , It's A VYBE</p>
-</div>
+            {/* HINGLISH: Password with toggle */}
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                className="w-full h-[50px] rounded-xl pl-11 pr-12 text-sm"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+                onChange={(e) => setPassword(e.target.value)}
+                value={password}
+                onKeyDown={handleKeyDown}
+                onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
+                onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
+              />
+              <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <IoIosEyeOff size={20} /> : <IoIosEye size={20} />}
+              </button>
+            </div>
+          </div>
+
+          {err && (
+            <div className="mb-4 p-3 rounded-xl text-sm text-red-400 text-center"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              {err}
+            </div>
+          )}
+
+          {/* HINGLISH: Sign up gradient button */}
+          <button
+            className="w-full h-[52px] rounded-2xl font-semibold text-white btn-gradient text-sm tracking-wide"
+            onClick={handleSignUp}
+            disabled={loading}
+          >
+            {loading ? <ClipLoader size={22} color="white" /> : "Sign Up"}
+          </button>
+
+          {/* HINGLISH: Social login */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+            <span className="text-xs" style={{ color: '#6B7280' }}>or continue with</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+          </div>
+
+          <div className="flex gap-3 justify-center">
+            {[
+              { icon: <FcGoogle size={20} />, label: 'Google' },
+              { icon: <SiApple size={20} className="text-white" />, label: 'Apple' },
+              { icon: <FaFacebook size={20} className="text-blue-500" />, label: 'Facebook' },
+            ].map((social) => (
+              <button key={social.label}
+                className="flex-1 h-[42px] rounded-xl flex items-center justify-center gap-2 hover-scale"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                {social.icon}
+              </button>
+            ))}
+          </div>
+
+          <p className="text-center mt-5 text-sm" style={{ color: '#6B7280' }}>
+            Already have an account?{" "}
+            <span className="font-semibold cursor-pointer hover:opacity-80" style={{ color: '#7C3AED' }}
+              onClick={() => navigate("/signin")}>
+              Login
+            </span>
+          </p>
+        </div>
       </div>
     </div>
   )

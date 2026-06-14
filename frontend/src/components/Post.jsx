@@ -1,148 +1,238 @@
 import React, { useEffect, useState } from 'react'
 import dp from "../assets/dp.webp"
 import VideoPlayer from './VideoPlayer'
-import { GoHeart } from "react-icons/go";
-import { useDispatch, useSelector } from 'react-redux';
-import { GoHeartFill } from "react-icons/go";
-import { MdOutlineComment } from "react-icons/md";
-import { MdOutlineBookmarkBorder } from "react-icons/md";
-import { GoBookmarkFill } from "react-icons/go";
-import { IoSendSharp } from "react-icons/io5";
-import axios from 'axios';
-import { serverUrl } from '../App';
-import { setPostData } from '../redux/postSlice';
-import { setUserData } from '../redux/userSlice';
-import FollowButton from './FollowButton';
-import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux'
+import { setPostData } from '../redux/postSlice'
+import { setUserData } from '../redux/userSlice'
+import FollowButton from './FollowButton'
+import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
+import { serverUrl } from '../App'
+import { IoSendSharp } from "react-icons/io5"
+
+// HINGLISH: Post card component — dark glassmorphism style with gradient actions
 function Post({ post }) {
   const { userData } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
   const { socket } = useSelector(state => state.socket)
   const [showComment, setShowComment] = useState(false)
-  const [message,setMessage]=useState("")
-  const navigate=useNavigate()
-const dispatch=useDispatch()
-  const handleLike=async ()=>{
-    try {
-      const result=await axios.get(`${serverUrl}/api/post/like/${post._id}`,{withCredentials:true})
-      const updatedPost=result.data
+  const [message, setMessage] = useState("")
+  const [showHeartAnim, setShowHeartAnim] = useState(false)
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
 
-      const updatedPosts=postData.map(p=>p._id==post._id?updatedPost:p)
+  const isLiked = post.likes.includes(userData._id)
+  const isSaved = userData.saved.includes(post?._id)
+
+  // HINGLISH: Like API call — post ko like/unlike karna
+  const handleLike = async () => {
+    try {
+      const result = await axios.get(`${serverUrl}/api/post/like/${post._id}`, { withCredentials: true })
+      const updatedPosts = postData.map(p => p._id === post._id ? result.data : p)
       dispatch(setPostData(updatedPosts))
     } catch (error) {
       console.log(error)
     }
   }
 
- const handleComment=async ()=>{
-    try {
-      const result=await axios.post(`${serverUrl}/api/post/comment/${post._id}`,{message},{withCredentials:true})
-      const updatedPost=result.data
+  // HINGLISH: Double tap pe heart animation + like
+  const handleDoubleClick = () => {
+    setShowHeartAnim(true)
+    setTimeout(() => setShowHeartAnim(false), 1500)
+    if (!isLiked) handleLike()
+  }
 
-      const updatedPosts=postData.map(p=>p._id==post._id?updatedPost:p)
+  // HINGLISH: Comment add karna
+  const handleComment = async () => {
+    if (!message.trim()) return
+    try {
+      const result = await axios.post(`${serverUrl}/api/post/comment/${post._id}`, { message }, { withCredentials: true })
+      const updatedPosts = postData.map(p => p._id === post._id ? result.data : p)
       dispatch(setPostData(updatedPosts))
+      setMessage("")
     } catch (error) {
       console.log(error.response)
     }
   }
 
-  const handleSaved=async ()=>{
+  // HINGLISH: Post save/unsave karna
+  const handleSaved = async () => {
     try {
-      const result=await axios.get(`${serverUrl}/api/post/saved/${post._id}`,{withCredentials:true})
+      const result = await axios.get(`${serverUrl}/api/post/saved/${post._id}`, { withCredentials: true })
       dispatch(setUserData(result.data))
     } catch (error) {
       console.log(error.response)
     }
   }
-  
-  useEffect(()=>{
-    socket?.on("likedPost",(updatedData)=>{
-     const updatedPosts=postData.map(p=>p._id==updatedData.postId?{...p,likes:updatedData.likes}:p)
-     dispatch(setPostData(updatedPosts))
-    })
-socket?.on("commentedPost",(updatedData)=>{
-     const updatedPosts=postData.map(p=>p._id==updatedData.postId?{...p,comments:updatedData.comments}:p)
-     dispatch(setPostData(updatedPosts))
-    })
 
-    return ()=>{socket?.off("likedPost")
-               socket?.off("CommentedPost")}
-  },[socket,postData,dispatch])
+  // HINGLISH: Real-time socket events — doosre users ke like/comment receive karna
+  useEffect(() => {
+    socket?.on("likedPost", (updatedData) => {
+      const updatedPosts = postData.map(p => p._id === updatedData.postId ? { ...p, likes: updatedData.likes } : p)
+      dispatch(setPostData(updatedPosts))
+    })
+    socket?.on("commentedPost", (updatedData) => {
+      const updatedPosts = postData.map(p => p._id === updatedData.postId ? { ...p, comments: updatedData.comments } : p)
+      dispatch(setPostData(updatedPosts))
+    })
+    return () => {
+      socket?.off("likedPost")
+      socket?.off("commentedPost")
+    }
+  }, [socket, postData, dispatch])
+
   return (
-    <div className='w-[90%]   flex flex-col gap-[10px] bg-white items-center shadow-2xl shadow-[#00000058] rounded-2xl pb-[20px]'>
-      <div className='w-full h-[80px] flex justify-between items-center px-[10px]'>
-        <div className='flex justify-center items-center md:gap-[20px] gap-[10px]' onClick={()=>navigate(`/profile/${post.author?.userName}`)}>
-          <div className='w-[40px] h-[40px] md:w-[60px] md:h-[60px] border-2 border-black rounded-full cursor-pointer overflow-hidden'>
-            <img src={post.author?.profileImage || dp} alt="" className='w-full object-cover' />
+    // HINGLISH: Post card — dark glassmorphism style
+    <div className="w-full rounded-2xl overflow-hidden fade-in"
+      style={{ background: '#1C2333', border: '1px solid rgba(255,255,255,0.06)' }}>
+
+      {/* HINGLISH: Post header — author info + follow button */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3 cursor-pointer"
+          onClick={() => navigate(`/profile/${post.author?.userName}`)}>
+          {/* HINGLISH: Author avatar with gradient ring */}
+          <div className="story-ring-active">
+            <div className="w-10 h-10 rounded-full overflow-hidden" style={{ background: '#0D1117' }}>
+              <img src={post.author?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+            </div>
           </div>
-          <div className='w-[150px] font-semibold truncate'>{post.author.userName}</div>
-        </div>
-       {userData._id!=post.author._id &&  <FollowButton tailwind={'px-[10px] minw-[60px] md:min-w-[100px] py-[5px] h-[30px] md:h-[40px] bg-[black] text-white rounded-2xl text-[14px] md:text-[16px]'} targetUserId={post.author._id}/>}
-       
-      </div>
-      <div className='w-[90%]   flex  items-center justify-center '>
-        {post.mediaType == "image" && <div className='w-[90%]    flex  items-center justify-center   '>
-          <img src={post.media} alt="" className='w-[80%] rounded-2xl  object-cover' />
-        </div>}
-
-        {post.mediaType == "video" && <div className='w-[80%]    flex flex-col items-center justify-center   '>
-          <VideoPlayer media={post.media} />
-        </div>}
-
-
-
-
-      </div>
-
-      <div className='w-full h-[60px] flex justify-between items-center px-[20px] mt-[10px]'>
-        <div className='flex justify-center items-center gap-[10px] '>
-          <div className='flex justify-center items-center gap-[5px]'>
-            {!post.likes.includes(userData._id) && <GoHeart className='w-[25px] cursor-pointer h-[25px]' onClick={handleLike}/>}
-            {post.likes.includes(userData._id) && <GoHeartFill className='w-[25px] cursor-pointer h-[25px] text-red-600' onClick={handleLike}/>}
-            <span >{post.likes.length}</span>
-          </div>
-          <div className='flex justify-center items-center gap-[5px]' onClick={()=>setShowComment(prev=>!prev)}>
-            <MdOutlineComment className='w-[25px] cursor-pointer h-[25px]' />
-            <span>{post.comments.length}</span>
+          <div>
+            <div className="text-sm font-semibold text-white">{post.author?.userName}</div>
+            <div className="text-xs" style={{ color: '#6B7280' }}>
+              {post.author?.profession || "CONNECTLY user"}
+            </div>
           </div>
         </div>
-        <div onClick={handleSaved}>
-          {!userData.saved.includes(post?._id) && <MdOutlineBookmarkBorder className='w-[25px] cursor-pointer h-[25px]' />}
-          {userData.saved.includes(post?._id) && <GoBookmarkFill className='w-[25px] cursor-pointer h-[25px]' />}
-        </div>
+
+        {userData._id !== post.author._id && (
+          <FollowButton
+            tailwind="px-4 py-1.5 rounded-full text-xs font-semibold btn-gradient"
+            targetUserId={post.author._id}
+          />
+        )}
       </div>
-      {post.caption && <div className='w-full px-[20px] gap-[10px] flex justify-start items-center '>
-        <h1>{post.author.userName}</h1>
-        <div>{post.caption}</div>
-      </div>}
 
-      {showComment &&
-        <div className='w-full  flex flex-col gap-[30px] pb-[20px]'>
-          <div className='w-full h-[80px] flex items-center justify-between px-[20px] relative'>
-          <div className='w-[40px] h-[40px] md:w-[60px] md:h-[60px] border-2 border-black rounded-full cursor-pointer overflow-hidden'>
-            <img src={post.author?.profileImage || dp} alt="" className='w-full object-cover' />
+      {/* HINGLISH: Post media — image ya video */}
+      <div className="relative w-full" onDoubleClick={handleDoubleClick}>
+        {post.mediaType === "image" && (
+          <img src={post.media} alt="" className="w-full object-cover max-h-[500px]" />
+        )}
+        {post.mediaType === "video" && (
+          <div className="w-full">
+            <VideoPlayer media={post.media} />
           </div>
-          <input type="text" className='px-[10px] border-b-2 border-b-gray-500 w-[90%] outline-none h-[40px]' placeholder='Write comment...' onChange={(e)=>setMessage(e.target.value)} value={message}/>
-          <button className='absolute right-[20px] cursor-pointer' onClick={handleComment}><IoSendSharp className='w-[25px] h-[25px]'/></button>
+        )}
+
+        {/* HINGLISH: Double-tap heart animation overlay */}
+        {showHeartAnim && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="heart-animation">
+              <svg width="80" height="80" viewBox="0 0 24 24" fill="#EC4899" filter="drop-shadow(0 0 20px rgba(236,72,153,0.8))">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* HINGLISH: Post caption */}
+      {post.caption && (
+        <div className="px-4 pt-3 pb-1">
+          <span className="text-sm font-semibold text-white">{post.author?.userName} </span>
+          <span className="text-sm" style={{ color: '#D1D5DB' }}>{post.caption}</span>
+        </div>
+      )}
+
+      {/* HINGLISH: Action buttons row — like, comment, share, save */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-5">
+          {/* HINGLISH: Like button with count */}
+          <button className="flex items-center gap-1.5 like-btn" onClick={handleLike}>
+            {isLiked ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#EC4899">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            )}
+            <span className="text-sm" style={{ color: isLiked ? '#EC4899' : '#9CA3AF' }}>{post.likes.length}</span>
+          </button>
+
+          {/* HINGLISH: Comment button */}
+          <button className="flex items-center gap-1.5 hover-scale" onClick={() => setShowComment(prev => !prev)}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span className="text-sm" style={{ color: '#9CA3AF' }}>{post.comments.length}</span>
+          </button>
+
+          {/* HINGLISH: Share button */}
+          <button className="hover-scale">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">
+              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
+
+        {/* HINGLISH: Save button — right side mein */}
+        <button className="hover-scale" onClick={handleSaved}>
+          {isSaved ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#7C3AED">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {/* HINGLISH: Comment section — show/hide toggle se */}
+      {showComment && (
+        <div className="border-t px-4 pt-3 pb-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          {/* HINGLISH: Comment input field */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+              <img src={userData?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1 flex items-center gap-2 px-4 h-[40px] rounded-full"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <input
+                type="text"
+                placeholder="Write a comment..."
+                className="w-full text-sm bg-transparent outline-none text-white placeholder:text-gray-600"
+                onChange={(e) => setMessage(e.target.value)}
+                value={message}
+                onKeyDown={(e) => e.key === 'Enter' && handleComment()}
+              />
+              {message && (
+                <button onClick={handleComment}>
+                  <IoSendSharp className="text-purple-500 w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className='w-full max-h-[300px] overflow-auto'>
-            {post.comments?.map((com,index)=>(
-<div key={index} className='w-full px-[20px] py-[20px]  flex items-center gap-[20px] border-b-2 border-b-gray-200'>
-   <div className='w-[40px] h-[40px] md:w-[60px] md:h-[60px] border-2 border-black rounded-full cursor-pointer overflow-hidden'>
-            <img src={com.author.profileImage || dp} alt="" className='w-full object-cover' />
-          </div>
-          <div>{com.message}</div>
-</div>
+          {/* HINGLISH: Existing comments list */}
+          <div className="flex flex-col gap-3 max-h-[200px] overflow-auto">
+            {post.comments?.map((com, index) => (
+              <div key={index} className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+                  <img src={com.author?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 px-3 py-2 rounded-2xl rounded-tl-sm text-sm"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}>
+                  <span className="font-semibold text-white text-xs">{com.author?.userName} </span>
+                  <span style={{ color: '#D1D5DB' }}>{com.message}</span>
+                </div>
+              </div>
             ))}
-
           </div>
-
         </div>
-      }
-
-
-
+      )}
     </div>
   )
 }

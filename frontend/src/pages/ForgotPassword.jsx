@@ -1,113 +1,195 @@
-import axios from 'axios'
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { MdOutlineKeyboardBackspace } from "react-icons/md"
 import { ClipLoader } from 'react-spinners'
+import axios from 'axios'
 import { serverUrl } from '../App'
 
+// HINGLISH: ForgotPassword page — OTP verification ke sath premium design
 function ForgotPassword() {
-    const [step,setStep]=useState(1)
-    const [inputClicked,setInputClicked]=useState({
-        email:false,
-        otp:false,
-        newPassword:false,
-        confirmNewPassword:false
-    })
-    const [email,setEmail]=useState("")
-    const [otp,setOtp]=useState("")
-    const [err,setErr]=useState("")
-      const [newPassword,setNewPassword]=useState("")
-          const [confirmNewPassword,setConfirmNewPassword]=useState("")
-    const [loading,setLoading]=useState(false)
+  const navigate = useNavigate()
+  const [step, setStep] = useState(1) // step 1: email, step 2: OTP + new password
+  const [email, setEmail] = useState("")
+  const [otp, setOtp] = useState(["", "", "", ""])
+  const [newPassword, setNewPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState("")
+  const [success, setSuccess] = useState("")
 
-const handleStep1=async ()=>{
-    setLoading(true)
-    setErr("")
-    try {
-        const result=await axios.post(`${serverUrl}/api/auth/sendOtp`,{email},{withCredentials:true})
-        console.log(result.data)
-        setStep(2)
-        setLoading(false)
-    } catch (error) {
-        console.log(error)
-        setLoading(false)
-        setErr(error.response.data.message)
+  // HINGLISH: OTP input handle karna — ek box se doosre me auto jump
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) return
+    const newOtp = [...otp]
+    newOtp[index] = value
+    setOtp(newOtp)
+    if (value && index < 3) {
+      document.getElementById(`otp-${index + 1}`)?.focus()
     }
-}
-const handleStep2=async ()=>{
-     setLoading(true)
-     setErr("")
-    try {
-        const result=await axios.post(`${serverUrl}/api/auth/verifyOtp`,{email,otp},{withCredentials:true})
-        console.log(result.data)
-        setLoading(false)
-        setStep(3)
-    } catch (error) {
-        console.log(error)
-        setLoading(false)
-        setErr(error.response.data.message)
-    }
-}
-const handleStep3=async ()=>{
-    if(newPassword !== confirmNewPassword){
-        return setErr("Passwords Do not match")
-     }
-    setErr("")
-    setLoading(true)
-    try {
-    
+  }
 
-        const result=await axios.post(`${serverUrl}/api/auth/resetPassword`,{email,password:newPassword},{withCredentials:true})
-        console.log(result.data)
-        setLoading(false)
-    } catch (error) {
-        console.log(error)
-        setLoading(false)
-        setErr(error.response.data.message)
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      document.getElementById(`otp-${index - 1}`)?.focus()
     }
-}
+  }
 
+  const handleSendOtp = async () => {
+    setLoading(true); setErr("")
+    try {
+      await axios.post(`${serverUrl}/api/auth/forgot-password`, { email }, { withCredentials: true })
+      setStep(2)
+      setLoading(false)
+    } catch (error) {
+      setErr(error.response?.data?.message || "Failed to send OTP")
+      setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    setLoading(true); setErr("")
+    try {
+      const otpString = otp.join("")
+      await axios.post(`${serverUrl}/api/auth/reset-password`, { email, otp: otpString, newPassword }, { withCredentials: true })
+      setSuccess("Password reset successfully!")
+      setTimeout(() => navigate("/signin"), 2000)
+      setLoading(false)
+    } catch (error) {
+      setErr(error.response?.data?.message || "Invalid OTP")
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className='w-full h-screen bg-gradient-to-b from-black to-gray-900 flex flex-col justify-center items-center'>
-    {/*  agar set 1 pe ha to div ke andar wala css show hoga screen pe */}
-    {step==1 && <div className='w-[90%] max-w-[500px]  h-[500px] bg-white rounded-2xl flex justify-center items-center flex-col   border-[#1a1f23]'>
-<h2 className='text-[30px] font-semibold'>Forgot Password</h2>
-<div className='relative flex items-center mt-[30px] justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,email:true})}>
-    <label htmlFor='email' className={`text-gray-700 absolute left-[20px] p-[5px] bg-white text-[15px] ${inputClicked.email?"top-[-15px]":""}`}> Enter Email</label>
-        <input type="email" id='email' className='w-[100%] h-[100%] rounded-2xl px-[20px] outline-none border-0' required onChange={(e)=>setEmail(e.target.value)} value={email}/>
-    
-</div>
+    <div className="w-full min-h-screen flex items-center justify-center relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #0D1117 0%, #1a0d2e 50%, #0D1117 100%)' }}>
 
-{err && <p className='text-red-500'>{err}</p>}
-<button className='w-[70%] px-[20px] py-[10px] bg-black text-white font-semibold h-[50px] cursor-pointer rounded-2xl mt-[30px]'  disabled={loading} onClick={handleStep1}>{loading?<ClipLoader size={30} color='white'/>:"Send OTP"}</button>
-      </div>}
-         {/*  agar set 2 pe ha to div ke andar wala css show hoga screen pe */}
-      {step==2 && <div className='w-[90%] max-w-[500px]  h-[500px] bg-white rounded-2xl flex justify-center items-center flex-col   border-[#1a1f23]'>
-<h2 className='text-[30px] font-semibold'>Forgot Password</h2>
-<div className='relative flex items-center mt-[30px] justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,otp:true})}>
-    <label htmlFor='otp' className={`text-gray-700 absolute left-[20px] p-[5px] bg-white text-[15px] ${inputClicked.otp?"top-[-15px]":""}`}> Enter OTP</label>
-        <input type="text" id='otp' className='w-[100%] h-[100%] rounded-2xl px-[20px] outline-none border-0' required onChange={(e)=>setOtp(e.target.value)} value={otp}/>
-    
-</div>
-{err && <p className='text-red-500'>{err}</p>}
-<button className='w-[70%] px-[20px] py-[10px] bg-black text-white font-semibold h-[50px] cursor-pointer rounded-2xl mt-[30px]'  disabled={loading} onClick={handleStep2}>{loading?<ClipLoader size={30} color='white'/>:"Submit"}</button>
-      </div>}
-         {/* agar set 3 pe ha to div ke andar wala css show hoga screen pe */}
-      {step==3 && <div className='w-[90%] max-w-[500px]  h-[500px] bg-white rounded-2xl flex justify-center items-center flex-col   border-[#1a1f23]'>
-<h2 className='text-[30px] font-semibold'>Reset Password</h2>
-<div className='relative flex items-center mt-[30px] justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,newPassword:true})}>
-    <label htmlFor='newPassword' className={`text-gray-700 absolute left-[20px] p-[5px] bg-white text-[15px] ${inputClicked.newPassword?"top-[-15px]":""}`}> Enter New Password</label>
-        <input type="text" id='newPassword' className='w-[100%] h-[100%] rounded-2xl px-[20px] outline-none border-0' required onChange={(e)=>setNewPassword(e.target.value)} value={newPassword}/>
-    
-</div>
-<div className='relative flex items-center mt-[30px] justify-start w-[90%] h-[50px] rounded-2xl  border-2 border-black' onClick={()=>setInputClicked({...inputClicked,confirmNewPassword:true})}>
-    <label htmlFor='confirmNewPassword' className={`text-gray-700 absolute left-[20px] p-[5px] bg-white text-[15px] ${inputClicked.confirmNewPassword?"top-[-15px]":""}`}> Confirm New Password</label>
-        <input type="text" id='confirmNewPassword' className='w-[100%] h-[100%] rounded-2xl px-[20px] outline-none border-0' required onChange={(e)=>setConfirmNewPassword(e.target.value)} value={confirmNewPassword}/>
-    
-</div>
-{err && <p className='text-red-500'>{err}</p>}
-<button className='w-[70%] px-[20px] py-[10px] bg-black text-white font-semibold h-[50px] cursor-pointer rounded-2xl mt-[30px]'  disabled={loading} onClick={handleStep3}>{loading?<ClipLoader size={30} color='white'/>:"Reset Password"}</button>
-      </div>}
-      
+      {/* HINGLISH: Animated background orbs */}
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full orb-float"
+        style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)' }} />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full orb-float-delay"
+        style={{ background: 'radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)' }} />
+
+      <div className="w-full max-w-[420px] mx-4 fade-in" style={{ zIndex: 10 }}>
+        <div className="rounded-3xl p-8" style={{
+          background: 'rgba(28, 35, 51, 0.75)',
+          backdropFilter: 'blur(30px)',
+          border: '1px solid rgba(124, 58, 237, 0.3)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5)'
+        }}>
+
+          {/* HINGLISH: Back button */}
+          <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
+            onClick={() => step === 1 ? navigate("/signin") : setStep(1)}>
+            <MdOutlineKeyboardBackspace size={22} />
+            <span className="text-sm">Back</span>
+          </button>
+
+          {/* HINGLISH: Shield icon aur heading */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 glow-pulse"
+              style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(236,72,153,0.3))', border: '2px solid rgba(124,58,237,0.5)' }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="url(#grad)" strokeWidth="1.5">
+                <defs>
+                  <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#7C3AED" />
+                    <stop offset="100%" stopColor="#EC4899" />
+                  </linearGradient>
+                </defs>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-white">{step === 1 ? "Verify your number" : "Enter OTP"}</h2>
+            <p className="text-sm mt-2" style={{ color: '#6B7280' }}>
+              {step === 1 ? "Enter the five-digit code sent to" : `Code sent to ${email}`}
+            </p>
+            {step === 1 && <p className="text-sm mt-1 font-semibold" style={{ color: '#9CA3AF' }}>+91 XXXXX-XXXXX</p>}
+          </div>
+
+          {/* HINGLISH: Step 1 — Email input */}
+          {step === 1 && (
+            <>
+              <div className="relative mb-4">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="w-full h-[52px] rounded-2xl px-4 text-sm"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={(e) => { e.target.style.borderColor = '#7C3AED' }}
+                  onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
+                />
+              </div>
+              {err && <p className="text-red-400 text-sm text-center mb-3">{err}</p>}
+              <button className="w-full h-[52px] rounded-2xl font-semibold text-white btn-gradient text-sm"
+                onClick={handleSendOtp} disabled={loading}>
+                {loading ? <ClipLoader size={22} color="white" /> : "Send OTP"}
+              </button>
+            </>
+          )}
+
+          {/* HINGLISH: Step 2 — OTP boxes + new password */}
+          {step === 2 && (
+            <>
+              {/* HINGLISH: OTP input boxes — 4 separate squares */}
+              <div className="flex gap-3 justify-center mb-6">
+                {otp.map((digit, index) => (
+                  <input
+                    key={index}
+                    id={`otp-${index}`}
+                    type="text"
+                    maxLength={1}
+                    className="w-[60px] h-[60px] text-center text-2xl font-bold rounded-2xl"
+                    style={{
+                      background: 'rgba(124,58,237,0.1)',
+                      border: digit ? '2px solid #7C3AED' : '1px solid rgba(255,255,255,0.15)',
+                      color: 'white',
+                      outline: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.boxShadow = '0 0 15px rgba(124,58,237,0.3)' }}
+                    onBlur={(e) => { e.target.style.boxShadow = 'none' }}
+                  />
+                ))}
+              </div>
+
+              <div className="relative mb-4">
+                <input
+                  type="password"
+                  placeholder="New Password"
+                  className="w-full h-[52px] rounded-2xl px-4 text-sm"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  onFocus={(e) => { e.target.style.borderColor = '#7C3AED' }}
+                  onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
+                />
+              </div>
+
+              {err && <p className="text-red-400 text-sm text-center mb-3">{err}</p>}
+              {success && <p className="text-green-400 text-sm text-center mb-3">{success}</p>}
+
+              <button className="w-full h-[52px] rounded-2xl font-semibold text-white btn-gradient text-sm"
+                onClick={handleResetPassword} disabled={loading}>
+                {loading ? <ClipLoader size={22} color="white" /> : "Reset Password"}
+              </button>
+
+              <p className="text-center mt-4 text-sm" style={{ color: '#6B7280' }}>
+                Resend code in{" "}
+                <span style={{ color: '#7C3AED' }}>00:30</span>
+              </p>
+            </>
+          )}
+
+          {/* HINGLISH: Secure verification notice */}
+          <div className="mt-6 text-center">
+            <p className="text-xs" style={{ color: '#4B5563' }}>🔒 Secure verification • Your data is protected</p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

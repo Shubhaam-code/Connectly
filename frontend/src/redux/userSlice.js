@@ -11,7 +11,7 @@ const userSlice=createSlice({
     },
     reducers:{
        setUserData:(state,action)=>{
-        state.userData=action.payload 
+        state.userData=action.payload
        } ,
        setSuggestedUsers:(state,action)=>{
         state.suggestedUsers=action.payload

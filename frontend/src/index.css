@@ -1,9 +1,342 @@
+/* HINGLISH: Google Fonts se Poppins font import kar rahe hain */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+/* HINGLISH: Sab elements pe scrollbar hide kar rahe hain */
 * {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  font-family: 'Poppins', sans-serif;
+  box-sizing: border-box;
 }
 
 ::-webkit-scrollbar {
   display: none;
 }
+
+/* HINGLISH: CONNECTLY ke liye CSS design tokens (variables) */
+:root {
+  --bg-primary: #0D1117;
+  --bg-secondary: #161B22;
+  --bg-card: #1C2333;
+  --bg-glass: rgba(255, 255, 255, 0.05);
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --accent-purple: #7C3AED;
+  --accent-pink: #EC4899;
+  --accent-cyan: #06B6D4;
+  --gradient-primary: linear-gradient(135deg, #7C3AED, #EC4899);
+  --gradient-story: linear-gradient(45deg, #7C3AED, #EC4899, #F59E0B);
+  --text-primary: #FFFFFF;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --shadow-glow: 0 0 30px rgba(124, 58, 237, 0.3);
+  --shadow-pink-glow: 0 0 30px rgba(236, 72, 153, 0.3);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Poppins', sans-serif;
+  overflow-x: hidden;
+}
+
+/* HINGLISH: Glassmorphism utility class — frosted glass effect ke liye */
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+}
+
+.glass-dark {
+  background: rgba(22, 27, 34, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* HINGLISH: Gradient button ka style */
+.btn-gradient {
+  background: linear-gradient(135deg, #7C3AED, #EC4899);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+}
+
+.btn-gradient:active {
+  transform: translateY(0);
+}
+
+.btn-gradient::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-gradient:hover::after {
+  left: 100%;
+}
+
+/* HINGLISH: Story ring gradient — unviewed stories ke liye */
+.story-ring-active {
+  background: linear-gradient(45deg, #7C3AED, #EC4899, #F59E0B);
+  padding: 3px;
+  border-radius: 50%;
+}
+
+.story-ring-seen {
+  background: linear-gradient(45deg, #374151, #6B7280);
+  padding: 3px;
+  border-radius: 50%;
+}
+
+/* HINGLISH: Input field ka premium dark style */
+.input-dark {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.input-dark:focus {
+  border-color: #7C3AED;
+  background: rgba(124, 58, 237, 0.1);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.input-dark::placeholder {
+  color: #6B7280;
+}
+
+/* HINGLISH: Card ka dark glassmorphism style */
+.card-dark {
+  background: #1C2333;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+/* HINGLISH: Heart animation double-tap ke baad dikhti hai */
+@keyframes heartPop {
+  0% { transform: scale(0.5); opacity: 0.4; }
+  50% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+.heart-animation {
+  animation: heartPop 1.5s ease-out forwards;
+}
+
+/* HINGLISH: Floating orb background animation */
+@keyframes floatOrb {
+  0%, 100% { transform: translateY(0) translateX(0) scale(1); }
+  33% { transform: translateY(-30px) translateX(20px) scale(1.05); }
+  66% { transform: translateY(20px) translateX(-15px) scale(0.95); }
+}
+
+.orb-float {
+  animation: floatOrb 8s ease-in-out infinite;
+}
+
+.orb-float-delay {
+  animation: floatOrb 10s ease-in-out infinite reverse;
+  animation-delay: -3s;
+}
+
+/* HINGLISH: Shimmer loading animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #1C2333 25%, #252D3D 50%, #1C2333 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* HINGLISH: Glow pulse — active icon ke liye */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(124, 58, 237, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(124, 58, 237, 0.8), 0 0 50px rgba(236, 72, 153, 0.3); }
+}
+
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* HINGLISH: Slide up animation — bottom sheets ke liye */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* HINGLISH: Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* HINGLISH: AI orb ka pulse animation */
+@keyframes aiOrbPulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.6), 0 0 60px rgba(124, 58, 237, 0.2);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.9), 0 0 100px rgba(236, 72, 153, 0.4);
+    transform: scale(1.05);
+  }
+}
+
+.ai-orb-pulse {
+  animation: aiOrbPulse 3s ease-in-out infinite;
+}
+
+/* HINGLISH: Rotate animation — loading states ke liye */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+/* HINGLISH: Scale on hover — interactive elements ke liye */
+.hover-scale {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.hover-scale:hover {
+  transform: scale(1.08);
+}
+.hover-scale:active {
+  transform: scale(0.95);
+}
+
+/* HINGLISH: Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, #7C3AED, #EC4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* HINGLISH: Story progress bar animation */
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* HINGLISH: Notification dot — unread indicator ke liye */
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #7C3AED, #EC4899);
+  border-radius: 50%;
+  animation: glowPulse 2s infinite;
+}
+
+/* HINGLISH: Message bubble styles */
+.bubble-sender {
+  background: linear-gradient(135deg, #7C3AED, #EC4899);
+  color: white;
+  border-radius: 20px 20px 4px 20px;
+}
+
+.bubble-receiver {
+  background: #1C2333;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: white;
+  border-radius: 20px 20px 20px 4px;
+}
+
+/* HINGLISH: Nav active indicator */
+.nav-active-dot {
+  width: 4px;
+  height: 4px;
+  background: linear-gradient(135deg, #7C3AED, #EC4899);
+  border-radius: 50%;
+  margin: 0 auto;
+  margin-top: 2px;
+}
+
+/* HINGLISH: Like button ka special hover */
+.like-btn {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.like-btn:active {
+  transform: scale(1.4);
+}
+
+/* HINGLISH: Story ring — active gradient ring for unseen stories */
+.story-ring-active {
+  background: linear-gradient(45deg, #7C3AED, #EC4899, #F59E0B);
+  padding: 2.5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* HINGLISH: Story ring — seen stories ka grey ring */
+.story-ring-seen {
+  background: linear-gradient(45deg, #374151, #6B7280);
+  padding: 2.5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* HINGLISH: AI orb pulse — ConnectlyAI avatar ke liye pulsing glow */
+.ai-orb-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.5), 0 0 40px rgba(236, 72, 153, 0.3);
+}
+
+/* HINGLISH: Slide up animation — bottom sheet ke liye */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* HINGLISH: Spin slow — loading spinner ke liye */
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin-slow {
+  animation: spinSlow 1.5s linear infinite;
+}
+
+/* HINGLISH: Glow pulse for unread indicator */
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+

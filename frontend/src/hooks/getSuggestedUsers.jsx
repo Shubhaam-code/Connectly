@@ -1,23 +1,29 @@
-import axios from 'axios'
-import React, { useEffect } from 'react'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
+import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setSuggestedUsers, setUserData } from '../redux/userSlice'
+import { setSuggestedUsers } from '../redux/userSlice'
 
+// FIX: Switched from raw axios to axiosInstance for auto auth-refresh.
+// FIX: Removed unused imports.
 function getSuggestedUsers() {
-    const dispatch=useDispatch()
-    const {userData}=useSelector(state=>state.user)
-  useEffect(()=>{
-const fetchUser=async ()=>{
-    try {
-        const result=await axios.get(`${serverUrl}/api/user/suggested`,{withCredentials:true})
-         dispatch(setSuggestedUsers(result.data))
-    } catch (error) {
-        console.log(error)
-    }
-}
-fetchUser()
-  },[userData])
+    const dispatch = useDispatch()
+    const { userData } = useSelector(state => state.user)
+
+    useEffect(() => {
+        if (!userData) return  // don't fetch if not logged in
+
+        const fetchUsers = async () => {
+            try {
+                const result = await axiosInstance.get("/api/user/suggested")
+                dispatch(setSuggestedUsers(result.data))
+            } catch (error) {
+                if (error.response?.status !== 401) {
+                    console.error("getSuggestedUsers error:", error.message)
+                }
+            }
+        }
+        fetchUsers()
+    }, [userData, dispatch])
 }
 
 export default getSuggestedUsers

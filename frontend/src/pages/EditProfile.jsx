@@ -3,35 +3,57 @@ import { MdOutlineKeyboardBackspace } from 'react-icons/md'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import dp from "../assets/dp.webp"
-import axios from 'axios'
-import { serverUrl } from '../App'
 import { setProfileData, setUserData } from '../redux/userSlice'
 import { ClipLoader } from 'react-spinners'
+import axiosInstance from '../lib/axiosInstance'
+
+// FIX: InputField and Field are defined OUTSIDE the component function.
+// When defined inside, React recreates them on every render, causing React
+// to see them as brand-new component types → full remount → input loses focus.
+// Defining them outside means they are stable references across renders.
+const Field = ({ label, value, onChange, placeholder }) => (
+  <div className="w-full">
+    <label className="text-xs font-medium mb-1.5 block" style={{ color: '#9CA3AF' }}>{label}</label>
+    <input
+      type="text"
+      placeholder={placeholder || label}
+      className="w-full h-[50px] rounded-2xl px-4 text-sm transition-all"
+      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+      onChange={onChange}
+      value={value}
+      onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
+      onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
+    />
+  </div>
+)
 
 // HINGLISH: EditProfile page — dark premium form for updating user info
 function EditProfile() {
   const { userData } = useSelector(state => state.user)
   const navigate = useNavigate()
   const imageInput = useRef()
-  const [frontendImage, setFrontendImage] = useState(userData.profileImage || dp)
+  const [frontendImage, setFrontendImage] = useState(userData?.profileImage || dp)
   const [backendImage, setBackendImage] = useState(null)
-  const [name, setName] = useState(userData.name || "")
-  const [userName, setUserName] = useState(userData.userName || "")
-  const [bio, setBio] = useState(userData.bio || "")
-  const [profession, setProfession] = useState(userData.profession || "")
-  const [gender, setGender] = useState(userData.gender || "")
+  const [name, setName] = useState(userData?.name || "")
+  const [userName, setUserName] = useState(userData?.userName || "")
+  const [bio, setBio] = useState(userData?.bio || "")
+  const [profession, setProfession] = useState(userData?.profession || "")
+  const [gender, setGender] = useState(userData?.gender || "")
+  const [error, setError] = useState("")
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
 
   const handleImage = (e) => {
     const file = e.target.files[0]
+    if (!file) return
     setBackendImage(file)
     setFrontendImage(URL.createObjectURL(file))
   }
 
-  // HINGLISH: Profile save karna — API call
+  // HINGLISH: Profile save karna — API call using axiosInstance (with auto auth-refresh)
   const handleEditProfile = async () => {
     setLoading(true)
+    setError("")
     try {
       const formdata = new FormData()
       formdata.append("name", name)
@@ -40,33 +62,21 @@ function EditProfile() {
       formdata.append("profession", profession)
       formdata.append("gender", gender)
       if (backendImage) formdata.append("profileImage", backendImage)
-      const result = await axios.post(`${serverUrl}/api/user/editProfile`, formdata, { withCredentials: true })
+
+      // FIX: Use axiosInstance instead of raw axios — ensures auth cookies are sent
+      // and 401 auto-refresh works. Also removed manual Content-Type header —
+      // axios sets multipart/form-data automatically when FormData is the body.
+      const result = await axiosInstance.post("/api/user/editProfile", formdata)
       dispatch(setProfileData(result.data))
       dispatch(setUserData(result.data))
       setLoading(false)
-      navigate(`/profile/${userData.userName}`)
-    } catch (error) {
-      console.log(error)
+      navigate(`/profile/${result.data.userName}`)
+    } catch (err) {
+      console.error("editProfile error:", err)
+      setError(err.response?.data?.message || "Failed to update profile. Please try again.")
       setLoading(false)
     }
   }
-
-  // HINGLISH: Reusable input field
-  const Field = ({ label, value, onChange, placeholder }) => (
-    <div className="w-full">
-      <label className="text-xs font-medium mb-1.5 block" style={{ color: '#9CA3AF' }}>{label}</label>
-      <input
-        type="text"
-        placeholder={placeholder || label}
-        className="w-full h-[50px] rounded-2xl px-4 text-sm transition-all"
-        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
-        onChange={onChange}
-        value={value}
-        onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
-        onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
-      />
-    </div>
-  )
 
   return (
     <div className="w-full min-h-screen" style={{ background: '#0D1117' }}>
@@ -75,7 +85,7 @@ function EditProfile() {
       <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-4"
         style={{ background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <button className="text-gray-400 hover:text-white transition-colors"
-          onClick={() => navigate(`/profile/${userData.userName}`)}>
+          onClick={() => navigate(`/profile/${userData?.userName}`)}>
           <MdOutlineKeyboardBackspace size={22} />
         </button>
         <h1 className="text-base font-bold text-white">Edit Profile</h1>
@@ -108,7 +118,7 @@ function EditProfile() {
           </button>
         </div>
 
-        {/* HINGLISH: Form fields */}
+        {/* HINGLISH: Form fields — all use stable Field component (defined outside) */}
         <div className="flex flex-col gap-4">
           <Field label="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
           <Field label="Username" value={userName} onChange={(e) => setUserName(e.target.value)} />
@@ -147,6 +157,14 @@ function EditProfile() {
             </select>
           </div>
         </div>
+
+        {/* HINGLISH: Error display */}
+        {error && (
+          <div className="mt-4 p-3 rounded-xl text-sm text-red-400 text-center"
+            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            {error}
+          </div>
+        )}
 
         {/* HINGLISH: Save button */}
         <button

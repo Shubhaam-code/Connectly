@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import dp from "../assets/dp.webp"
 import VideoPlayer from './VideoPlayer'
 import { useDispatch, useSelector } from 'react-redux'
@@ -6,32 +6,52 @@ import { setPostData } from '../redux/postSlice'
 import { setUserData } from '../redux/userSlice'
 import FollowButton from './FollowButton'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
 import { IoSendSharp } from "react-icons/io5"
+import { useSocket } from '../context/SocketContext'
 
 // HINGLISH: Post card component — dark glassmorphism style with gradient actions
+// FIX: Switched from raw axios to axiosInstance for auto auth-refresh
 function Post({ post }) {
   const { userData } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
-  const { socket } = useSelector(state => state.socket)
+  // BUG FIX (Issue 4): Read socket from Context, not Redux
+  const socketRef = useSocket()
   const [showComment, setShowComment] = useState(false)
   const [message, setMessage] = useState("")
   const [showHeartAnim, setShowHeartAnim] = useState(false)
   const navigate = useNavigate()
   const dispatch = useDispatch()
 
-  const isLiked = post.likes.includes(userData._id)
-  const isSaved = userData.saved.includes(post?._id)
+  // FIX: Use ref to avoid stale closure in socket handler
+  const postDataRef = useRef(postData)
+  useEffect(() => { postDataRef.current = postData }, [postData])
 
-  // HINGLISH: Like API call — post ko like/unlike karna
+  // FIX: Safe check with toString() for ObjectId comparison
+  const isLiked = post.likes.some(id => id.toString() === userData._id.toString())
+  const isSaved = userData?.saved?.some(id => id.toString() === post?._id?.toString()) || false
+
+  // Optimistic like — update UI instantly, revert on failure
   const handleLike = async () => {
+    const wasLiked = isLiked
+    const optimisticLikes = wasLiked
+      ? post.likes.filter(id => id.toString() !== userData._id.toString())
+      : [...post.likes, userData._id]
+
+    const optimisticPosts = postDataRef.current.map(p =>
+      p._id === post._id ? { ...p, likes: optimisticLikes } : p
+    )
+    dispatch(setPostData(optimisticPosts))
+
     try {
-      const result = await axios.get(`${serverUrl}/api/post/like/${post._id}`, { withCredentials: true })
-      const updatedPosts = postData.map(p => p._id === post._id ? result.data : p)
+      const result = await axiosInstance.get(`/api/post/like/${post._id}`)
+      const updatedPosts = postDataRef.current.map(p => p._id === post._id ? result.data : p)
       dispatch(setPostData(updatedPosts))
     } catch (error) {
-      console.log(error)
+      dispatch(setPostData(postDataRef.current.map(p =>
+        p._id === post._id ? { ...p, likes: post.likes } : p
+      )))
+      console.error("handleLike error:", error.message)
     }
   }
 
@@ -46,45 +66,52 @@ function Post({ post }) {
   const handleComment = async () => {
     if (!message.trim()) return
     try {
-      const result = await axios.post(`${serverUrl}/api/post/comment/${post._id}`, { message }, { withCredentials: true })
-      const updatedPosts = postData.map(p => p._id === post._id ? result.data : p)
+      const result = await axiosInstance.post(`/api/post/comment/${post._id}`, { message })
+      const updatedPosts = postDataRef.current.map(p => p._id === post._id ? result.data : p)
       dispatch(setPostData(updatedPosts))
       setMessage("")
     } catch (error) {
-      console.log(error.response)
+      console.error("handleComment error:", error.message)
     }
   }
 
   // HINGLISH: Post save/unsave karna
   const handleSaved = async () => {
     try {
-      const result = await axios.get(`${serverUrl}/api/post/saved/${post._id}`, { withCredentials: true })
+      const result = await axiosInstance.get(`/api/post/saved/${post._id}`)
       dispatch(setUserData(result.data))
     } catch (error) {
-      console.log(error.response)
+      console.error("handleSaved error:", error.message)
     }
   }
 
   // HINGLISH: Real-time socket events — doosre users ke like/comment receive karna
+  // FIX: Removed postData from dependency array — use ref to avoid stale closure
+  // Previously: [socketRef?.current, postData] caused socket.off/on on every like/comment,
+  // creating O(n²) event listeners and causing missed events.
   useEffect(() => {
-    socket?.on("likedPost", (updatedData) => {
-      const updatedPosts = postData.map(p => p._id === updatedData.postId ? { ...p, likes: updatedData.likes } : p)
+    const socket = socketRef?.current
+    if (!socket) return
+    const handleLikedPost = (updatedData) => {
+      const updatedPosts = postDataRef.current.map(p => p._id === updatedData.postId ? { ...p, likes: updatedData.likes } : p)
       dispatch(setPostData(updatedPosts))
-    })
-    socket?.on("commentedPost", (updatedData) => {
-      const updatedPosts = postData.map(p => p._id === updatedData.postId ? { ...p, comments: updatedData.comments } : p)
-      dispatch(setPostData(updatedPosts))
-    })
-    return () => {
-      socket?.off("likedPost")
-      socket?.off("commentedPost")
     }
-  }, [socket, postData, dispatch])
+    const handleCommentedPost = (updatedData) => {
+      const updatedPosts = postDataRef.current.map(p => p._id === updatedData.postId ? { ...p, comments: updatedData.comments } : p)
+      dispatch(setPostData(updatedPosts))
+    }
+    socket.on("likedPost", handleLikedPost)
+    socket.on("commentedPost", handleCommentedPost)
+    return () => {
+      socket.off("likedPost", handleLikedPost)
+      socket.off("commentedPost", handleCommentedPost)
+    }
+  }, [socketRef?.current, dispatch])
 
   return (
     // HINGLISH: Post card — dark glassmorphism style
-    <div className="w-full rounded-2xl overflow-hidden fade-in"
-      style={{ background: '#1C2333', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="w-full overflow-hidden fade-in mb-4"
+      style={{ background: '#121212', borderBottom: '1px solid #262626' }}>
 
       {/* HINGLISH: Post header — author info + follow button */}
       <div className="flex items-center justify-between px-4 py-3">
@@ -104,7 +131,7 @@ function Post({ post }) {
           </div>
         </div>
 
-        {userData._id !== post.author._id && (
+        {userData._id?.toString() !== post.author._id?.toString() && (
           <FollowButton
             tailwind="px-4 py-1.5 rounded-full text-xs font-semibold btn-gradient"
             targetUserId={post.author._id}

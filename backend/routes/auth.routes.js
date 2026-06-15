@@ -1,13 +1,36 @@
 import express from "express"
-import { resetPassword, sendOtp, signIn, signOut, signUp, verifyOtp } from "../controllers/auth.controllers.js"
+import {
+    resetPassword,
+    sendOtp,
+    signIn,
+    signOut,
+    signUp,
+    verifyOtp,
+    refreshTokens
+} from "../controllers/auth.controllers.js"
+import rateLimiter from "../middlewares/rateLimiter.js"
+import isAuth from "../middlewares/isAuth.js"
 
-// express.Router() ek Router object return karta hai jisme route define karne aur middleware lagane ke methods hote hain. Ye pura Express app nahi, balki ek mini route manager hai. 🚀
-const authRouter=express.Router()
+const authRouter = express.Router()
 
-authRouter.post("/signup",signUp)
-authRouter.post("/signin",signIn)
-authRouter.post("/sendOtp",sendOtp)
-authRouter.post("/verifyOtp",verifyOtp)
-authRouter.post("/resetPassword",resetPassword)
-authRouter.get("/signout",signOut)
+authRouter.post("/signup", signUp)
+
+// Rate limiter on signin — 5 attempts per IP per 15 min
+authRouter.post("/signin", rateLimiter, signIn)
+
+// Refresh token rotation — called by frontend on 401
+authRouter.post("/refresh-token", refreshTokens)
+
+// Sign out — requires auth to get userId for Redis cleanup
+authRouter.get("/signout", isAuth, signOut)
+
+// OTP password reset — original route names (backward compat)
+authRouter.post("/sendOtp", sendOtp)
+authRouter.post("/verifyOtp", verifyOtp)
+authRouter.post("/resetPassword", resetPassword)
+
+// Alias routes matching new ForgotPassword.jsx frontend calls
+authRouter.post("/forgot-password", sendOtp)
+authRouter.post("/reset-password", resetPassword)
+
 export default authRouter

@@ -1,34 +1,39 @@
 import React, { useState } from 'react'
 import { IoIosEye, IoIosEyeOff } from "react-icons/io"
-import { FcGoogle } from "react-icons/fc"
-import { SiApple } from "react-icons/si"
-import { FaFacebook } from "react-icons/fa"
-import axios from "axios"
-import { serverUrl } from '../App'
 import { ClipLoader } from "react-spinners"
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { setUserData } from '../redux/userSlice'
+import axiosInstance from '../lib/axiosInstance'
+
+// FIX: Removed Google, Apple, Facebook social login buttons — they were non-functional.
+// FIX: Switched from raw axios to axiosInstance for consistent auth handling.
 
 // HINGLISH: SignIn page — CONNECTLY ka premium dark login screen
 function SignIn() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [userName, setUserName] = useState("")
+  // UPGRADE: identifier accepts both username AND email
+  const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
   const [err, setErr] = useState("")
   const navigate = useNavigate()
   const dispatch = useDispatch()
 
   const handleSignIn = async () => {
+    if (!identifier || !password) {
+      setErr("Username/Email and password are required")
+      return
+    }
     setLoading(true)
     setErr("")
     try {
-      const result = await axios.post(`${serverUrl}/api/auth/signin`, { userName, password }, { withCredentials: true })
+      // FIX: Use axiosInstance — handles withCredentials and baseURL consistently
+      const result = await axiosInstance.post("/api/auth/signin", { identifier, password, rememberMe })
       dispatch(setUserData(result.data))
       setLoading(false)
     } catch (error) {
-      console.log(error)
       setLoading(false)
       setErr(error.response?.data?.message || "Something went wrong")
     }
@@ -70,7 +75,7 @@ function SignIn() {
             </div>
           </div>
 
-          {/* HINGLISH: Username input field */}
+          {/* HINGLISH: Username/Email input field */}
           <div className="flex flex-col gap-4 mb-6">
             <div className="relative">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
@@ -82,10 +87,12 @@ function SignIn() {
                 type="text"
                 placeholder="Username or Email"
                 className="w-full h-[52px] rounded-2xl pl-11 pr-4 text-sm input-dark"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-                onChange={(e) => setUserName(e.target.value)}
-                value={userName}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+                onChange={(e) => setIdentifier(e.target.value)}
+                value={identifier}
                 onKeyDown={handleKeyDown}
+                onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
+                onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
               />
             </div>
 
@@ -100,10 +107,12 @@ function SignIn() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 className="w-full h-[52px] rounded-2xl pl-11 pr-12 text-sm input-dark"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
                 onChange={(e) => setPassword(e.target.value)}
                 value={password}
                 onKeyDown={handleKeyDown}
+                onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
+                onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
               />
               <button
                 type="button"
@@ -115,8 +124,26 @@ function SignIn() {
             </div>
           </div>
 
-          {/* HINGLISH: Forgot password link */}
-          <div className="text-right mb-6">
+          {/* HINGLISH: Remember Me + Forgot Password row */}
+          <div className="flex items-center justify-between mb-6">
+            {/* Remember Me checkbox */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div
+                className="w-5 h-5 rounded-md flex items-center justify-center transition-all"
+                style={{
+                  background: rememberMe ? 'linear-gradient(135deg, #7C3AED, #EC4899)' : 'rgba(255,255,255,0.05)',
+                  border: rememberMe ? 'none' : '1px solid rgba(255,255,255,0.2)'
+                }}
+                onClick={() => setRememberMe(prev => !prev)}
+              >
+                {rememberMe && (
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+              <span className="text-sm" style={{ color: '#9CA3AF' }}>Remember me</span>
+            </label>
             <span
               className="text-sm cursor-pointer hover:text-white transition-colors"
               style={{ color: '#7C3AED' }}
@@ -142,29 +169,6 @@ function SignIn() {
           >
             {loading ? <ClipLoader size={22} color="white" /> : "Login"}
           </button>
-
-          {/* HINGLISH: Social login options */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
-            <span className="text-xs" style={{ color: '#6B7280' }}>or continue with</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
-          </div>
-
-          <div className="flex gap-3 justify-center">
-            {[
-              { icon: <FcGoogle size={20} />, label: 'Google' },
-              { icon: <SiApple size={20} className="text-white" />, label: 'Apple' },
-              { icon: <FaFacebook size={20} className="text-blue-500" />, label: 'Facebook' },
-            ].map((social) => (
-              <button key={social.label}
-                className="flex-1 h-[44px] rounded-xl flex items-center justify-center gap-2 hover-scale transition-all"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-              >
-                {social.icon}
-                <span className="text-xs text-gray-300 hidden sm:block">{social.label}</span>
-              </button>
-            ))}
-          </div>
 
           {/* HINGLISH: Sign up redirect */}
           <p className="text-center mt-6 text-sm" style={{ color: '#6B7280' }}>

@@ -3,8 +3,7 @@ import dp from "../assets/dp.webp"
 import { FiPlusCircle } from "react-icons/fi"
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import axios from 'axios'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
 
 // HINGLISH: Story DP component — stories row mein circular avatars with gradient rings
 function StoryDp({ ProfileImage, userName, story }) {
@@ -20,9 +19,9 @@ function StoryDp({ ProfileImage, userName, story }) {
 
   const handleViewers = async () => {
     try {
-      await axios.get(`${serverUrl}/api/story/view/${story._id}`, { withCredentials: true })
+      await axiosInstance.get(`/api/story/view/${story._id}`)
     } catch (error) {
-      console.log(error)
+      console.error("viewStory error:", error.message)
     }
   }
 
@@ -41,17 +40,11 @@ function StoryDp({ ProfileImage, userName, story }) {
   return (
     <div className="flex flex-col items-center gap-2 cursor-pointer hover-scale flex-shrink-0" onClick={handleClick}>
       {/* HINGLISH: Gradient ring — unseen = purple-pink, seen = grey */}
-      <div className={`w-[72px] h-[72px] rounded-full p-[2.5px] flex items-center justify-center`}
-        style={{
-          background: !story
-            ? 'rgba(255,255,255,0.1)'
-            : !viewed
-              ? 'linear-gradient(45deg, #7C3AED, #EC4899, #F59E0B)'
-              : 'linear-gradient(45deg, #374151, #6B7280)',
-        }}>
+      <div className={`w-[72px] h-[72px] rounded-full p-[2.5px] flex items-center justify-center ${!story ? '' : !viewed ? 'connectly-story-ring' : 'connectly-story-ring-seen'}`}
+        style={!story ? { background: '#262626' } : undefined}>
         {/* HINGLISH: Inner avatar circle with white gap */}
         <div className="w-full h-full rounded-full overflow-hidden relative"
-          style={{ background: '#0D1117', padding: '2px' }}>
+          style={{ background: '#000000', padding: '2px' }}>
           <div className="w-full h-full rounded-full overflow-hidden">
             <img src={ProfileImage || dp} alt="" className="w-full h-full object-cover" />
           </div>

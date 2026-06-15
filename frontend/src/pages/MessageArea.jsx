@@ -7,25 +7,41 @@ import { IoMdSend } from 'react-icons/io'
 import dp from "../assets/dp.webp"
 import SenderMessage from '../components/SenderMessage'
 import ReceiverMessage from '../components/ReceiverMessage'
-import axios from 'axios'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
 import { setMessages } from '../redux/messageSlice'
+import { useSocket } from '../context/SocketContext'
 
 // HINGLISH: Chat/Message screen — selected user ke saath conversation
 function MessageArea() {
   const { selectedUser, messages } = useSelector(state => state.message)
   const { userData } = useSelector(state => state.user)
-  const { socket } = useSelector(state => state.socket)
+  // BUG FIX (Issue 4): Read socket from Context, not Redux
+  const socketRef = useSocket()
   const navigate = useNavigate()
   const [input, setInput] = useState("")
   const dispatch = useDispatch()
   const imageInput = useRef()
   const messagesEndRef = useRef()
+  // BUG FIX (Issue 5): Use a ref to always hold the latest messages value.
+  // This prevents the stale closure problem in the socket event handler below.
+  const messagesRef = useRef(messages)
   const [frontendImage, setFrontendImage] = useState(null)
   const [backendImage, setBackendImage] = useState(null)
+  const [sending, setSending] = useState(false)
+
+  // Keep messagesRef in sync with Redux messages state
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
 
   const handleImage = (e) => {
     const file = e.target.files[0]
+    // BUG FIX (Issue 2): Guard against undefined/null file.
+    // If the user opens the file picker and then cancels, e.target.files[0]
+    // is undefined. Calling URL.createObjectURL(undefined) throws:
+    // "Failed to execute 'createObjectURL' on 'URL': Overload resolution failed."
+    if (!file || !(file instanceof File)) return
+
     setBackendImage(file)
     setFrontendImage(URL.createObjectURL(file))
   }
@@ -34,39 +50,55 @@ function MessageArea() {
   const handleSendMessage = async (e) => {
     e.preventDefault()
     if (!input.trim() && !backendImage) return
+    setSending(true)
     try {
       const formData = new FormData()
       formData.append("message", input)
       if (backendImage) formData.append("image", backendImage)
-      const result = await axios.post(`${serverUrl}/api/message/send/${selectedUser._id}`, formData, { withCredentials: true })
+      const result = await axiosInstance.post(
+        `/api/message/send/${selectedUser._id}`,
+        formData
+      )
       dispatch(setMessages([...messages, result.data]))
       setInput("")
       setBackendImage(null)
       setFrontendImage(null)
     } catch (error) {
-      console.log(error)
+      console.error("sendMessage error:", error)
+    } finally {
+      setSending(false)
     }
   }
 
   // HINGLISH: Pichle saare messages fetch karna
   const getAllMessages = async () => {
     try {
-      const result = await axios.get(`${serverUrl}/api/message/getAll/${selectedUser._id}`, { withCredentials: true })
-      dispatch(setMessages(result.data))
+      const result = await axiosInstance.get(
+        `/api/message/getAll/${selectedUser._id}`
+      )
+      dispatch(setMessages(result.data || []))
     } catch (error) {
-      console.log(error)
+      console.error("getAllMessages error:", error)
     }
   }
 
   useEffect(() => { getAllMessages() }, [])
 
-  // HINGLISH: Real-time naye messages receive karna via socket
+  // BUG FIX (Issue 5): Fixed stale closure in the newMessage socket handler.
+  // Previously the handler captured `messages` at effect-creation time.
+  // Now messagesRef.current always points to the latest messages array,
+  // so incoming socket messages are appended to the correct current state.
   useEffect(() => {
-    socket?.on("newMessage", (mess) => {
-      dispatch(setMessages([...messages, mess]))
-    })
-    return () => socket?.off("newMessage")
-  }, [messages, socket])
+    const socket = socketRef?.current
+    if (!socket) return
+
+    const handleNewMessage = (mess) => {
+      dispatch(setMessages([...messagesRef.current, mess]))
+    }
+
+    socket.on("newMessage", handleNewMessage)
+    return () => socket.off("newMessage", handleNewMessage)
+  }, [socketRef?.current, dispatch])
 
   // HINGLISH: Naya message aane par bottom pe auto-scroll
   useEffect(() => {
@@ -160,7 +192,12 @@ function MessageArea() {
             <button
               className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs"
               style={{ background: '#EC4899' }}
-              onClick={() => { setFrontendImage(null); setBackendImage(null) }}>
+              onClick={() => {
+                setFrontendImage(null)
+                setBackendImage(null)
+                // Reset file input so same file can be re-selected
+                if (imageInput.current) imageInput.current.value = ""
+              }}>
               ✕
             </button>
           </div>
@@ -171,7 +208,13 @@ function MessageArea() {
       <div className="flex-shrink-0 px-4 py-3"
         style={{ background: 'rgba(13,17,23,0.95)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <form className="flex items-center gap-3" onSubmit={handleSendMessage}>
-          <input type="file" accept="image/*" hidden ref={imageInput} onChange={handleImage} />
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            ref={imageInput}
+            onChange={handleImage}
+          />
 
           <div className="flex-1 flex items-center gap-3 px-4 h-[48px] rounded-full"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -181,6 +224,10 @@ function MessageArea() {
               className="flex-1 text-sm text-white bg-transparent outline-none placeholder:text-gray-600"
               onChange={(e) => setInput(e.target.value)}
               value={input}
+              // BUG FIX (Issue 3): autoFocus on this input is NOT the issue — the
+              // focus was being lost because App.jsx re-rendered on every keystroke
+              // due to the notification listener being outside useEffect.
+              // That is now fixed in App.jsx.
             />
             <button type="button" className="text-gray-500 hover:text-gray-300 transition-colors"
               onClick={() => imageInput.current.click()}>
@@ -198,8 +245,11 @@ function MessageArea() {
 
           {/* HINGLISH: Send button — gradient circle */}
           {(input || frontendImage) && (
-            <button type="submit"
-              className="w-12 h-12 rounded-full flex items-center justify-center btn-gradient flex-shrink-0 hover-scale">
+            <button
+              type="submit"
+              disabled={sending}
+              className="w-12 h-12 rounded-full flex items-center justify-center btn-gradient flex-shrink-0 hover-scale"
+              style={{ opacity: sending ? 0.6 : 1 }}>
               <IoMdSend className="text-white" size={20} />
             </button>
           )}

@@ -1,16 +1,16 @@
 import React, { useState } from 'react'
 import { IoIosEye, IoIosEyeOff } from "react-icons/io"
-import { FcGoogle } from "react-icons/fc"
-import { SiApple } from "react-icons/si"
-import { FaFacebook } from "react-icons/fa"
-import axios from "axios"
-import { serverUrl } from '../App'
 import { ClipLoader } from "react-spinners"
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { setUserData } from '../redux/userSlice'
+import axiosInstance from '../lib/axiosInstance'
 
-// HINGLISH: InputField bahar define kiya — warna har state change pe remount hota tha aur focus utta tha
+// FIX: Removed Google, Apple, Facebook social login buttons and imports.
+// These were decorative-only — clicking them did nothing. Removed to avoid
+// confusing users. Only email + password signup remains.
+
+// FIX: InputField defined OUTSIDE component — prevents remount on every keystroke
 const InputField = ({ icon, placeholder, type = "text", value, onChange, onKeyDown }) => (
   <div className="relative">
     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">{icon}</div>
@@ -41,10 +41,19 @@ function SignUp() {
   const dispatch = useDispatch()
 
   const handleSignUp = async () => {
+    if (!name || !userName || !email || !password) {
+      setErr("All fields are required")
+      return
+    }
+    if (password.length < 6) {
+      setErr("Password must be at least 6 characters")
+      return
+    }
     setLoading(true)
     setErr("")
     try {
-      const result = await axios.post(`${serverUrl}/api/auth/signup`, { name, userName, email, password }, { withCredentials: true })
+      // FIX: Use axiosInstance so withCredentials and baseURL are handled automatically
+      const result = await axiosInstance.post("/api/auth/signup", { name, userName, email, password })
       dispatch(setUserData(result.data))
       setLoading(false)
     } catch (error) {
@@ -56,8 +65,6 @@ function SignUp() {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') handleSignUp()
   }
-
-  // HINGLISH: InputField ab bahar define hai — yahan sirf use kar rahe hain
 
   return (
     // HINGLISH: Full screen dark background with animated orbs
@@ -85,7 +92,7 @@ function SignUp() {
             <p className="text-sm" style={{ color: '#9CA3AF' }}>Connect. Express. Be you.</p>
             <div className="mt-3">
               <h2 className="text-xl font-semibold text-white">Create account ✨</h2>
-              <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Join VYNK today</p>
+              <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Join CONNECTLY today</p>
             </div>
           </div>
 
@@ -123,7 +130,7 @@ function SignUp() {
               </div>
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder="Password (min 6 characters)"
                 className="w-full h-[50px] rounded-xl pl-11 pr-12 text-sm"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
                 onChange={(e) => setPassword(e.target.value)}
@@ -154,27 +161,6 @@ function SignUp() {
           >
             {loading ? <ClipLoader size={22} color="white" /> : "Sign Up"}
           </button>
-
-          {/* HINGLISH: Social login */}
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
-            <span className="text-xs" style={{ color: '#6B7280' }}>or continue with</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
-          </div>
-
-          <div className="flex gap-3 justify-center">
-            {[
-              { icon: <FcGoogle size={20} />, label: 'Google' },
-              { icon: <SiApple size={20} className="text-white" />, label: 'Apple' },
-              { icon: <FaFacebook size={20} className="text-blue-500" />, label: 'Facebook' },
-            ].map((social) => (
-              <button key={social.label}
-                className="flex-1 h-[42px] rounded-xl flex items-center justify-center gap-2 hover-scale"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                {social.icon}
-              </button>
-            ))}
-          </div>
 
           <p className="text-center mt-5 text-sm" style={{ color: '#6B7280' }}>
             Already have an account?{" "}

@@ -2,8 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MdOutlineKeyboardBackspace } from "react-icons/md"
 import { ClipLoader } from 'react-spinners'
-import axios from 'axios'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
 
 // HINGLISH: ForgotPassword page — OTP verification ke sath premium design
 function ForgotPassword() {
@@ -36,7 +35,8 @@ function ForgotPassword() {
   const handleSendOtp = async () => {
     setLoading(true); setErr("")
     try {
-      await axios.post(`${serverUrl}/api/auth/forgot-password`, { email }, { withCredentials: true })
+      // FIXED: route now matches backend /api/auth/forgot-password
+      await axiosInstance.post("/api/auth/forgot-password", { email })
       setStep(2)
       setLoading(false)
     } catch (error) {
@@ -49,7 +49,9 @@ function ForgotPassword() {
     setLoading(true); setErr("")
     try {
       const otpString = otp.join("")
-      await axios.post(`${serverUrl}/api/auth/reset-password`, { email, otp: otpString, newPassword }, { withCredentials: true })
+      // FIXED: route + field names match backend controller
+      await axiosInstance.post("/api/auth/verifyOtp", { email, otp: otpString })
+      await axiosInstance.post("/api/auth/reset-password", { email, newPassword })
       setSuccess("Password reset successfully!")
       setTimeout(() => navigate("/signin"), 2000)
       setLoading(false)

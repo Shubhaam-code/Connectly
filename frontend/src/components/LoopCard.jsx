@@ -4,10 +4,10 @@ import dp from "../assets/dp.webp"
 import FollowButton from './FollowButton'
 import { useDispatch, useSelector } from 'react-redux'
 import { setLoopData } from '../redux/loopSlice'
-import axios from 'axios'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
 import { IoSendSharp } from "react-icons/io5"
 import { useNavigate } from 'react-router-dom'
+import { useSocket } from '../context/SocketContext'
 
 // HINGLISH: LoopCard — TikTok-style full screen reel player with all actions
 function LoopCard({ loop }) {
@@ -20,12 +20,18 @@ function LoopCard({ loop }) {
   const [showComment, setShowComment] = useState(false)
   const [message, setMessage] = useState("")
   const { userData } = useSelector(state => state.user)
-  const { socket } = useSelector(state => state.socket)
+  // BUG FIX (Issue 4): Read socket from Context, not Redux
+  const socketRef = useSocket()
   const { loopData } = useSelector(state => state.loop)
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
-  const isLiked = loop.likes?.includes(userData._id)
+  // FIX: Use ref to avoid stale closure in socket handler
+  const loopDataRef = useRef(loopData)
+  useEffect(() => { loopDataRef.current = loopData }, [loopData])
+
+  // FIX: Use .toString() for proper ObjectId comparison
+  const isLiked = loop.likes?.some(id => id.toString() === userData._id.toString())
 
   // HINGLISH: Video progress track karna
   const handleTimeUpdate = () => {
@@ -56,11 +62,11 @@ function LoopCard({ loop }) {
   // HINGLISH: Like/unlike loop API call
   const handleLike = async () => {
     try {
-      const result = await axios.get(`${serverUrl}/api/loop/like/${loop._id}`, { withCredentials: true })
-      const updatedLoops = loopData.map(p => p._id === loop._id ? result.data : p)
+      const result = await axiosInstance.get(`/api/loop/like/${loop._id}`)
+      const updatedLoops = loopDataRef.current.map(p => p._id === loop._id ? result.data : p)
       dispatch(setLoopData(updatedLoops))
     } catch (error) {
-      console.log(error)
+      console.error("handleLike error:", error.message)
     }
   }
 
@@ -68,12 +74,12 @@ function LoopCard({ loop }) {
   const handleComment = async () => {
     if (!message.trim()) return
     try {
-      const result = await axios.post(`${serverUrl}/api/loop/comment/${loop._id}`, { message }, { withCredentials: true })
-      const updatedLoops = loopData.map(p => p._id === loop._id ? result.data : p)
+      const result = await axiosInstance.post(`/api/loop/comment/${loop._id}`, { message })
+      const updatedLoops = loopDataRef.current.map(p => p._id === loop._id ? result.data : p)
       dispatch(setLoopData(updatedLoops))
       setMessage("")
     } catch (error) {
-      console.log(error)
+      console.error("handleComment error:", error.message)
     }
   }
 
@@ -107,20 +113,25 @@ function LoopCard({ loop }) {
   }, [])
 
   // HINGLISH: Socket real-time updates — doosre users ke like/comment
+  // FIX: Removed loopData from dependency array — use ref instead
   useEffect(() => {
-    socket?.on("likedLoop", (updatedData) => {
-      const updatedLoops = loopData.map(p => p._id === updatedData.loopId ? { ...p, likes: updatedData.likes } : p)
+    const socket = socketRef?.current
+    if (!socket) return
+    const handleLikedLoop = (updatedData) => {
+      const updatedLoops = loopDataRef.current.map(p => p._id === updatedData.loopId ? { ...p, likes: updatedData.likes } : p)
       dispatch(setLoopData(updatedLoops))
-    })
-    socket?.on("commentedLoop", (updatedData) => {
-      const updatedLoops = loopData.map(p => p._id === updatedData.loopId ? { ...p, comments: updatedData.comments } : p)
-      dispatch(setLoopData(updatedLoops))
-    })
-    return () => {
-      socket?.off("likedLoop")
-      socket?.off("commentedLoop")
     }
-  }, [socket, loopData, dispatch])
+    const handleCommentedLoop = (updatedData) => {
+      const updatedLoops = loopDataRef.current.map(p => p._id === updatedData.loopId ? { ...p, comments: updatedData.comments } : p)
+      dispatch(setLoopData(updatedLoops))
+    }
+    socket.on("likedLoop", handleLikedLoop)
+    socket.on("commentedLoop", handleCommentedLoop)
+    return () => {
+      socket.off("likedLoop", handleLikedLoop)
+      socket.off("commentedLoop", handleCommentedLoop)
+    }
+  }, [socketRef?.current, dispatch])
 
   return (
     <div className="w-full h-screen flex items-center justify-center relative overflow-hidden"

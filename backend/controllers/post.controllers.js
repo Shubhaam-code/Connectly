@@ -6,23 +6,45 @@ import { getSocketId, io } from "../socket.js";
 
 export const uploadPost = async (req, res) => {
     try {
+        // FIX: Log req.body and req.file for debugging upload issues
+        console.log("uploadPost called — body:", req.body, "file:", req.file?.originalname)
+
         const { caption, mediaType } = req.body
-        let media;
-        if (req.file) {
-            media = await uploadOnCloudinary(req.file.path)
-        } else {
-            return res.status(400).json({ message: "media is required" })
+
+        if (!req.file) {
+            return res.status(400).json({ message: "Media file is required" })
         }
+
+        if (!mediaType || !["image", "video"].includes(mediaType)) {
+            return res.status(400).json({ message: "mediaType must be 'image' or 'video'" })
+        }
+
+        const media = await uploadOnCloudinary(req.file.path)
+
+        // FIX: Validate that Cloudinary actually returned a URL.
+        // If cloudinary returns null, return a descriptive 500 instead of crashing.
+        if (!media) {
+            return res.status(500).json({ message: "Failed to upload media to Cloudinary. Check CLOUDINARY credentials in .env" })
+        }
+
         const post = await Post.create({
             caption, media, mediaType, author: req.userId
         })
+
+        // FIX: Push post to user.posts array
         const user = await User.findById(req.userId)
-        user.posts.push(post._id)
-        await user.save()
-        const populatedPost = await Post.findById(post._id).populate("author", "name userName profileImage")
+        if (user) {
+            user.posts.push(post._id)
+            await user.save()
+        }
+
+        const populatedPost = await Post.findById(post._id)
+            .populate("author", "name userName profileImage")
         return res.status(201).json(populatedPost)
+
     } catch (error) {
-        return res.status(500).json({ message: `uploadPost error ${error}` })
+        console.error("uploadPost error:", error)
+        return res.status(500).json({ message: `uploadPost error: ${error.message}` })
     }
 }
 
@@ -31,10 +53,12 @@ export const getAllPosts = async (req, res) => {
     try {
         const posts = await Post.find({})
             .populate("author", "name userName profileImage")
-            .populate("comments.author", "name userName profileImage").sort({ createdAt: -1 })
+            .populate("comments.author", "name userName profileImage")
+            .sort({ createdAt: -1 })
         return res.status(200).json(posts)
     } catch (error) {
-        return res.status(500).json({ message: `getallpost error ${error}` })
+        console.error("getAllPosts error:", error)
+        return res.status(500).json({ message: `getallpost error: ${error.message}` })
     }
 }
 
@@ -52,23 +76,22 @@ export const like = async (req, res) => {
             post.likes = post.likes.filter(id => id.toString() != req.userId.toString())
         } else {
             post.likes.push(req.userId)
-            if (post.author._id != req.userId) {
+            // FIX: use .toString() for proper ObjectId comparison
+            if (post.author._id.toString() != req.userId.toString()) {
                 const notification = await Notification.create({
                     sender: req.userId,
                     receiver: post.author._id,
                     type: "like",
                     post: post._id,
-                    message:"liked your post"
+                    message: "liked your post"
                 })
                 const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
-                const receiverSocketId=getSocketId(post.author._id)
-                if(receiverSocketId){
-                    io.to(receiverSocketId).emit("newNotification",populatedNotification)
+                const receiverSocketId = getSocketId(post.author._id)
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit("newNotification", populatedNotification)
                 }
-            
             }
         }
-
 
         await post.save()
         await post.populate("author", "name userName profileImage")
@@ -78,7 +101,8 @@ export const like = async (req, res) => {
         })
         return res.status(200).json(post)
     } catch (error) {
-        return res.status(500).json({ message: `likepost error ${error}` })
+        console.error("like error:", error)
+        return res.status(500).json({ message: `likepost error: ${error.message}` })
     }
 }
 
@@ -94,31 +118,32 @@ export const comment = async (req, res) => {
             author: req.userId,
             message
         })
-         if (post.author._id != req.userId) {
-                const notification = await Notification.create({
-                    sender: req.userId,
-                    receiver: post.author._id,
-                    type: "comment",
-                    post: post._id,
-                    message:"commented on your post"
-                })
-                const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
-                const receiverSocketId=getSocketId(post.author._id)
-                if(receiverSocketId){
-                    io.to(receiverSocketId).emit("newNotification",populatedNotification)
-                }
-            
+        // FIX: use .toString() for proper ObjectId comparison
+        if (post.author._id.toString() != req.userId.toString()) {
+            const notification = await Notification.create({
+                sender: req.userId,
+                receiver: post.author._id,
+                type: "comment",
+                post: post._id,
+                message: "commented on your post"
+            })
+            const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
+            const receiverSocketId = getSocketId(post.author._id)
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("newNotification", populatedNotification)
             }
+        }
         await post.save()
-        await post.populate("author", "name userName profileImage"),
-            await post.populate("comments.author")
+        await post.populate("author", "name userName profileImage")
+        await post.populate("comments.author")
         io.emit("commentedPost", {
             postId: post._id,
             comments: post.comments
         })
         return res.status(200).json(post)
     } catch (error) {
-        return res.status(500).json({ message: `comment post error ${error}` })
+        console.error("comment error:", error)
+        return res.status(500).json({ message: `comment post error: ${error.message}` })
     }
 }
 
@@ -126,7 +151,9 @@ export const saved = async (req, res) => {
     try {
         const postId = req.params.postId
         const user = await User.findById(req.userId)
-
+        if (!user) {
+            return res.status(400).json({ message: "user not found" })
+        }
 
         const alreadySaved = user.saved.some(id => id.toString() == postId.toString())
 
@@ -136,9 +163,39 @@ export const saved = async (req, res) => {
             user.saved.push(postId)
         }
         await user.save()
-        user.populate("saved")
+        await user.populate("saved")
         return res.status(200).json(user)
     } catch (error) {
-        return res.status(500).json({ message: `saved  error ${error}` })
+        console.error("saved error:", error)
+        return res.status(500).json({ message: `saved error: ${error.message}` })
+    }
+}
+
+// FIX: Added delete post route
+export const deletePost = async (req, res) => {
+    try {
+        const postId = req.params.postId
+        const post = await Post.findById(postId)
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" })
+        }
+
+        // Only author can delete their post
+        if (post.author.toString() !== req.userId.toString()) {
+            return res.status(403).json({ message: "Not authorized to delete this post" })
+        }
+
+        await Post.findByIdAndDelete(postId)
+
+        // Remove from user's posts array
+        await User.findByIdAndUpdate(req.userId, {
+            $pull: { posts: postId }
+        })
+
+        return res.status(200).json({ message: "Post deleted successfully" })
+    } catch (error) {
+        console.error("deletePost error:", error)
+        return res.status(500).json({ message: `deletePost error: ${error.message}` })
     }
 }

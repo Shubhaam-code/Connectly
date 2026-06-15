@@ -3,15 +3,15 @@ import { MdOutlineKeyboardBackspace } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
 import { FiPlusSquare } from 'react-icons/fi'
 import VideoPlayer from '../components/VideoPlayer'
-import axios from 'axios'
-import { serverUrl } from '../App'
 import { useDispatch, useSelector } from 'react-redux'
 import { setPostData } from '../redux/postSlice'
 import { setCurrentUserStory } from '../redux/storySlice'
 import { setLoopData } from '../redux/loopSlice'
 import { ClipLoader } from 'react-spinners'
+import axiosInstance from '../lib/axiosInstance'
 
 // HINGLISH: Upload page — media upload karne ka premium camera-style screen
+// FIX: Switched all upload functions from raw axios to axiosInstance for auto auth-refresh
 function Upload() {
   const navigate = useNavigate()
   const [uploadType, setUploadType] = useState("post")
@@ -19,6 +19,7 @@ function Upload() {
   const [backendMedia, setBackendMedia] = useState(null)
   const [mediaType, setMediaType] = useState("")
   const [caption, setCaption] = useState("")
+  const [error, setError] = useState("")
   const mediaInput = useRef()
   const dispatch = useDispatch()
   const { postData } = useSelector(state => state.post)
@@ -31,6 +32,7 @@ function Upload() {
     setMediaType(file.type.includes("image") ? "image" : "video")
     setBackendMedia(file)
     setFrontendMedia(URL.createObjectURL(file))
+    setError("")
   }
 
   // HINGLISH: Post upload API
@@ -40,12 +42,14 @@ function Upload() {
       formData.append("caption", caption)
       formData.append("mediaType", mediaType)
       formData.append("media", backendMedia)
-      const result = await axios.post(`${serverUrl}/api/post/upload`, formData, { withCredentials: true })
-      dispatch(setPostData([...postData, result.data]))
+      // FIX: axiosInstance handles withCredentials + baseURL + auto auth refresh
+      const result = await axiosInstance.post("/api/post/upload", formData)
+      dispatch(setPostData([result.data, ...postData]))
       setLoading(false)
       navigate("/")
     } catch (error) {
-      console.log(error)
+      console.error("uploadPost error:", error)
+      setError(error.response?.data?.message || "Upload failed. Check your connection and try again.")
       setLoading(false)
     }
   }
@@ -56,12 +60,13 @@ function Upload() {
       const formData = new FormData()
       formData.append("mediaType", mediaType)
       formData.append("media", backendMedia)
-      const result = await axios.post(`${serverUrl}/api/story/upload`, formData, { withCredentials: true })
+      const result = await axiosInstance.post("/api/story/upload", formData)
       dispatch(setCurrentUserStory(result.data))
       setLoading(false)
       navigate("/")
     } catch (error) {
-      console.log(error)
+      console.error("uploadStory error:", error)
+      setError(error.response?.data?.message || "Story upload failed.")
       setLoading(false)
     }
   }
@@ -72,18 +77,20 @@ function Upload() {
       const formData = new FormData()
       formData.append("caption", caption)
       formData.append("media", backendMedia)
-      const result = await axios.post(`${serverUrl}/api/loop/upload`, formData, { withCredentials: true })
-      dispatch(setLoopData([...loopData, result.data]))
+      const result = await axiosInstance.post("/api/loop/upload", formData)
+      dispatch(setLoopData([result.data, ...loopData]))
       setLoading(false)
       navigate("/")
     } catch (error) {
-      console.log(error)
+      console.error("uploadLoop error:", error)
+      setError(error.response?.data?.message || "Loop upload failed.")
       setLoading(false)
     }
   }
 
   const handleUpload = () => {
     if (!backendMedia) return
+    setError("")
     setLoading(true)
     if (uploadType === "post") uploadPost()
     else if (uploadType === "story") uploadStory()
@@ -129,12 +136,20 @@ function Upload() {
                 background: uploadType === key ? 'linear-gradient(135deg, #7C3AED, #EC4899)' : 'transparent',
                 color: uploadType === key ? 'white' : '#9CA3AF',
               }}
-              onClick={() => { setUploadType(key); setFrontendMedia(null); setBackendMedia(null); setCaption("") }}>
+              onClick={() => { setUploadType(key); setFrontendMedia(null); setBackendMedia(null); setCaption(""); setError("") }}>
               <span>{icon}</span>
               {label}
             </button>
           ))}
         </div>
+
+        {/* HINGLISH: Error display */}
+        {error && (
+          <div className="w-full max-w-[400px] mb-4 p-3 rounded-xl text-sm text-red-400 text-center"
+            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            {error}
+          </div>
+        )}
 
         {/* HINGLISH: Media picker — koi media nahi hai to show karo */}
         {!frontendMedia && (
@@ -196,7 +211,7 @@ function Upload() {
             {/* HINGLISH: Change media button */}
             <button
               className="text-sm font-medium gradient-text"
-              onClick={() => { setFrontendMedia(null); setBackendMedia(null) }}>
+              onClick={() => { setFrontendMedia(null); setBackendMedia(null); setError("") }}>
               Change media
             </button>
 

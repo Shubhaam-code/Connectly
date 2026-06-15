@@ -1,13 +1,14 @@
-import axios from 'axios'
+import axiosInstance from '../lib/axiosInstance'
 import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { serverUrl } from '../App'
 import { toggleFollow } from '../redux/userSlice'
 
 // HINGLISH: Follow button — gradient follow / outlined following state
 function FollowButton({ targetUserId, tailwind, onFollowChange }) {
   const { following, userData } = useSelector(state => state.user)
-  const isFollowing = following.includes(targetUserId)
+  // FIX: Use .toString() for proper ObjectId vs string comparison
+  // following array from Redux may contain ObjectId objects or plain strings
+  const isFollowing = following.some(id => id.toString() === targetUserId?.toString())
   const dispatch = useDispatch()
 
   // HINGLISH: Apne aap ko follow nahi kar sakte
@@ -15,11 +16,11 @@ function FollowButton({ targetUserId, tailwind, onFollowChange }) {
 
   const handleFollow = async () => {
     try {
-      await axios.get(`${serverUrl}/api/user/follow/${targetUserId}`, { withCredentials: true })
+      await axiosInstance.get(`/api/user/follow/${targetUserId}`)
       if (onFollowChange) onFollowChange()
       dispatch(toggleFollow(targetUserId))
     } catch (error) {
-      console.log(error)
+      console.error("follow error:", error.message)
     }
   }
 

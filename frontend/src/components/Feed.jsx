@@ -1,93 +1,157 @@
-import React from 'react'
-import logo from '../assets/logo.png'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import StoryDp from './StoryDp'
 import Nav from './Nav'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import Post from './Post'
-import { FiBell } from 'react-icons/fi'
-import { BiMessageAltDetail } from 'react-icons/bi'
 
-// HINGLISH: Feed component — home page ka main content area (stories + posts)
+function PostSkeleton() {
+  return (
+    <div className="w-full rounded-none overflow-hidden animate-pulse" style={{ background: '#121212', border: '1px solid #262626' }}>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="w-10 h-10 rounded-full shimmer" />
+        <div className="flex-1">
+          <div className="h-3 w-24 rounded shimmer mb-2" />
+          <div className="h-2 w-16 rounded shimmer" />
+        </div>
+      </div>
+      <div className="w-full aspect-square shimmer" />
+      <div className="px-4 py-3 flex gap-4">
+        <div className="h-6 w-6 rounded shimmer" />
+        <div className="h-6 w-6 rounded shimmer" />
+        <div className="h-6 w-6 rounded shimmer" />
+      </div>
+    </div>
+  )
+}
+
 function Feed() {
   const { postData } = useSelector(state => state.post)
   const { userData, notificationData } = useSelector(state => state.user)
   const { storyList, currentUserStory } = useSelector(state => state.story)
   const navigate = useNavigate()
 
+  const [visibleCount, setVisibleCount] = useState(5)
+  const [loading, setLoading] = useState(!postData)
+  const observerRef = useRef(null)
+  const loadMoreRef = useRef(null)
+
   const unreadCount = notificationData?.filter(n => !n.isRead).length || 0
+  const visiblePosts = postData?.slice(0, visibleCount) || []
+  const hasMore = postData && visibleCount < postData.length
+
+  useEffect(() => {
+    if (postData) setLoading(false)
+  }, [postData])
+
+  const loadMore = useCallback(() => {
+    if (hasMore) {
+      setVisibleCount(prev => Math.min(prev + 5, postData.length))
+    }
+  }, [hasMore, postData?.length])
+
+  useEffect(() => {
+    if (!loadMoreRef.current) return
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore()
+      },
+      { threshold: 0.1 }
+    )
+    observerRef.current.observe(loadMoreRef.current)
+    return () => observerRef.current?.disconnect()
+  }, [loadMore])
 
   return (
-    // HINGLISH: Feed container — dark bg, full height, scrollable
-    <div className="w-full lg:w-[calc(100%-260px)] lg:ml-[260px] min-h-screen"
-      style={{ background: '#0D1117' }}>
-
-      {/* HINGLISH: Mobile header — logo + notification + message icons */}
-      <div className="lg:hidden w-full flex items-center justify-between px-5 py-4 sticky top-0 z-40"
-        style={{ background: 'rgba(13,17,23,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        {/* HINGLISH: CONNECTLY logo text */}
-        <h1 className="text-xl font-black gradient-text">CONNECTLY</h1>
-        <div className="flex items-center gap-4">
-          {/* HINGLISH: Notification bell with unread badge */}
-          <div className="relative cursor-pointer" onClick={() => navigate("/notifications")}>
-            <FiBell className="text-white w-[22px] h-[22px]" />
+    <main
+      className="min-h-screen lg:ml-[240px] xl:mr-[320px]"
+      style={{ background: '#000000' }}
+    >
+      {/* Mobile header */}
+      <div
+        className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3"
+        style={{ background: '#000000', borderBottom: '1px solid #262626' }}
+      >
+        <h1 className="text-xl font-black connectly-gradient-text">CONNECTLY</h1>
+        <div className="flex items-center gap-5">
+          <button className="relative" onClick={() => navigate('/notifications')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
             {unreadCount > 0 && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center connectly-badge">
                 {unreadCount > 9 ? '9+' : unreadCount}
-              </div>
+              </span>
             )}
+          </button>
+          <button onClick={() => navigate('/messages')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Center feed — max 620px */}
+      <div className="w-full max-w-[620px] mx-auto">
+        {/* Stories */}
+        <div className="px-4 py-4 border-b" style={{ borderColor: '#262626' }}>
+          <div className="flex gap-4 overflow-x-auto pb-1 scroll-smooth">
+            <StoryDp userName="Your Story" ProfileImage={userData?.profileImage} story={currentUserStory} />
+            {storyList?.map((story) => (
+              <StoryDp
+                key={story._id}
+                userName={story.author.userName}
+                ProfileImage={story.author.profileImage}
+                story={story}
+              />
+            ))}
           </div>
-          <BiMessageAltDetail className="text-white w-[22px] h-[22px] cursor-pointer" onClick={() => navigate("/messages")} />
         </div>
-      </div>
 
-      {/* HINGLISH: Desktop header — CONNECTLY ka naam dikhao */}
-      <div className="hidden lg:flex items-center justify-between px-6 py-5 sticky top-0 z-40"
-        style={{ background: 'rgba(13,17,23,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div>
-          <h1 className="text-lg font-bold text-white">Home Feed</h1>
-          <p className="text-xs" style={{ color: '#6B7280' }}>What's happening in your world</p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer"
-          style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
-          <span className="text-xs font-medium" style={{ color: '#7C3AED' }}>✨ AI Recommended</span>
-        </div>
-      </div>
-
-      {/* HINGLISH: Stories row — horizontal scroll */}
-      <div className="w-full px-4 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-        <div className="flex gap-4 overflow-x-auto pb-1">
-          <StoryDp userName={"Your Story"} ProfileImage={userData?.profileImage} story={currentUserStory} />
-          {storyList?.map((story, index) => (
-            <StoryDp key={index} userName={story.author.userName} ProfileImage={story.author.profileImage} story={story} />
-          ))}
-        </div>
-      </div>
-
-      {/* HINGLISH: Posts feed — all posts from following users */}
-      <div className="flex flex-col gap-4 px-4 py-4 pb-24 lg:pb-6 max-w-[680px] mx-auto">
-        <Nav />
-        {postData && postData.map((post, index) => (
-          <Post post={post} key={index} />
-        ))}
-
-        {/* HINGLISH: Empty state — agar koi post nahi hai */}
-        {postData?.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(124,58,237,0.1)' }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.5">
-                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
+        {/* Posts */}
+        <div className="flex flex-col pb-24 lg:pb-8">
+          {loading ? (
+            <>
+              <PostSkeleton />
+              <PostSkeleton />
+            </>
+          ) : visiblePosts.length > 0 ? (
+            <>
+              {visiblePosts.map((post) => (
+                <Post post={post} key={post._id} />
+              ))}
+              {hasMore && (
+                <div ref={loadMoreRef} className="py-4">
+                  <PostSkeleton />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 gap-4 px-8">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center connectly-gradient-bg opacity-20">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+              </div>
+              <p className="text-white font-semibold">Welcome to CONNECTLY</p>
+              <p className="text-sm text-center" style={{ color: '#A8A8A8' }}>
+                Follow people to see their posts in your feed
+              </p>
+              <button
+                onClick={() => navigate('/search')}
+                className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white connectly-gradient-bg hover:opacity-90 transition-opacity"
+              >
+                Find People
+              </button>
             </div>
-            <p className="text-white font-semibold">No posts yet</p>
-            <p className="text-sm text-center" style={{ color: '#6B7280' }}>Follow people to see their posts here</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+
+      <Nav />
+    </main>
   )
 }
 

@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MdOutlineKeyboardBackspace } from 'react-icons/md'
 import { useDispatch, useSelector } from 'react-redux'
 import NotificationCard from '../components/NotificationCard'
-import axios from 'axios'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
 import { setNotificationData } from '../redux/userSlice'
 import Nav from '../components/Nav'
 
@@ -18,19 +17,19 @@ function Notifications({ compact }) {
   // HINGLISH: Notifications ko read mark karna
   const markAsRead = async () => {
     try {
-      await axios.post(`${serverUrl}/api/user/markAsRead`, { notificationId: ids }, { withCredentials: true })
+      await axiosInstance.post("/api/user/markAsRead", { notificationId: ids })
       await fetchNotifications()
     } catch (error) {
-      console.log(error)
+      console.error("markAsRead error:", error.message)
     }
   }
 
   const fetchNotifications = async () => {
     try {
-      const result = await axios.get(`${serverUrl}/api/user/getAllNotifications`, { withCredentials: true })
+      const result = await axiosInstance.get("/api/user/getAllNotifications")
       dispatch(setNotificationData(result.data))
     } catch (error) {
-      console.log(error)
+      console.error("fetchNotifications error:", error.message)
     }
   }
 

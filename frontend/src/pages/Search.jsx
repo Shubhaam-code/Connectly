@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { FiSearch } from 'react-icons/fi'
 import { MdOutlineKeyboardBackspace } from 'react-icons/md'
-import axios from 'axios'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
 import dp from "../assets/dp.webp"
 import FollowButton from '../components/FollowButton'
 import Nav from '../components/Nav'
@@ -23,7 +22,7 @@ function Search() {
   // HINGLISH: Search API call — user type karne par results fetch karna
   const handleSearch = async () => {
     try {
-      const result = await axios.get(`${serverUrl}/api/user/search?keyWord=${input}`, { withCredentials: true })
+      const result = await axiosInstance.get(`/api/user/search?keyWord=${input}`)
       setSearchData(result.data)
     } catch (error) {
       console.log(error)

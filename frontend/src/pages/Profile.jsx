@@ -1,6 +1,5 @@
-import axios from 'axios'
+import axiosInstance from '../lib/axiosInstance'
 import React, { useEffect, useState } from 'react'
-import { serverUrl } from '../App'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setProfileData, setUserData } from '../redux/userSlice'
@@ -13,41 +12,57 @@ import Post from '../components/Post'
 import { setSelectedUser } from '../redux/messageSlice'
 
 // HINGLISH: Profile page — user ka premium profile screen with grid + stats
+// FIX: Switched from raw axios to axiosInstance for auto auth-refresh
 function Profile() {
   const { userName } = useParams()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const [postType, setPostType] = useState("posts")
+  const [profileLoading, setProfileLoading] = useState(true)
   const { profileData, userData } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
-  const isOwnProfile = profileData?._id === userData._id
+  const isOwnProfile = profileData?._id === userData?._id
 
   const handleProfile = async () => {
+    setProfileLoading(true)
     try {
-      const result = await axios.get(`${serverUrl}/api/user/getProfile/${userName}`, { withCredentials: true })
+      const result = await axiosInstance.get(`/api/user/getProfile/${userName}`)
       dispatch(setProfileData(result.data))
     } catch (error) {
-      console.log(error)
+      console.error("getProfile error:", error.message)
+    } finally {
+      setProfileLoading(false)
     }
   }
 
   const handleLogOut = async () => {
     try {
-      await axios.get(`${serverUrl}/api/auth/signout`, { withCredentials: true })
+      await axiosInstance.get("/api/auth/signout")
       dispatch(setUserData(null))
     } catch (error) {
-      console.log(error)
+      console.error("logout error:", error.message)
+      // Still clear local state even if server call fails
+      dispatch(setUserData(null))
     }
   }
 
   useEffect(() => { handleProfile() }, [userName, dispatch])
 
   // HINGLISH: User ki posts filter karna
-  const userPosts = postData.filter(post => post.author?._id === profileData?._id)
-  const savedPosts = postData.filter(post => userData.saved.includes(post._id))
+  const userPosts = postData?.filter(post => post.author?._id === profileData?._id) || []
+  // FIX: Safe check userData.saved — may be null/undefined before loaded
+  const savedPosts = postData?.filter(post => userData?.saved?.includes(post._id)) || []
   const displayPosts = isOwnProfile
     ? (postType === "posts" ? userPosts : savedPosts)
     : userPosts
+
+  if (profileLoading && !profileData) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center" style={{ background: '#0D1117' }}>
+        <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="w-full min-h-screen pb-24 lg:pb-0" style={{ background: '#0D1117' }}>

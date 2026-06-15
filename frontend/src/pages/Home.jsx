@@ -1,15 +1,14 @@
 import React from 'react'
 import LeftHome from '../components/LeftHome'
 import Feed from '../components/Feed'
+import RightHome from '../components/RightHome'
 
-// HINGLISH: Home page — sidebar + feed ka layout
 function Home() {
   return (
-    <div className="w-full flex" style={{ background: '#0D1117', minHeight: '100vh' }}>
-      {/* HINGLISH: Desktop sidebar — sirf lg+ screens pe dikhega */}
+    <div className="min-h-screen" style={{ background: '#000000' }}>
       <LeftHome />
-      {/* HINGLISH: Main feed content */}
       <Feed />
+      <RightHome />
     </div>
   )
 }

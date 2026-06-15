@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MdOutlineKeyboardBackspace, MdOutlineLogout } from 'react-icons/md'
 import { useDispatch, useSelector } from 'react-redux'
 import { setUserData } from '../redux/userSlice'
-import axios from 'axios'
-import { serverUrl } from '../App'
+import axiosInstance from '../lib/axiosInstance'
 import dp from '../assets/dp.webp'
 
 // HINGLISH: Settings page — CONNECTLY ka premium settings screen
@@ -15,10 +14,11 @@ function Settings() {
 
   const handleLogOut = async () => {
     try {
-      await axios.get(`${serverUrl}/api/auth/signout`, { withCredentials: true })
+      await axiosInstance.get("/api/auth/signout")
       dispatch(setUserData(null))
     } catch (error) {
-      console.log(error)
+      console.error("logout error:", error.message)
+      dispatch(setUserData(null))
     }
   }
 

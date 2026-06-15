@@ -64,6 +64,10 @@ export const editProfile = async (req, res) => {
         if (gender !== undefined) user.gender = gender
 
         await user.save()
+
+        // Real-time event: broadcast profile updates so UI can refresh other views
+        io.emit("profileUpdated", user)
+
         return res.status(200).json(user)
 
     } catch (error) {
@@ -117,6 +121,14 @@ export const follow = async (req, res) => {
             currentUser.following = currentUser.following.filter(id => id.toString() !== targetUserId.toString())
             targetUser.followers = targetUser.followers.filter(id => id.toString() !== currentUserId.toString())
             await Promise.all([currentUser.save(), targetUser.save()])
+
+            io.emit("followUpdated", {
+                userId: currentUserId,
+                targetUserId,
+                following: currentUser.following,
+                isFollowing: false
+            })
+
             return res.status(200).json({
                 following: false,
                 message: "unfollow successfully"
@@ -139,6 +151,14 @@ export const follow = async (req, res) => {
             }
 
             await Promise.all([currentUser.save(), targetUser.save()])
+
+            io.emit("followUpdated", {
+                userId: currentUserId,
+                targetUserId,
+                following: currentUser.following,
+                isFollowing: true
+            })
+
             return res.status(200).json({
                 following: true,
                 message: "follow successfully"

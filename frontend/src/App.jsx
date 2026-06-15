@@ -22,7 +22,9 @@ import getPrevChatUsers from './hooks/getPrevChatUsers'
 import Search from './pages/Search'
 import getAllNotifications from './hooks/getAllNotifications'
 import Notifications from './pages/Notifications'
-import { setNotificationData, setUserData } from './redux/userSlice'
+import { setPostData } from './redux/postSlice'
+import { setStoryList, setCurrentUserStory } from './redux/storySlice'
+import { setNotificationData, setUserData, setProfileData, setFollowing } from './redux/userSlice'
 import { useSocket } from './context/SocketContext'
 import AIFriend from './pages/AIFriend'
 import Settings from './pages/Settings'
@@ -42,20 +44,31 @@ function App() {
   getPrevChatUsers()
   getAllNotifications()
 
-  const { userData, notificationData } = useSelector(state => state.user)
+  const { userData, notificationData, profileData } = useSelector(state => state.user)
+  const { postData } = useSelector(state => state.post)
+  const { storyList } = useSelector(state => state.story)
   const socketRef = useSocket()
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
-  // FIX: Use a ref to always hold the latest notificationData.
-  // Without this, the socket event handler closes over the stale initial [] value,
-  // causing notifications to overwrite each other instead of appending.
-  // Using a ref avoids making notificationData a dependency (which would cause
-  // socket.off/socket.on on every new notification → memory leak + missing events).
+  // FIX: Use refs to keep latest Redux slices in socket event handlers.
   const notificationDataRef = useRef(notificationData)
+  const postDataRef = useRef(postData)
+  const storyListRef = useRef(storyList)
+  const profileDataRef = useRef(profileData)
+
   useEffect(() => {
     notificationDataRef.current = notificationData
   }, [notificationData])
+  useEffect(() => {
+    postDataRef.current = postData
+  }, [postData])
+  useEffect(() => {
+    storyListRef.current = storyList
+  }, [storyList])
+  useEffect(() => {
+    profileDataRef.current = profileData
+  }, [profileData])
 
   // ── Auth:logout event ────────────────────────────────────────────────────────
   // axiosInstance dispatches this event when refresh token also fails.
@@ -82,9 +95,59 @@ function App() {
       dispatch(setNotificationData([...notificationDataRef.current, noti]))
     }
 
+    const handleNewPost = (newPost) => {
+      if (!postDataRef.current.some(post => post._id === newPost._id)) {
+        dispatch(setPostData([newPost, ...postDataRef.current]))
+      }
+    }
+
+    const handleNewStory = (newStory) => {
+      if (!storyListRef.current.some(story => story._id === newStory._id)) {
+        dispatch(setStoryList([newStory, ...storyListRef.current]))
+      }
+      if (newStory.author?._id === userData?._id) {
+        dispatch(setCurrentUserStory(newStory))
+      }
+    }
+
+    const handleProfileUpdated = (updatedUser) => {
+      if (updatedUser?._id === userData?._id) {
+        dispatch(setUserData(updatedUser))
+      }
+      if (updatedUser?._id === profileDataRef.current?._id) {
+        dispatch(setProfileData(updatedUser))
+      }
+    }
+
+    const handleFollowUpdated = (payload) => {
+      if (payload?.userId === userData?._id) {
+        dispatch(setFollowing(payload.following || []))
+      }
+      if (payload?.targetUserId === profileDataRef.current?._id) {
+        const existingFollowers = Array.isArray(profileDataRef.current?.followers)
+          ? profileDataRef.current.followers
+          : []
+        const updatedFollowers = payload.isFollowing
+          ? [...existingFollowers, userData?._id]
+          : existingFollowers.filter(id => id?.toString() !== userData?._id?.toString())
+        dispatch(setProfileData({ ...profileDataRef.current, followers: updatedFollowers }))
+      }
+    }
+
     socket.on("newNotification", handleNewNotification)
-    return () => socket.off("newNotification", handleNewNotification)
-  }, [socketRef?.current, dispatch])
+    socket.on("newPost", handleNewPost)
+    socket.on("newStory", handleNewStory)
+    socket.on("profileUpdated", handleProfileUpdated)
+    socket.on("followUpdated", handleFollowUpdated)
+
+    return () => {
+      socket.off("newNotification", handleNewNotification)
+      socket.off("newPost", handleNewPost)
+      socket.off("newStory", handleNewStory)
+      socket.off("profileUpdated", handleProfileUpdated)
+      socket.off("followUpdated", handleFollowUpdated)
+    }
+  }, [socketRef?.current, dispatch, userData?._id])
 
   return (
     <Routes>

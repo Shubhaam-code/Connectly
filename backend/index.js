@@ -32,8 +32,20 @@ app.use("/api/loop", loopRouter)
 app.use("/api/story", storyRouter)
 app.use("/api/message", messageRouter)
 
+server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+        console.error(`❌ Port ${port} already in use. Make sure no other server is running on this port.`)
+    } else {
+        console.error("❌ Server startup error:", err.message)
+    }
+    process.exit(1)
+})
+
+server.on("listening", () => {
+    console.log(`✅ Server listening on port ${port}`)
+})
+
 server.listen(port, async () => {
-    connectDb()
+    await connectDb()
     await initRedis()
-    console.log(`✅ Server running on port ${port}`)
 })

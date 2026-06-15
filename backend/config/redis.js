@@ -83,6 +83,8 @@ const createClient = ({ host, port, username, password, useTls, forTest = false 
 }
 
 const testConnection = async (client, label) => {
+    attachEventHandlers(client)
+
     try {
         await client.connect()
         const pong = await client.ping()
@@ -138,7 +140,6 @@ export const initRedis = async () => {
         const client = createClient({ host, port, username, password, useTls, forTest: true })
 
         if (await testConnection(client, label)) {
-            attachEventHandlers(client)
             redisClient = client
             return redisClient
         }

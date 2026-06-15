@@ -57,9 +57,30 @@ function Upload() {
   // HINGLISH: Story upload API
   const uploadStory = async () => {
     try {
+      if (!backendMedia) {
+        setError("Please select a file before uploading your story.")
+        setLoading(false)
+        return
+      }
+
+      if (!mediaType) {
+        setError("Unable to determine media type. Please choose another file.")
+        setLoading(false)
+        return
+      }
+
+      console.debug("uploadStory selectedFile:", {
+        name: backendMedia.name,
+        type: backendMedia.type,
+        size: backendMedia.size
+      })
       const formData = new FormData()
       formData.append("mediaType", mediaType)
       formData.append("media", backendMedia)
+      for (const entry of formData.entries()) {
+        console.debug("uploadStory formData entry:", entry[0], entry[1])
+      }
+
       const result = await axiosInstance.post("/api/story/upload", formData)
       dispatch(setCurrentUserStory(result.data))
       setLoading(false)

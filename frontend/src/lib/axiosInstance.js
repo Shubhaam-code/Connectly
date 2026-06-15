@@ -11,10 +11,19 @@ const SERVER_URL = "http://localhost:8000"
 const axiosInstance = axios.create({
     baseURL: SERVER_URL,
     withCredentials: true,   // CRITICAL: sends httpOnly cookies cross-origin
-    timeout: 15000,
-    headers: {
-        "Content-Type": "application/json"
+    timeout: 15000
+})
+
+axiosInstance.interceptors.request.use((config) => {
+    if (config.data instanceof FormData) {
+        // Let the browser set the correct boundary for multipart/form-data.
+        // Some axios versions keep an existing header object, so undefined is safer.
+        if (config.headers) {
+            config.headers['Content-Type'] = undefined
+            config.headers['content-type'] = undefined
+        }
     }
+    return config
 })
 
 // ─── Response Interceptor — Silent Auth Refresh ───────────────────────────────

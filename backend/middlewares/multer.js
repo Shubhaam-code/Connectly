@@ -29,8 +29,8 @@ const storage = multer.diskStorage({
 // 2. Cloudinary 403 from unexpected file types
 const fileFilter = (req, file, cb) => {
     const allowedTypes = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
-        'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'
+        'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
+        'video/mp4', 'video/quicktime', 'video/mov', 'video/x-msvideo', 'video/webm'
     ]
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true)

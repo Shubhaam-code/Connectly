@@ -8,10 +8,23 @@ import { getAllStories, getStoryByUserName, uploadStory, viewStory } from "../co
 
 const storyRouter=express.Router()
 
-storyRouter.post("/upload",isAuth,upload.single("media"),uploadStory)
-storyRouter.get("/getByUserName/:userName",isAuth,getStoryByUserName)
-storyRouter.get("/getAll",isAuth,getAllStories)
-storyRouter.get("/view/:storyId",isAuth,viewStory)
+const storyUploadMiddleware = (req, res, next) => {
+    upload.single("media")(req, res, (err) => {
+        if (err) {
+            console.error("[story upload multer error]", err)
+            if (err.code === "LIMIT_FILE_SIZE") {
+                return res.status(400).json({ message: "File is too large. Maximum size is 50MB." })
+            }
+            return res.status(400).json({ message: err.message || "Invalid file upload." })
+        }
+        next()
+    })
+}
+
+storyRouter.post("/upload", isAuth, storyUploadMiddleware, uploadStory)
+storyRouter.get("/getByUserName/:userName", isAuth, getStoryByUserName)
+storyRouter.get("/getAll", isAuth, getAllStories)
+storyRouter.get("/view/:storyId", isAuth, viewStory)
 
 
 export default storyRouter

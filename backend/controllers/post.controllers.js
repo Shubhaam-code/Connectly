@@ -40,6 +40,10 @@ export const uploadPost = async (req, res) => {
 
         const populatedPost = await Post.findById(post._id)
             .populate("author", "name userName profileImage")
+
+        // Real-time event: broadcast the new post to connected clients
+        io.emit("newPost", populatedPost)
+
         return res.status(201).json(populatedPost)
 
     } catch (error) {

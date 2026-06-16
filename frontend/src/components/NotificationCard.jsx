@@ -32,14 +32,14 @@ function NotificationCard({ noti, compact }) {
       {/* HINGLISH: Sender avatar with gradient ring */}
       <div className="relative flex-shrink-0">
         <div className={`${!noti.isRead ? 'story-ring-active' : 'story-ring-seen'}`}>
-          <div className="w-11 h-11 rounded-full overflow-hidden" style={{ background: '#0D1117' }}>
+          <div className="w-11 h-11 rounded-full overflow-hidden" style={{ background: '#000000' }}>
             <img src={noti.sender?.profileImage || dp} alt="" className="w-full h-full object-cover" />
           </div>
         </div>
         {/* HINGLISH: Unread dot */}
         {!noti.isRead && (
           <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)', borderColor: '#0D1117' }} />
+            style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)', borderColor: '#000000' }} />
         )}
       </div>
 

@@ -3,25 +3,32 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setProfileData, setUserData } from '../redux/userSlice'
-import { MdOutlineKeyboardBackspace } from 'react-icons/md'
-import { FiSettings } from 'react-icons/fi'
+import { setPostData } from '../redux/postSlice'
+import { FiSettings, FiGrid, FiVideo, FiBookmark, FiHeart, FiMessageCircle, FiLogOut, FiArrowLeft } from 'react-icons/fi'
 import dp from "../assets/dp.webp"
-import Nav from '../components/Nav'
+import Layout from '../components/layout/Layout'
 import FollowButton from '../components/FollowButton'
-import Post from '../components/Post'
+import PostModal from '../components/posts/PostModal'
 import { setSelectedUser } from '../redux/messageSlice'
+import { motion } from 'framer-motion'
 
-// HINGLISH: Profile page — user ka premium profile screen with grid + stats
-// FIX: Switched from raw axios to axiosInstance for auto auth-refresh
+// HINGLISH: Profile page — user ka premium profile screen with grid + stats, Instagram desktop look.
 function Profile() {
   const { userName } = useParams()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const [postType, setPostType] = useState("posts")
   const [profileLoading, setProfileLoading] = useState(true)
+  
   const { profileData, userData } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
+  const { loopData } = useSelector(state => state.loop)
+  
   const isOwnProfile = profileData?._id === userData?._id
+
+  // Modal navigation / viewing states
+  const [selectedPostIndex, setSelectedPostIndex] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleProfile = async () => {
     setProfileLoading(true)
@@ -39,190 +46,346 @@ function Profile() {
     try {
       await axiosInstance.get("/api/auth/signout")
       dispatch(setUserData(null))
+      navigate("/signin")
     } catch (error) {
       console.error("logout error:", error.message)
-      // Still clear local state even if server call fails
       dispatch(setUserData(null))
+      navigate("/signin")
     }
   }
 
-  useEffect(() => { handleProfile() }, [userName, dispatch])
+  useEffect(() => {
+    handleProfile()
+  }, [userName, dispatch])
 
-  // HINGLISH: User ki posts filter karna
-  const userPosts = postData?.filter(post => post.author?._id === profileData?._id) || []
-  // FIX: Safe check userData.saved — may be null/undefined before loaded
-  const savedPosts = postData?.filter(post => userData?.saved?.includes(post._id)) || []
-  const displayPosts = isOwnProfile
-    ? (postType === "posts" ? userPosts : savedPosts)
-    : userPosts
+  // Filter posts, loops and saved posts safely
+  const userPosts = postData?.filter(post => {
+    const authorId = post.author?._id || post.author
+    return authorId?.toString() === profileData?._id?.toString()
+  }) || []
+
+  const userLoops = loopData?.filter(loop => {
+    const authorId = loop.author?._id || loop.author
+    return authorId?.toString() === profileData?._id?.toString()
+  }) || []
+
+  const savedPosts = postData?.filter(post => {
+    return userData?.saved?.some(savedId => savedId?.toString() === post?._id?.toString())
+  }) || []
+
+  // Determine which list to display
+  let displayPosts = []
+  if (postType === "posts") {
+    displayPosts = userPosts
+  } else if (postType === "loops") {
+    displayPosts = userLoops
+  } else if (postType === "saved") {
+    displayPosts = savedPosts
+  }
+
+  // Keyboard controls for modal navigation
+  useEffect(() => {
+    if (selectedPostIndex === null || !isModalOpen) return
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowLeft" && selectedPostIndex > 0) {
+        setSelectedPostIndex(prev => prev - 1)
+      } else if (e.key === "ArrowRight" && selectedPostIndex < displayPosts.length - 1) {
+        setSelectedPostIndex(prev => prev + 1)
+      } else if (e.key === "Escape") {
+        setIsModalOpen(false)
+        setSelectedPostIndex(null)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [selectedPostIndex, displayPosts.length, isModalOpen])
+
+  // Liking/commenting handlers for PostModal
+  const handleLikeToggle = (postId) => {
+    const updatedPosts = postData.map(post => {
+      if (post._id === postId) {
+        const hasLiked = post.likes.includes(userData._id)
+        const newLikes = hasLiked
+          ? post.likes.filter(id => id !== userData._id)
+          : [...post.likes, userData._id]
+        return { ...post, likes: newLikes }
+      }
+      return post
+    })
+    dispatch(setPostData(updatedPosts))
+  }
+
+  const handleCommentAdded = (postId, newComments) => {
+    const updatedPosts = postData.map(post => {
+      if (post._id === postId) {
+        return { ...post, comments: newComments }
+      }
+      return post
+    })
+    dispatch(setPostData(updatedPosts))
+  }
 
   if (profileLoading && !profileData) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center" style={{ background: '#0D1117' }}>
-        <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <Layout>
+        <div className="w-full h-full flex items-center justify-center bg-[#000000]">
+          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </Layout>
     )
   }
 
+  const currentModalPost = selectedPostIndex !== null ? displayPosts[selectedPostIndex] : null
+
   return (
-    <div className="w-full min-h-screen pb-24 lg:pb-0" style={{ background: '#0D1117' }}>
+    <Layout>
+      <div className="max-w-4xl mx-auto px-4 py-8 bg-[#000000] text-white min-h-screen">
+        
+        {/* Mobile Sticky / Top header */}
+        <div className="flex items-center justify-between border-b border-[#262626] pb-4 mb-8 md:hidden">
+          <button className="text-[#A8A8A8] hover:text-white" onClick={() => navigate('/')}>
+            <FiArrowLeft size={22} />
+          </button>
+          <span className="font-bold text-sm tracking-wide">{profileData?.userName}</span>
+          <button className="text-[#A8A8A8] hover:text-white" onClick={() => isOwnProfile ? navigate('/settings') : null}>
+            <FiSettings size={20} />
+          </button>
+        </div>
 
-      {/* HINGLISH: Header bar with back + username + settings */}
-      <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
-        style={{ background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <button className="text-gray-400 hover:text-white transition-colors"
-          onClick={() => navigate('/')}>
-          <MdOutlineKeyboardBackspace size={22} />
-        </button>
-        <h1 className="text-base font-bold text-white">{profileData?.userName}</h1>
-        <button className="text-gray-400 hover:text-white transition-colors"
-          onClick={() => isOwnProfile ? navigate('/settings') : null}>
-          <FiSettings size={20} />
-        </button>
-      </div>
-
-      {/* HINGLISH: Profile hero section — cover gradient + avatar */}
-      <div className="relative">
-        {/* HINGLISH: Cover gradient background */}
-        <div className="w-full h-[140px]"
-          style={{ background: 'linear-gradient(135deg, #1a0d2e 0%, #0d1730 50%, #0D1117 100%)' }} />
-
-        {/* HINGLISH: Avatar — overlapping the cover */}
-        <div className="px-5 pb-4">
-          <div className="flex items-end justify-between -mt-[50px] mb-4">
-            <div className="story-ring-active">
-              <div className="w-[90px] h-[90px] rounded-full overflow-hidden" style={{ background: '#0D1117' }}>
-                <img src={profileData?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+        {/* Profile Info Row */}
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-16 mb-12">
+          {/* Avatar Section */}
+          <div className="relative flex-shrink-0">
+            <div className="w-24 h-24 md:w-36 md:h-36 rounded-full p-[3px] bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600">
+              <div className="w-full h-full rounded-full overflow-hidden border-4 border-black bg-[#121212]">
+                <img
+                  src={profileData?.profileImage || dp}
+                  alt={profileData?.userName}
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
-
-            {/* HINGLISH: Action buttons — Edit Profile / Follow + Message */}
-            <div className="flex gap-2 mt-4">
-              {isOwnProfile ? (
-                <>
-                  <button
-                    className="px-5 py-2 rounded-xl text-sm font-semibold text-white hover-scale transition-all"
-                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
-                    onClick={() => navigate('/editprofile')}>
-                    Edit Profile
-                  </button>
-                  <button
-                    className="px-4 py-2 rounded-xl text-sm font-semibold text-white hover-scale"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-                    onClick={handleLogOut}>
-                    Log Out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <FollowButton
-                    tailwind="px-5 py-2 rounded-xl text-sm font-semibold btn-gradient hover-scale"
-                    targetUserId={profileData?._id}
-                    onFollowChange={handleProfile}
-                  />
-                  <button
-                    className="px-4 py-2 rounded-xl text-sm font-semibold text-white hover-scale"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-                    onClick={() => {
-                      dispatch(setSelectedUser(profileData))
-                      navigate('/messageArea')
-                    }}>
-                    Message
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* HINGLISH: User info — name, profession, bio */}
-          <div className="mb-5">
-            <h2 className="text-lg font-bold text-white">{profileData?.name}</h2>
-            <p className="text-sm font-medium" style={{ color: '#7C3AED' }}>
-              {profileData?.profession || "CONNECTLY Creator"}
-            </p>
-            {profileData?.bio && (
-              <p className="text-sm mt-1.5 leading-relaxed" style={{ color: '#D1D5DB' }}>{profileData?.bio}</p>
+            {profileData?.isOnline && (
+              <span className="absolute bottom-1 right-1 md:bottom-3 md:right-3 w-4.5 h-4.5 bg-green-500 border-4 border-black rounded-full" />
             )}
           </div>
 
-          {/* HINGLISH: Stats row — Posts, Followers, Following */}
-          <div className="flex gap-0 rounded-2xl overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {[
-              { label: 'Posts', value: profileData?.posts?.length || 0 },
-              { label: 'Followers', value: profileData?.followers?.length || 0 },
-              { label: 'Following', value: profileData?.following?.length || 0 },
-            ].map((stat, i) => (
-              <div key={stat.label}
-                className="flex-1 flex flex-col items-center py-3 cursor-pointer hover:bg-white/5 transition-all"
-                style={{ borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                <span className="text-xl font-bold gradient-text">{stat.value}</span>
-                <span className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{stat.label}</span>
+          {/* User Details Section */}
+          <div className="flex-1 text-center md:text-left space-y-4 md:space-y-6">
+            {/* Username & Buttons */}
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex items-center justify-center md:justify-start gap-2">
+                <h1 className="text-xl font-light tracking-wide">{profileData?.userName}</h1>
+                {profileData?.isVerified && (
+                  <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 fill-blue-500 inline-block align-middle ml-1" title="Verified Creator">
+                    <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z"/>
+                  </svg>
+                )}
               </div>
-            ))}
+
+              {/* Action Buttons */}
+              <div className="flex justify-center md:justify-start gap-2">
+                {isOwnProfile ? (
+                  <>
+                    <button
+                      onClick={() => navigate('/editprofile')}
+                      className="px-4 py-1.5 bg-[#121212] border border-[#262626] rounded-lg text-sm font-semibold text-white hover:bg-[#1a1a1a] transition-all"
+                    >
+                      Edit Profile
+                    </button>
+                    <button
+                      onClick={handleLogOut}
+                      className="px-3 py-1.5 bg-[#121212] border border-red-900/30 rounded-lg text-sm font-semibold text-red-500 hover:bg-red-950/20 transition-all flex items-center gap-1"
+                    >
+                      <FiLogOut size={14} /> Log Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <FollowButton
+                      targetUserId={profileData?._id}
+                      onFollowChange={handleProfile}
+                      tailwind="px-6 py-1.5 rounded-lg text-sm font-semibold btn-gradient hover-scale"
+                    />
+                    <button
+                      onClick={() => {
+                        dispatch(setSelectedUser(profileData))
+                        navigate('/messages')
+                      }}
+                      className="px-4 py-1.5 bg-[#121212] border border-[#262626] rounded-lg text-sm font-semibold text-white hover:bg-[#1a1a1a] transition-all"
+                    >
+                      Message
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Row */}
+            <div className="flex justify-center md:justify-start gap-10 text-sm border-t border-b border-[#121212] py-3 md:border-0 md:py-0">
+              <div>
+                <span className="font-bold text-white mr-1">{profileData?.posts?.length || 0}</span>
+                <span className="text-gray-400">posts</span>
+              </div>
+              <div>
+                <span className="font-bold text-white mr-1">{profileData?.followers?.length || 0}</span>
+                <span className="text-gray-400">followers</span>
+              </div>
+              <div>
+                <span className="font-bold text-white mr-1">{profileData?.following?.length || 0}</span>
+                <span className="text-gray-400">following</span>
+              </div>
+            </div>
+
+            {/* Name & Bio */}
+            <div className="space-y-1">
+              <h2 className="font-semibold text-sm text-white">{profileData?.name}</h2>
+              <span className="text-xs font-semibold text-purple-400 block">
+                {profileData?.profession || "CONNECTLY Creator"}
+              </span>
+              {profileData?.bio && (
+                <p className="text-sm text-gray-300 font-normal leading-relaxed whitespace-pre-wrap max-w-lg mx-auto md:mx-0">
+                  {profileData?.bio}
+                </p>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Tab Row (Instagram Style top border) */}
+        <div className="flex justify-center border-t border-[#262626]">
+          <div className="flex gap-12 md:gap-16">
+            <button
+              onClick={() => setPostType("posts")}
+              className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
+                postType === "posts"
+                  ? "border-white text-white"
+                  : "border-transparent text-gray-500 hover:text-white"
+              }`}
+            >
+              <FiGrid size={12} />
+              POSTS
+            </button>
+            <button
+              onClick={() => setPostType("loops")}
+              className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
+                postType === "loops"
+                  ? "border-white text-white"
+                  : "border-transparent text-gray-500 hover:text-white"
+              }`}
+            >
+              <FiVideo size={12} />
+              LOOPS
+            </button>
+            {isOwnProfile && (
+              <button
+                onClick={() => setPostType("saved")}
+                className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
+                  postType === "saved"
+                    ? "border-white text-white"
+                    : "border-transparent text-gray-500 hover:text-white"
+                }`}
+              >
+                <FiBookmark size={12} />
+                SAVED
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 3-Column Posts Media Grid */}
+        {displayPosts.length > 0 ? (
+          <div className="grid grid-cols-3 gap-1 md:gap-2 mt-4">
+            {displayPosts.map((post, index) => {
+              const isVideo = post.mediaType === "video" || postType === "loops"
+              return (
+                <div
+                  key={post._id || index}
+                  onClick={() => {
+                    setSelectedPostIndex(index)
+                    setIsModalOpen(true)
+                  }}
+                  className="aspect-square bg-[#121212] overflow-hidden relative group cursor-pointer border border-[#1a1a1a] rounded-sm"
+                >
+                  {isVideo ? (
+                    <video
+                      src={post.media}
+                      className="w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                      onMouseEnter={(e) => e.target.play().catch(() => {})}
+                      onMouseLeave={(e) => e.target.pause()}
+                    />
+                  ) : (
+                    <img
+                      src={post.media}
+                      alt="post"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  )}
+
+                  {/* Play icon overlay for videos */}
+                  {isVideo && (
+                    <div className="absolute top-2 right-2 text-white/80 group-hover:opacity-0 transition-opacity z-10">
+                      <FiVideo size={14} className="drop-shadow-md" />
+                    </div>
+                  )}
+
+                  {/* Hover Overlay with Likes & Comments Count */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-6 text-white font-bold z-20">
+                    <span className="flex items-center gap-1.5">
+                      <FiHeart className="fill-white stroke-none" size={18} />
+                      {post.likes?.length || 0}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <FiMessageCircle className="fill-white stroke-none" size={18} />
+                      {post.comments?.length || 0}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full border border-[#262626] flex items-center justify-center text-gray-500">
+              {postType === "posts" ? <FiGrid size={24} /> : postType === "loops" ? <FiVideo size={24} /> : <FiBookmark size={24} />}
+            </div>
+            <h3 className="font-semibold text-lg">
+              No {postType === "posts" ? "Posts" : postType === "loops" ? "Loops" : "Saved Posts"} Yet
+            </h3>
+            {isOwnProfile && postType === "posts" && (
+              <button
+                onClick={() => navigate('/upload')}
+                className="px-6 py-2 bg-blue-500 rounded-lg text-sm font-semibold text-white hover:bg-blue-600 transition-all"
+              >
+                Share your first post
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* HINGLISH: Posts/Saved tab bar — sirf apni profile mein */}
-      {isOwnProfile && (
-        <div className="flex border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          {[
-            { key: 'posts', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg> },
-            { key: 'saved', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg> },
-          ].map(tab => (
-            <button key={tab.key}
-              className="flex-1 flex items-center justify-center py-3 transition-all"
-              style={{ color: postType === tab.key ? '#7C3AED' : '#6B7280', borderBottom: postType === tab.key ? '2px solid #7C3AED' : '2px solid transparent' }}
-              onClick={() => setPostType(tab.key)}>
-              {tab.icon}
-            </button>
-          ))}
-        </div>
+      {/* Post Modal with full pagination and sync */}
+      {isModalOpen && currentModalPost && (
+        <PostModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false)
+            setSelectedPostIndex(null)
+          }}
+          post={currentModalPost}
+          onPrevious={() => setSelectedPostIndex(prev => prev - 1)}
+          onNext={() => setSelectedPostIndex(prev => prev + 1)}
+          canNavigatePrev={selectedPostIndex > 0}
+          canNavigateNext={selectedPostIndex < displayPosts.length - 1}
+          onLikeToggle={handleLikeToggle}
+          onCommentAdded={handleCommentAdded}
+        />
       )}
-
-      {/* HINGLISH: Posts photo grid — 3 columns */}
-      {displayPosts.length > 0 ? (
-        <div className="grid grid-cols-3 gap-0.5 mt-0.5">
-          {displayPosts.map((post, index) => (
-            post.mediaType === "image" ? (
-              <div key={index} className="aspect-square overflow-hidden cursor-pointer hover-scale">
-                <img src={post.media} alt="" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div key={index} className="aspect-square overflow-hidden relative cursor-pointer hover-scale">
-                <video src={post.media} muted className="w-full h-full object-cover" />
-                {/* HINGLISH: Video indicator */}
-                <div className="absolute top-2 right-2">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                    <polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" fill="white" />
-                  </svg>
-                </div>
-              </div>
-            )
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-3 py-16 px-8">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
-            </svg>
-          </div>
-          <p className="text-white font-semibold">No posts yet</p>
-          {isOwnProfile && (
-            <button className="px-6 py-2.5 rounded-full btn-gradient text-sm font-semibold text-white"
-              onClick={() => navigate('/upload')}>
-              Create your first post
-            </button>
-          )}
-        </div>
-      )}
-
-      <Nav />
-    </div>
+    </Layout>
   )
 }
 

@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import axiosInstance from '../lib/axiosInstance'
 import { IoSendSharp } from "react-icons/io5"
 import { useSocket } from '../context/SocketContext'
+import ShareModal from './share/ShareModal'
 
 // HINGLISH: Post card component — dark glassmorphism style with gradient actions
 // FIX: Switched from raw axios to axiosInstance for auto auth-refresh
@@ -18,6 +19,7 @@ function Post({ post }) {
   // BUG FIX (Issue 4): Read socket from Context, not Redux
   const socketRef = useSocket()
   const [showComment, setShowComment] = useState(false)
+  const [isShareOpen, setIsShareOpen] = useState(false)
   const [message, setMessage] = useState("")
   const [showHeartAnim, setShowHeartAnim] = useState(false)
   const navigate = useNavigate()
@@ -196,7 +198,7 @@ function Post({ post }) {
           </button>
 
           {/* HINGLISH: Share button */}
-          <button className="hover-scale">
+          <button className="hover-scale" onClick={() => setIsShareOpen(true)}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">
               <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
@@ -259,6 +261,14 @@ function Post({ post }) {
             ))}
           </div>
         </div>
+      )}
+      {isShareOpen && (
+        <ShareModal
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+          item={post}
+          itemType="post"
+        />
       )}
     </div>
   )

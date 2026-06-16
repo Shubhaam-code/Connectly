@@ -16,14 +16,13 @@ import getAllLoops from './hooks/getAllLoops'
 import Story from './pages/Story'
 import getAllStories from './hooks/getAllStories'
 import Messages from './pages/Messages'
-import MessageArea from './pages/MessageArea'
 import getFollowingList from './hooks/getFollowingList'
 import getPrevChatUsers from './hooks/getPrevChatUsers'
 import Search from './pages/Search'
 import getAllNotifications from './hooks/getAllNotifications'
 import Notifications from './pages/Notifications'
 import { setPostData } from './redux/postSlice'
-import { setStoryList, setCurrentUserStory } from './redux/storySlice'
+import { setStoryList, setCurrentUserStory, deleteStoryFromState } from './redux/storySlice'
 import { setNotificationData, setUserData, setProfileData, setFollowing } from './redux/userSlice'
 import { useSocket } from './context/SocketContext'
 import AIFriend from './pages/AIFriend'
@@ -110,6 +109,10 @@ function App() {
       }
     }
 
+    const handleStoryDeleted = (payload) => {
+      dispatch(deleteStoryFromState(payload.storyId))
+    }
+
     const handleProfileUpdated = (updatedUser) => {
       if (updatedUser?._id === userData?._id) {
         dispatch(setUserData(updatedUser))
@@ -137,6 +140,7 @@ function App() {
     socket.on("newNotification", handleNewNotification)
     socket.on("newPost", handleNewPost)
     socket.on("newStory", handleNewStory)
+    socket.on("storyDeleted", handleStoryDeleted)
     socket.on("profileUpdated", handleProfileUpdated)
     socket.on("followUpdated", handleFollowUpdated)
 
@@ -144,6 +148,7 @@ function App() {
       socket.off("newNotification", handleNewNotification)
       socket.off("newPost", handleNewPost)
       socket.off("newStory", handleNewStory)
+      socket.off("storyDeleted", handleStoryDeleted)
       socket.off("profileUpdated", handleProfileUpdated)
       socket.off("followUpdated", handleFollowUpdated)
     }
@@ -164,7 +169,7 @@ function App() {
       <Route path='/search' element={userData ? <Search /> : <Navigate to={"/signin"} />} />
       <Route path='/editprofile' element={userData ? <EditProfile /> : <Navigate to={"/signin"} />} />
       <Route path='/messages' element={userData ? <Messages /> : <Navigate to={"/signin"} />} />
-      <Route path='/messageArea' element={userData ? <MessageArea /> : <Navigate to={"/signin"} />} />
+      <Route path='/messageArea' element={userData ? <Messages /> : <Navigate to={"/signin"} />} />
       <Route path='/notifications' element={userData ? <Notifications /> : <Navigate to={"/signin"} />} />
       <Route path='/loops' element={userData ? <Loops /> : <Navigate to={"/signin"} />} />
       <Route path='/ai-friend' element={userData ? <AIFriend /> : <Navigate to={"/signin"} />} />

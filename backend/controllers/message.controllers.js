@@ -7,24 +7,37 @@ export const sendMessage = async (req, res) => {
     try {
         const senderId = req.userId
         const receiverId = req.params.receiverId
-        const { message } = req.body
+        const { message, replyTo, sharedPost, sharedLoop, sharedStory } = req.body
 
         let image;
+        let video;
+
         if (req.file) {
-            image = await uploadOnCloudinary(req.file.path)
-            // BUG FIX: If cloudinary returns null (upload failed), don't silently
-            // store null — inform the client of the failure.
-            if (!image) {
-                return res.status(500).json({ message: "Failed to upload image to Cloudinary" })
+            const uploadedUrl = await uploadOnCloudinary(req.file.path)
+            if (!uploadedUrl) {
+                return res.status(500).json({ message: "Failed to upload file to Cloudinary" })
+            }
+            if (req.file.mimetype.startsWith("video/")) {
+                video = uploadedUrl
+            } else {
+                image = uploadedUrl
             }
         }
 
-        const newMessage = await Message.create({
+        const messageData = {
             sender: senderId,
             receiver: receiverId,
-            message,
-            image
-        })
+            message
+        }
+
+        if (image) messageData.image = image
+        if (video) messageData.video = video
+        if (replyTo) messageData.replyTo = replyTo
+        if (sharedPost) messageData.sharedPost = sharedPost
+        if (sharedLoop) messageData.sharedLoop = sharedLoop
+        if (sharedStory) messageData.sharedStory = sharedStory
+
+        const newMessage = await Message.create(messageData)
 
         let conversation = await Conversation.findOne({
             participants: { $all: [senderId, receiverId] }
@@ -39,12 +52,20 @@ export const sendMessage = async (req, res) => {
             await conversation.save()
         }
 
+        const populatedMessage = await Message.findById(newMessage._id)
+            .populate("sender", "name userName profileImage")
+            .populate("receiver", "name userName profileImage")
+            .populate("replyTo")
+            .populate("sharedPost")
+            .populate("sharedLoop")
+            .populate("sharedStory")
+
         const receiverSocketId = getSocketId(receiverId)
         if (receiverSocketId) {
-            io.to(receiverSocketId).emit("newMessage", newMessage)
+            io.to(receiverSocketId).emit("newMessage", populatedMessage)
         }
 
-        return res.status(200).json(newMessage)
+        return res.status(200).json(populatedMessage)
     } catch (error) {
         console.error("sendMessage error:", error)
         return res.status(500).json({ message: `send Message error: ${error.message}` })
@@ -57,7 +78,17 @@ export const getAllMessages = async (req, res) => {
         const receiverId = req.params.receiverId
         const conversation = await Conversation.findOne({
             participants: { $all: [senderId, receiverId] }
-        }).populate("messages")
+        }).populate({
+            path: "messages",
+            populate: [
+                { path: "sender", select: "name userName profileImage" },
+                { path: "receiver", select: "name userName profileImage" },
+                { path: "replyTo" },
+                { path: "sharedPost" },
+                { path: "sharedLoop" },
+                { path: "sharedStory" }
+            ]
+        })
 
         return res.status(200).json(conversation?.messages || [])
 
@@ -77,7 +108,7 @@ export const getPrevUserChats = async (req, res) => {
         const userMap = {}
         conversations.forEach(conv => {
             conv.participants.forEach(user => {
-                if (user._id != currentUserId) {
+                if (user._id.toString() !== currentUserId.toString()) {
                     userMap[user._id] = user
                 }
             });
@@ -89,5 +120,148 @@ export const getPrevUserChats = async (req, res) => {
     } catch (error) {
         console.error("getPrevUserChats error:", error)
         return res.status(500).json({ message: `prev user error: ${error.message}` })
+    }
+}
+
+export const markMessageAsSeen = async (req, res) => {
+    try {
+        const currentUserId = req.userId
+        const { chatId } = req.params // ChatId is the other participant's user id
+
+        await Message.updateMany(
+            { sender: chatId, receiver: currentUserId, seen: false },
+            { $set: { seen: true } }
+        )
+
+        const senderSocketId = getSocketId(chatId)
+        if (senderSocketId) {
+            io.to(senderSocketId).emit("messagesSeen", { viewerId: currentUserId })
+        }
+
+        return res.status(200).json({ message: "Messages marked as seen" })
+    } catch (error) {
+        console.error("markMessageAsSeen error:", error)
+        return res.status(500).json({ message: "Failed to mark messages as seen" })
+    }
+}
+
+export const toggleReaction = async (req, res) => {
+    try {
+        const currentUserId = req.userId
+        const { messageId } = req.params
+        const { emoji } = req.body
+
+        const message = await Message.findById(messageId)
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" })
+        }
+
+        // Toggle logic
+        const existingIdx = message.reactions.findIndex(
+            r => r.user.toString() === currentUserId.toString()
+        )
+
+        if (existingIdx > -1) {
+            if (message.reactions[existingIdx].emoji === emoji) {
+                // Remove reaction if same emoji
+                message.reactions.splice(existingIdx, 1)
+            } else {
+                // Update emoji
+                message.reactions[existingIdx].emoji = emoji
+            }
+        } else {
+            // Add reaction
+            message.reactions.push({ user: currentUserId, emoji })
+        }
+
+        await message.save()
+        await message.populate("reactions.user", "name userName profileImage")
+
+        // Broadcast to other participant
+        const targetUserId = message.sender.toString() === currentUserId.toString() ? message.receiver : message.sender
+        const targetSocketId = getSocketId(targetUserId)
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("messageReaction", {
+                messageId: message._id,
+                reactions: message.reactions
+            })
+        }
+
+        return res.status(200).json(message)
+    } catch (error) {
+        console.error("toggleReaction error:", error)
+        return res.status(500).json({ message: "Failed to toggle reaction" })
+    }
+}
+
+export const editMessage = async (req, res) => {
+    try {
+        const currentUserId = req.userId
+        const { messageId } = req.params
+        const { message: newText } = req.body
+
+        const message = await Message.findById(messageId)
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" })
+        }
+
+        if (message.sender.toString() !== currentUserId.toString()) {
+            return res.status(403).json({ message: "Unauthorized to edit this message" })
+        }
+
+        message.message = newText
+        message.isEdited = true
+        await message.save()
+
+        const targetUserId = message.receiver
+        const targetSocketId = getSocketId(targetUserId)
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("messageEdited", {
+                messageId: message._id,
+                message: newText,
+                isEdited: true
+            })
+        }
+
+        return res.status(200).json(message)
+    } catch (error) {
+        console.error("editMessage error:", error)
+        return res.status(500).json({ message: "Failed to edit message" })
+    }
+}
+
+export const deleteMessage = async (req, res) => {
+    try {
+        const currentUserId = req.userId
+        const { messageId } = req.params
+
+        const message = await Message.findById(messageId)
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" })
+        }
+
+        if (message.sender.toString() !== currentUserId.toString()) {
+            return res.status(403).json({ message: "Unauthorized to delete this message" })
+        }
+
+        message.message = "This message was deleted"
+        message.image = undefined
+        message.video = undefined
+        message.isDeleted = true
+        await message.save()
+
+        const targetUserId = message.receiver
+        const targetSocketId = getSocketId(targetUserId)
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("messageDeleted", {
+                messageId: message._id,
+                isDeleted: true
+            })
+        }
+
+        return res.status(200).json(message)
+    } catch (error) {
+        console.error("deleteMessage error:", error)
+        return res.status(500).json({ message: "Failed to delete message" })
     }
 }

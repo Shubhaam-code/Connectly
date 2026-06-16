@@ -58,6 +58,7 @@ export const getAllPosts = async (req, res) => {
         const posts = await Post.find({})
             .populate("author", "name userName profileImage")
             .populate("comments.author", "name userName profileImage")
+            .populate("comments.replies.author", "name userName profileImage")
             .sort({ createdAt: -1 })
         return res.status(200).json(posts)
     } catch (error) {
@@ -99,6 +100,9 @@ export const like = async (req, res) => {
 
         await post.save()
         await post.populate("author", "name userName profileImage")
+        await post.populate({ path: "comments.author", select: "name userName profileImage" })
+        await post.populate({ path: "comments.replies.author", select: "name userName profileImage" })
+
         io.emit("likedPost", {
             postId: post._id,
             likes: post.likes
@@ -112,16 +116,31 @@ export const like = async (req, res) => {
 
 export const comment = async (req, res) => {
     try {
-        const { message } = req.body
+        const { message, parentCommentId } = req.body
         const postId = req.params.postId
         const post = await Post.findById(postId)
         if (!post) {
             return res.status(400).json({ message: "post not found" })
         }
-        post.comments.push({
-            author: req.userId,
-            message
-        })
+
+        if (parentCommentId) {
+            // Find parent comment
+            const parentComment = post.comments.find(c => c._id.toString() === parentCommentId.toString())
+            if (!parentComment) {
+                return res.status(404).json({ message: "Parent comment not found" })
+            }
+            parentComment.replies.push({
+                author: req.userId,
+                message
+            })
+        } else {
+            // Top level comment
+            post.comments.push({
+                author: req.userId,
+                message
+            })
+        }
+
         // FIX: use .toString() for proper ObjectId comparison
         if (post.author._id.toString() != req.userId.toString()) {
             const notification = await Notification.create({
@@ -129,7 +148,7 @@ export const comment = async (req, res) => {
                 receiver: post.author._id,
                 type: "comment",
                 post: post._id,
-                message: "commented on your post"
+                message: parentCommentId ? "replied to a comment on your post" : "commented on your post"
             })
             const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
             const receiverSocketId = getSocketId(post.author._id)
@@ -139,7 +158,9 @@ export const comment = async (req, res) => {
         }
         await post.save()
         await post.populate("author", "name userName profileImage")
-        await post.populate("comments.author")
+        await post.populate({ path: "comments.author", select: "name userName profileImage" })
+        await post.populate({ path: "comments.replies.author", select: "name userName profileImage" })
+
         io.emit("commentedPost", {
             postId: post._id,
             comments: post.comments
@@ -148,6 +169,89 @@ export const comment = async (req, res) => {
     } catch (error) {
         console.error("comment error:", error)
         return res.status(500).json({ message: `comment post error: ${error.message}` })
+    }
+}
+
+export const likeComment = async (req, res) => {
+    try {
+        const { postId, commentId } = req.params
+        const post = await Post.findById(postId)
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" })
+        }
+
+        const comment = post.comments.find(c => c._id.toString() === commentId.toString())
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" })
+        }
+
+        const userIdStr = req.userId.toString()
+        const alreadyLiked = comment.likes.some(id => id.toString() === userIdStr)
+
+        if (alreadyLiked) {
+            comment.likes = comment.likes.filter(id => id.toString() !== userIdStr)
+        } else {
+            comment.likes.push(req.userId)
+        }
+
+        await post.save()
+        await post.populate("author", "name userName profileImage")
+        await post.populate({ path: "comments.author", select: "name userName profileImage" })
+        await post.populate({ path: "comments.replies.author", select: "name userName profileImage" })
+
+        io.emit("commentedPost", {
+            postId: post._id,
+            comments: post.comments
+        })
+
+        return res.status(200).json(post)
+    } catch (error) {
+        console.error("likeComment error:", error)
+        return res.status(500).json({ message: "Failed to like comment" })
+    }
+}
+
+export const likeReply = async (req, res) => {
+    try {
+        const { postId, commentId, replyId } = req.params
+        const post = await Post.findById(postId)
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" })
+        }
+
+        const comment = post.comments.find(c => c._id.toString() === commentId.toString())
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" })
+        }
+
+        const reply = comment.replies.find(r => r._id.toString() === replyId.toString())
+        if (!reply) {
+            return res.status(404).json({ message: "Reply not found" })
+        }
+
+        const userIdStr = req.userId.toString()
+        const alreadyLiked = reply.likes.some(id => id.toString() === userIdStr)
+
+        if (alreadyLiked) {
+            reply.likes = reply.likes.filter(id => id.toString() !== userIdStr)
+        } else {
+            reply.likes.push(req.userId)
+        }
+
+        await post.save()
+        await post.populate("author", "name userName profileImage")
+        await post.populate({ path: "comments.author", select: "name userName profileImage" })
+        await post.populate({ path: "comments.replies.author", select: "name userName profileImage" })
+
+        io.emit("commentedPost", {
+            postId: post._id,
+            comments: post.comments
+        })
+
+        return res.status(200).json(post)
+    } catch (error) {
+        console.error("likeReply error:", error)
+        return res.status(500).json({ message: "Failed to like reply" })
     }
 }
 

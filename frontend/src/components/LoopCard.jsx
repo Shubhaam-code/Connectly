@@ -8,6 +8,7 @@ import axiosInstance from '../lib/axiosInstance'
 import { IoSendSharp } from "react-icons/io5"
 import { useNavigate } from 'react-router-dom'
 import { useSocket } from '../context/SocketContext'
+import ShareModal from './share/ShareModal'
 
 // HINGLISH: LoopCard — TikTok-style full screen reel player with all actions
 function LoopCard({ loop }) {
@@ -18,6 +19,7 @@ function LoopCard({ loop }) {
   const [progress, setProgress] = useState(0)
   const [showHeart, setShowHeart] = useState(false)
   const [showComment, setShowComment] = useState(false)
+  const [isShareOpen, setIsShareOpen] = useState(false)
   const [message, setMessage] = useState("")
   const { userData } = useSelector(state => state.user)
   // BUG FIX (Issue 4): Read socket from Context, not Redux
@@ -296,7 +298,7 @@ function LoopCard({ loop }) {
         </button>
 
         {/* Share */}
-        <button className="flex flex-col items-center gap-1 hover-scale">
+        <button className="flex flex-col items-center gap-1 hover-scale" onClick={() => setIsShareOpen(true)}>
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
             <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>
@@ -309,6 +311,14 @@ function LoopCard({ loop }) {
         <div className="h-full transition-all duration-200 ease-linear"
           style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #7C3AED, #EC4899)' }} />
       </div>
+      {isShareOpen && (
+        <ShareModal
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+          item={loop}
+          itemType="loop"
+        />
+      )}
     </div>
   )
 }

@@ -18,11 +18,6 @@ export const uploadStory = async (req, res) => {
             return res.status(404).json({ message: "User not found" })
         }
 
-        if (user.story) {
-            await Story.findByIdAndDelete(user.story)
-            user.story = null
-        }
-
         const { mediaType } = req.body
         if (!mediaType) {
             return res.status(400).json({ message: "mediaType is required" })
@@ -87,38 +82,68 @@ export const viewStory = async (req, res) => {
 }
 
 
-export const getStoryByUserName=async (req,res)=>{
+export const getStoryByUserName = async (req, res) => {
     try {
-        const userName=req.params.userName
-        const user=await User.findOne({userName})
-        if(!user){
-             return res.status(400).json({ message: "user not found" })
+        const userName = req.params.userName
+        const user = await User.findOne({ userName })
+        if (!user) {
+            return res.status(400).json({ message: "user not found" })
         }
 
-        const story=await Story.find({
-            author:user._id
+        const story = await Story.find({
+            author: user._id
         }).populate("viewers author")
 
-         return res.status(200).json(story)
+        return res.status(200).json(story)
     } catch (error) {
-         return res.status(500).json({ message: "story get by userName error" })
+        return res.status(500).json({ message: "story get by userName error" })
     }
 }
 
-export const getAllStories=async (req,res)=>{
+export const getAllStories = async (req, res) => {
     try {
-        const currentUser=await User.findById(req.userId)
-        const followingIds=currentUser.following
+        const currentUser = await User.findById(req.userId)
+        const followingIds = currentUser.following
 
-        const stories=await Story.find({
-            author:{$in:followingIds}
+        const stories = await Story.find({
+            author: { $in: followingIds }
         }).populate("viewers author")
-           .sort({createdAt:-1})
+            .sort({ createdAt: -1 })
 
-           return res.status(200).json(stories)
+        return res.status(200).json(stories)
 
 
     } catch (error) {
-           return res.status(500).json({ message: "All story get error" })
+        return res.status(500).json({ message: "All story get error" })
+    }
+}
+
+export const deleteStory = async (req, res) => {
+    try {
+        const { storyId } = req.params
+        const story = await Story.findById(storyId)
+        if (!story) {
+            return res.status(404).json({ message: "Story not found" })
+        }
+
+        if (story.author.toString() !== req.userId.toString()) {
+            return res.status(403).json({ message: "Unauthorized to delete this story" })
+        }
+
+        await Story.findByIdAndDelete(storyId)
+
+        // Find next latest story of this user to update user.story
+        const nextLatest = await Story.findOne({ author: req.userId }).sort({ createdAt: -1 })
+        await User.findByIdAndUpdate(req.userId, {
+            story: nextLatest ? nextLatest._id : null
+        })
+
+        // Broadcast to all users
+        io.emit("storyDeleted", { storyId, userId: req.userId })
+
+        return res.status(200).json({ message: "Story deleted successfully", storyId })
+    } catch (error) {
+        console.error("deleteStory error:", error)
+        return res.status(500).json({ message: "Delete story failed" })
     }
 }

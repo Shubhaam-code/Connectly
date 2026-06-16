@@ -16,8 +16,7 @@ function RightHome() {
 
   return (
     <aside
-      className="hidden xl:block fixed right-0 top-0 h-screen overflow-y-auto pt-8 px-4"
-      style={{ width: '320px', background: '#000000' }}
+      className="hidden xl:block w-[320px] pt-8 pl-6 h-fit sticky top-0 bg-[#000000] flex-shrink-0"
     >
       {/* Current User Card */}
       <div

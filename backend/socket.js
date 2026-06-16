@@ -26,10 +26,24 @@ io.on("connection",(socket)=>{
  io.emit('getOnlineUsers',Object.keys(userSocketMap))  
 
 
-socket.on('disconnect',()=>{
-    delete userSocketMap[userId]
-     io.emit('getOnlineUsers',Object.keys(userSocketMap))  
-})
+    socket.on("typing", ({ receiverId }) => {
+      const receiverSocketId = getSocketId(receiverId)
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("typing", { senderId: userId })
+      }
+    })
+
+    socket.on("stopTyping", ({ receiverId }) => {
+      const receiverSocketId = getSocketId(receiverId)
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("stopTyping", { senderId: userId })
+      }
+    })
+
+    socket.on('disconnect',()=>{
+        delete userSocketMap[userId]
+        io.emit('getOnlineUsers',Object.keys(userSocketMap))  
+    })
 
 })
 

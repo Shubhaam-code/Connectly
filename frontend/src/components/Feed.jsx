@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import StoryDp from './StoryDp'
-import Nav from './Nav'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
 import Post from './Post'
+import { StoriesContainer, StoryViewer } from './stories/StoryViewer'
+import axiosInstance from '../lib/axiosInstance'
 
 function PostSkeleton() {
   return (
@@ -36,6 +37,24 @@ function Feed() {
   const observerRef = useRef(null)
   const loadMoreRef = useRef(null)
 
+  const [ownStories, setOwnStories] = useState([])
+  const [activeStoryIndex, setActiveStoryIndex] = useState(null)
+  const [storyGroups, setStoryGroups] = useState([])
+
+  const fetchOwnStories = useCallback(async () => {
+    if (!userData) return
+    try {
+      const res = await axiosInstance.get(`/api/story/getByUserName/${userData.userName}`)
+      setOwnStories(res.data)
+    } catch (err) {
+      console.error("Failed to fetch own stories:", err)
+    }
+  }, [userData])
+
+  useEffect(() => {
+    fetchOwnStories()
+  }, [fetchOwnStories, storyList])
+
   const unreadCount = notificationData?.filter(n => !n.isRead).length || 0
   const visiblePosts = postData?.slice(0, visibleCount) || []
   const hasMore = postData && visibleCount < postData.length
@@ -64,7 +83,7 @@ function Feed() {
 
   return (
     <main
-      className="min-h-screen lg:ml-[240px] xl:mr-[320px]"
+      className="min-h-screen w-full"
       style={{ background: '#000000' }}
     >
       {/* Mobile header */}
@@ -95,19 +114,26 @@ function Feed() {
       {/* Center feed — max 620px */}
       <div className="w-full max-w-[620px] mx-auto">
         {/* Stories */}
-        <div className="px-4 py-4 border-b" style={{ borderColor: '#262626' }}>
-          <div className="flex gap-4 overflow-x-auto pb-1 scroll-smooth">
-            <StoryDp userName="Your Story" ProfileImage={userData?.profileImage} story={currentUserStory} />
-            {storyList?.map((story) => (
-              <StoryDp
-                key={story._id}
-                userName={story.author.userName}
-                ProfileImage={story.author.profileImage}
-                story={story}
-              />
-            ))}
-          </div>
-        </div>
+        <StoriesContainer
+          stories={storyList}
+          ownStories={ownStories}
+          onStoryClick={(idx, groups) => {
+            setStoryGroups(groups)
+            setActiveStoryIndex(idx)
+          }}
+          onAddOwnClick={() => navigate('/upload')}
+        />
+
+        {/* Story Viewer Modal */}
+        <AnimatePresence>
+          {activeStoryIndex !== null && (
+            <StoryViewer
+              groupedStories={storyGroups}
+              initialUserIndex={activeStoryIndex}
+              onClose={() => setActiveStoryIndex(null)}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Posts */}
         <div className="flex flex-col pb-24 lg:pb-8">
@@ -150,7 +176,7 @@ function Feed() {
         </div>
       </div>
 
-      <Nav />
+
     </main>
   )
 }

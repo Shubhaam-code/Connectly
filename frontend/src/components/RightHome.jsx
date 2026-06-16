@@ -1,12 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import dp from "../assets/dp.webp"
 import FollowButton from './FollowButton'
+import AccountSwitcherModal from './layout/AccountSwitcherModal'
 
 function RightHome() {
   const { userData, suggestedUsers, following } = useSelector(state => state.user)
   const navigate = useNavigate()
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false)
 
   const suggestions = suggestedUsers
     ?.filter(u => u._id !== userData?._id && !following?.some(id => id?.toString() === u._id?.toString()))
@@ -38,7 +40,7 @@ function RightHome() {
           </div>
         </div>
         <button
-          onClick={() => navigate('/editprofile')}
+          onClick={() => setIsSwitcherOpen(true)}
           className="text-xs font-semibold connectly-gradient-text hover:opacity-80 transition-opacity flex-shrink-0"
         >
           Switch
@@ -96,6 +98,7 @@ function RightHome() {
           © 2026 CONNECTLY
         </p>
       </footer>
+      <AccountSwitcherModal isOpen={isSwitcherOpen} onClose={() => setIsSwitcherOpen(false)} />
     </aside>
   )
 }

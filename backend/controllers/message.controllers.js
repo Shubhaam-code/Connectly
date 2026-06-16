@@ -1,6 +1,7 @@
 import uploadOnCloudinary from "../config/cloudinary.js";
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
+import Notification from "../models/notification.model.js";
 import { getSocketId, io } from "../socket.js";
 
 export const sendMessage = async (req, res) => {
@@ -65,6 +66,25 @@ export const sendMessage = async (req, res) => {
             io.to(receiverSocketId).emit("newMessage", populatedMessage)
         }
 
+        // Create a notification for the receiver
+        const notiType = sharedStory ? "story_reaction" : "message"
+        const notiMessage = sharedStory ? "reacted to your story" : "sent you a message"
+        
+        const notification = await Notification.create({
+            sender: senderId,
+            receiver: receiverId,
+            type: notiType,
+            message: notiMessage
+        })
+
+        const populatedNotification = await Notification.findById(notification._id)
+            .populate("sender", "name userName profileImage")
+            .populate("receiver", "name userName profileImage")
+
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("newNotification", populatedNotification)
+        }
+
         return res.status(200).json(populatedMessage)
     } catch (error) {
         console.error("sendMessage error:", error)
@@ -103,19 +123,39 @@ export const getPrevUserChats = async (req, res) => {
         const currentUserId = req.userId
         const conversations = await Conversation.find({
             participants: currentUserId
-        }).populate("participants").sort({ updatedAt: -1 })
+        }).populate("participants")
 
-        const userMap = {}
-        conversations.forEach(conv => {
-            conv.participants.forEach(user => {
-                if (user._id.toString() !== currentUserId.toString()) {
-                    userMap[user._id] = user
-                }
+        const prevChats = await Promise.all(conversations.map(async (conv) => {
+            const otherUser = conv.participants.find(p => p._id.toString() !== currentUserId.toString())
+            if (!otherUser) return null;
+
+            let lastMessage = null;
+            if (conv.messages && conv.messages.length > 0) {
+                const lastMessageId = conv.messages[conv.messages.length - 1];
+                lastMessage = await Message.findById(lastMessageId);
+            }
+
+            const unreadCount = await Message.countDocuments({
+                sender: otherUser._id,
+                receiver: currentUserId,
+                seen: false
             });
-        });
 
-        const previousUsers = Object.values(userMap)
-        return res.status(200).json(previousUsers)
+            return {
+                user: otherUser,
+                lastMessage: lastMessage ? lastMessage.message : "",
+                lastMessageMedia: lastMessage ? (lastMessage.image ? "image" : lastMessage.video ? "video" : null) : null,
+                lastMessageSender: lastMessage ? lastMessage.sender : null,
+                lastMessageTimestamp: lastMessage ? lastMessage.createdAt : conv.updatedAt,
+                unreadCount
+            }
+        }));
+
+        const sortedChats = prevChats
+            .filter(chat => chat !== null)
+            .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
+
+        return res.status(200).json(sortedChats)
 
     } catch (error) {
         console.error("getPrevUserChats error:", error)

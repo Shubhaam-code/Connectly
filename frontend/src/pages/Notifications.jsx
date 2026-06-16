@@ -60,10 +60,9 @@ function Notifications({ compact }) {
   }
 
   // Filter notifications by type
-  const likesNotifications = notificationData.filter(n => n.type === "like")
-  const commentsNotifications = notificationData.filter(n => n.type === "comment" || n.type === "reply")
-  const followsNotifications = notificationData.filter(n => n.type === "follow")
-  const mentionsNotifications = notificationData.filter(n => n.type === "mention")
+  const likesNotifications = notificationData.filter(n => n.type === "like" || n.type === "save_post")
+  const commentsNotifications = notificationData.filter(n => n.type === "comment" || n.type === "reply" || n.type === "mention")
+  const followsNotifications = notificationData.filter(n => n.type === "follow" || n.type === "follow_accepted")
 
   const sections = [
     { id: "all", label: "All Activity", count: notificationData.length, items: notificationData, icon: <FiBell size={14} /> },

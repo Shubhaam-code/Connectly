@@ -54,8 +54,29 @@ function SignUp() {
     try {
       // FIX: Use axiosInstance so withCredentials and baseURL are handled automatically
       const result = await axiosInstance.post("/api/auth/signup", { name, userName, email, password })
+      
+      // Save account to savedAccounts in localStorage for account switching
+      if (result.data && result.data._id) {
+        const saved = JSON.parse(localStorage.getItem("savedAccounts") || "[]")
+        const newAcc = {
+          _id: result.data._id,
+          userName: result.data.userName,
+          name: result.data.name,
+          profileImage: result.data.profileImage,
+          refreshToken: result.data.refreshToken
+        }
+        const existsIdx = saved.findIndex(acc => acc._id === newAcc._id)
+        if (existsIdx > -1) {
+          saved[existsIdx] = newAcc
+        } else {
+          saved.push(newAcc)
+        }
+        localStorage.setItem("savedAccounts", JSON.stringify(saved))
+      }
+
       dispatch(setUserData(result.data))
       setLoading(false)
+      navigate("/")
     } catch (error) {
       setErr(error.response?.data?.message || "Something went wrong")
       setLoading(false)

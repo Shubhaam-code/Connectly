@@ -1,6 +1,6 @@
 import express from "express"
 import isAuth from "../middlewares/isAuth.js"
-import { editProfile, follow, followingList, getAllNotifications, getCurrentUser, getProfile, markAsRead, search, suggestedUsers } from "../controllers/user.controllers.js"
+import { editProfile, follow, followingList, getAllNotifications, getCurrentUser, getProfile, markAsRead, search, suggestedUsers, getSavedPosts } from "../controllers/user.controllers.js"
 import { upload } from "../middlewares/multer.js"
 
 const userRouter = express.Router()
@@ -12,6 +12,7 @@ userRouter.get("/follow/:targetUserId", isAuth, follow)
 userRouter.get("/followingList", isAuth, followingList)
 userRouter.get("/search", isAuth, search)
 userRouter.get("/getAllNotifications", isAuth, getAllNotifications)
+userRouter.get("/saved-posts", isAuth, getSavedPosts)
 userRouter.post("/markAsRead", isAuth, markAsRead)
 // FIX: Removed duplicate /search route (was declared twice)
 userRouter.post("/editProfile", isAuth, upload.single("profileImage"), editProfile)

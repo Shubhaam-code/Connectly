@@ -23,11 +23,13 @@ import getAllNotifications from './hooks/getAllNotifications'
 import Notifications from './pages/Notifications'
 import { setPostData } from './redux/postSlice'
 import { setStoryList, setCurrentUserStory, deleteStoryFromState } from './redux/storySlice'
-import { setNotificationData, setUserData, setProfileData, setFollowing } from './redux/userSlice'
+import { setNotificationData, setUserData, setProfileData, setFollowing, setSuggestedUsers } from './redux/userSlice'
+import { setMessages, setPrevChatUsers } from './redux/messageSlice'
 import { useSocket } from './context/SocketContext'
 import AIFriend from './pages/AIFriend'
 import Settings from './pages/Settings'
-import { SERVER_URL } from './lib/axiosInstance'
+import axiosInstance, { SERVER_URL } from './lib/axiosInstance'
+import SplashScreen from './components/ui/SplashScreen'
 
 // serverUrl is exported for any components that build URLs (not for axios calls)
 export const serverUrl = SERVER_URL
@@ -43,10 +45,11 @@ function App() {
   getPrevChatUsers()
   getAllNotifications()
 
-  const { userData, notificationData, profileData } = useSelector(state => state.user)
+  const { userData, notificationData, profileData, suggestedUsers, following, isAuthChecking } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
   const { storyList } = useSelector(state => state.story)
-  const socketRef = useSocket()
+  const { selectedUser, messages, prevChatUsers } = useSelector(state => state.message)
+  const socket = useSocket()
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
@@ -55,6 +58,10 @@ function App() {
   const postDataRef = useRef(postData)
   const storyListRef = useRef(storyList)
   const profileDataRef = useRef(profileData)
+  const selectedUserRef = useRef(selectedUser)
+  const messagesRef = useRef(messages)
+  const prevChatUsersRef = useRef(prevChatUsers)
+  const suggestedUsersRef = useRef(suggestedUsers)
 
   useEffect(() => {
     notificationDataRef.current = notificationData
@@ -68,6 +75,18 @@ function App() {
   useEffect(() => {
     profileDataRef.current = profileData
   }, [profileData])
+  useEffect(() => {
+    selectedUserRef.current = selectedUser
+  }, [selectedUser])
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+  useEffect(() => {
+    prevChatUsersRef.current = prevChatUsers
+  }, [prevChatUsers])
+  useEffect(() => {
+    suggestedUsersRef.current = suggestedUsers
+  }, [suggestedUsers])
 
   // ── Auth:logout event ────────────────────────────────────────────────────────
   // axiosInstance dispatches this event when refresh token also fails.
@@ -87,13 +106,25 @@ function App() {
   // every time a notification arrived → race condition + missed notifications.
   // Now: uses notificationDataRef.current for latest data without re-registering.
   useEffect(() => {
-    const socket = socketRef?.current
     if (!socket) return
 
     const handleNewNotification = (noti) => {
+      console.log("[SOCKET DEBUG] New notification received:", noti)
       dispatch(setNotificationData([...notificationDataRef.current, noti]))
-    }
 
+      // If notification is for a new message or story reaction, fetch prevChats to sync unread count in real-time
+      if (noti.type === "message" || noti.type === "story_reaction") {
+        console.log("[SOCKET DEBUG] Message/Reaction notification received, fetching prevChats...")
+        axiosInstance.get("/api/message/prevChats")
+          .then(res => {
+            console.log("[SOCKET DEBUG] prevChats fetched from notification listener:", res.data)
+            dispatch(setPrevChatUsers(res.data || []))
+          })
+          .catch(err => console.error("[SOCKET DEBUG] Error fetching prevChats from notification listener:", err))
+      }
+    }
+    
+    // ... other handlers ...
     const handleNewPost = (newPost) => {
       if (!postDataRef.current.some(post => post._id === newPost._id)) {
         dispatch(setPostData([newPost, ...postDataRef.current]))
@@ -101,10 +132,14 @@ function App() {
     }
 
     const handleNewStory = (newStory) => {
-      if (!storyListRef.current.some(story => story._id === newStory._id)) {
-        dispatch(setStoryList([newStory, ...storyListRef.current]))
-      }
-      if (newStory.author?._id === userData?._id) {
+      const authorId = newStory.author?._id?.toString() || newStory.author?.toString()
+      const currentUserId = userData?._id?.toString()
+
+      if (authorId !== currentUserId) {
+        if (!storyListRef.current.some(story => story._id === newStory._id)) {
+          dispatch(setStoryList([newStory, ...storyListRef.current]))
+        }
+      } else {
         dispatch(setCurrentUserStory(newStory))
       }
     }
@@ -125,24 +160,118 @@ function App() {
     const handleFollowUpdated = (payload) => {
       if (payload?.userId === userData?._id) {
         dispatch(setFollowing(payload.following || []))
+        
+        axiosInstance.get("/api/user/suggested")
+          .then(res => {
+            dispatch(setSuggestedUsers(res.data))
+          })
+          .catch(err => console.error("Error refreshing suggestions:", err))
+
+        if (profileDataRef.current?._id === userData?._id) {
+          const existingFollowing = Array.isArray(profileDataRef.current?.following)
+            ? profileDataRef.current.following
+            : []
+          const updatedFollowing = payload.isFollowing
+            ? [...existingFollowing, payload.targetUser || { _id: payload.targetUserId }]
+            : existingFollowing.filter(f => (f._id || f).toString() !== payload.targetUserId.toString())
+          dispatch(setProfileData({ ...profileDataRef.current, following: updatedFollowing }))
+        }
       }
       if (payload?.targetUserId === profileDataRef.current?._id) {
         const existingFollowers = Array.isArray(profileDataRef.current?.followers)
           ? profileDataRef.current.followers
           : []
-        const updatedFollowers = payload.isFollowing
-          ? [...existingFollowers, userData?._id]
-          : existingFollowers.filter(id => id?.toString() !== userData?._id?.toString())
+        let updatedFollowers;
+        if (payload.isFollowing) {
+          const alreadyExists = existingFollowers.some(f => (f._id || f).toString() === payload.userId.toString());
+          if (alreadyExists) {
+            updatedFollowers = existingFollowers;
+          } else {
+            updatedFollowers = [...existingFollowers, payload.user || { _id: payload.userId }];
+          }
+        } else {
+          updatedFollowers = existingFollowers.filter(f => (f._id || f).toString() !== payload.userId.toString());
+        }
         dispatch(setProfileData({ ...profileDataRef.current, followers: updatedFollowers }))
+      }
+      if (payload?.targetUserId === userData?._id) {
+        const existingFollowers = Array.isArray(userData?.followers) ? userData.followers : []
+        let updatedFollowers;
+        if (payload.isFollowing) {
+          const alreadyExists = existingFollowers.some(f => (f._id || f).toString() === payload.userId.toString());
+          if (alreadyExists) {
+            updatedFollowers = existingFollowers;
+          } else {
+            updatedFollowers = [...existingFollowers, payload.user || { _id: payload.userId }];
+          }
+        } else {
+          updatedFollowers = existingFollowers.filter(f => (f._id || f).toString() !== payload.userId.toString());
+        }
+        dispatch(setUserData({ ...userData, followers: updatedFollowers }))
+      }
+      if (suggestedUsersRef.current) {
+        const updatedSuggestions = suggestedUsersRef.current.map(user => {
+          if (user._id.toString() === payload.targetUserId.toString()) {
+            const existingFollowers = Array.isArray(user.followers) ? user.followers : [];
+            const isAlreadyFollower = existingFollowers.some(f => (f._id || f).toString() === payload.userId.toString());
+            let newFollowers;
+            if (payload.isFollowing) {
+              newFollowers = isAlreadyFollower ? existingFollowers : [...existingFollowers, payload.userId];
+            } else {
+              newFollowers = existingFollowers.filter(f => (f._id || f).toString() !== payload.userId.toString());
+            }
+            return { ...user, followers: newFollowers };
+          }
+          return user;
+        });
+        dispatch(setSuggestedUsers(updatedSuggestions));
       }
     }
 
+    const handleNewMessage = (mess) => {
+      console.log("[SOCKET DEBUG] New message received via socket:", mess)
+      const senderIdStr = (mess.sender?._id || mess.sender)?.toString()
+      const receiverIdStr = (mess.receiver?._id || mess.receiver)?.toString()
+      const currentUserIdStr = userData?._id?.toString()
+      
+      const otherUserIdStr = senderIdStr === currentUserIdStr ? receiverIdStr : senderIdStr
+
+      const isCurrentChat =
+        selectedUserRef.current &&
+        selectedUserRef.current._id?.toString() === otherUserIdStr
+      console.log("[SOCKET DEBUG] isCurrentChat check:", { isCurrentChat, activeUser: selectedUserRef.current?._id })
+
+      if (isCurrentChat) {
+        dispatch(setMessages([...messagesRef.current, mess]))
+        axiosInstance.put(`/api/message/seen/${selectedUserRef.current._id}`)
+          .then(() => {
+            console.log("[SOCKET DEBUG] Marked message as seen, fetching prevChats...")
+            return axiosInstance.get("/api/message/prevChats")
+          })
+          .then(res => {
+            console.log("[SOCKET DEBUG] prevChats fetched (active chat override):", res.data)
+            dispatch(setPrevChatUsers(res.data || []))
+          })
+          .catch((err) => console.error("[SOCKET DEBUG] Error marking seen/fetching chats:", err))
+      } else {
+        console.log("[SOCKET DEBUG] Inactive chat message, fetching prevChats to update unread badge...")
+        axiosInstance.get("/api/message/prevChats")
+          .then(res => {
+            console.log("[SOCKET DEBUG] prevChats fetched (unread increment):", res.data)
+            dispatch(setPrevChatUsers(res.data || []))
+          })
+          .catch(err => console.error("[SOCKET DEBUG] Error fetching prevChats:", err))
+      }
+    }
+
+    console.log("[SOCKET DEBUG] Registering global socket listeners...")
     socket.on("newNotification", handleNewNotification)
     socket.on("newPost", handleNewPost)
     socket.on("newStory", handleNewStory)
     socket.on("storyDeleted", handleStoryDeleted)
     socket.on("profileUpdated", handleProfileUpdated)
     socket.on("followUpdated", handleFollowUpdated)
+    socket.on("newMessage", handleNewMessage)
 
     return () => {
       socket.off("newNotification", handleNewNotification)
@@ -151,14 +280,19 @@ function App() {
       socket.off("storyDeleted", handleStoryDeleted)
       socket.off("profileUpdated", handleProfileUpdated)
       socket.off("followUpdated", handleFollowUpdated)
+      socket.off("newMessage", handleNewMessage)
     }
-  }, [socketRef?.current, dispatch, userData?._id])
+  }, [socket, dispatch, userData?._id])
+
+  if (isAuthChecking) {
+    return <SplashScreen />
+  }
 
   return (
     <Routes>
       {/* Auth routes — logged in users ko redirect karo */}
-      <Route path='/signup' element={!userData ? <SignUp /> : <Navigate to={"/"} />} />
-      <Route path='/signin' element={!userData ? <SignIn /> : <Navigate to={"/"} />} />
+      <Route path='/signup' element={(!userData || new URLSearchParams(window.location.search).get("addAccount") === "true") ? <SignUp /> : <Navigate to={"/"} />} />
+      <Route path='/signin' element={(!userData || new URLSearchParams(window.location.search).get("addAccount") === "true") ? <SignIn /> : <Navigate to={"/"} />} />
       <Route path='/forgot-password' element={!userData ? <ForgotPassword /> : <Navigate to={"/"} />} />
 
       {/* Protected routes — login ke baad hi access */}

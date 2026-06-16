@@ -23,7 +23,7 @@ function LoopCard({ loop }) {
   const [message, setMessage] = useState("")
   const { userData } = useSelector(state => state.user)
   // BUG FIX (Issue 4): Read socket from Context, not Redux
-  const socketRef = useSocket()
+  const socket = useSocket()
   const { loopData } = useSelector(state => state.loop)
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -117,7 +117,6 @@ function LoopCard({ loop }) {
   // HINGLISH: Socket real-time updates — doosre users ke like/comment
   // FIX: Removed loopData from dependency array — use ref instead
   useEffect(() => {
-    const socket = socketRef?.current
     if (!socket) return
     const handleLikedLoop = (updatedData) => {
       const updatedLoops = loopDataRef.current.map(p => p._id === updatedData.loopId ? { ...p, likes: updatedData.likes } : p)
@@ -133,7 +132,7 @@ function LoopCard({ loop }) {
       socket.off("likedLoop", handleLikedLoop)
       socket.off("commentedLoop", handleCommentedLoop)
     }
-  }, [socketRef?.current, dispatch])
+  }, [socket, dispatch])
 
   return (
     <div className="w-full h-screen flex items-center justify-center relative overflow-hidden"

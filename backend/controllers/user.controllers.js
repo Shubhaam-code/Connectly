@@ -1,7 +1,8 @@
 import uploadOnCloudinary from "../config/cloudinary.js"
 import Notification from "../models/notification.model.js"
 import User from "../models/user.model.js"
-import { getSocketId, io } from "../socket.js"
+import Post from "../models/post.model.js"
+import { getSocketId, io, userSocketMap } from "../socket.js"
 
 export const getCurrentUser = async (req, res) => {
     try {
@@ -20,10 +21,64 @@ export const getCurrentUser = async (req, res) => {
 
 export const suggestedUsers = async (req, res) => {
     try {
-        const users = await User.find({
-            _id: { $ne: req.userId }
-        }).select("-password")
-        return res.status(200).json(users)
+        const currentUser = await User.findById(req.userId)
+        if (!currentUser) {
+            return res.status(404).json({ message: "User not found" })
+        }
+        const followingIds = currentUser.following.map(id => id.toString())
+
+        // Find all other users who are not current user and not already followed
+        const candidates = await User.find({
+            _id: { $nin: [req.userId, ...currentUser.following] }
+        }).populate("story")
+
+        const scoredUsers = candidates.map(user => {
+            let score = 0
+            
+            // 1. Mutual followers count
+            const candidateFollowers = user.followers.map(id => id.toString())
+            const mutuals = followingIds.filter(id => candidateFollowers.includes(id))
+            const mutualCount = mutuals.length
+            score += mutualCount * 3
+
+            // 2. Common interests / Profession (must match non-empty values)
+            if (currentUser.profession && user.profession && 
+                currentUser.profession.trim().toLowerCase() === user.profession.trim().toLowerCase() &&
+                currentUser.profession.trim() !== "") {
+                score += 2
+            }
+
+            // 3. Active state (online or active story)
+            const isOnline = !!userSocketMap[user._id.toString()]
+            if (isOnline) {
+                score += 3
+            }
+            if (user.story) {
+                score += 2
+            }
+
+            return {
+                user,
+                score,
+                mutualCount
+            }
+        })
+
+        // Sort by score descending
+        scoredUsers.sort((a, b) => b.score - a.score)
+
+        // Return top 15 candidates
+        const result = scoredUsers.slice(0, 15).map(item => {
+            const userObj = item.user.toObject()
+            delete userObj.password
+            return {
+                ...userObj,
+                mutualCount: item.mutualCount,
+                score: item.score
+            }
+        })
+
+        return res.status(200).json(result)
     } catch (error) {
         console.error("suggestedUsers error:", error)
         return res.status(500).json({ message: `get suggested user error ${error.message}` })
@@ -101,7 +156,6 @@ export const follow = async (req, res) => {
             return res.status(400).json({ message: "target user is not found" })
         }
 
-        // FIX: Use .toString() for proper ObjectId comparison
         if (currentUserId.toString() === targetUserId.toString()) {
             return res.status(400).json({ message: "you can not follow yourself." })
         }
@@ -113,20 +167,32 @@ export const follow = async (req, res) => {
             return res.status(404).json({ message: "User not found" })
         }
 
-        // FIX: Use .toString() for proper ObjectId comparison in array check
         const isFollowing = currentUser.following.some(id => id.toString() === targetUserId.toString())
 
         if (isFollowing) {
-            // Unfollow
+            // Unfollow - pull to avoid duplicates safely
             currentUser.following = currentUser.following.filter(id => id.toString() !== targetUserId.toString())
             targetUser.followers = targetUser.followers.filter(id => id.toString() !== currentUserId.toString())
+            
             await Promise.all([currentUser.save(), targetUser.save()])
 
             io.emit("followUpdated", {
                 userId: currentUserId,
                 targetUserId,
                 following: currentUser.following,
-                isFollowing: false
+                isFollowing: false,
+                user: {
+                    _id: currentUser._id,
+                    userName: currentUser.userName,
+                    name: currentUser.name,
+                    profileImage: currentUser.profileImage
+                },
+                targetUser: {
+                    _id: targetUser._id,
+                    userName: targetUser.userName,
+                    name: targetUser.name,
+                    profileImage: targetUser.profileImage
+                }
             })
 
             return res.status(200).json({
@@ -134,15 +200,23 @@ export const follow = async (req, res) => {
                 message: "unfollow successfully"
             })
         } else {
-            // Follow
-            currentUser.following.push(targetUserId)
-            targetUser.followers.push(currentUserId)
+            // Follow - prevent duplicate pushes
+            if (!currentUser.following.some(id => id.toString() === targetUserId.toString())) {
+                currentUser.following.push(targetUserId)
+            }
+            if (!targetUser.followers.some(id => id.toString() === currentUserId.toString())) {
+                targetUser.followers.push(currentUserId)
+            }
+
+            const isFollowBack = currentUser.followers.some(id => id.toString() === targetUserId.toString())
+            const notiType = isFollowBack ? "follow_accepted" : "follow"
+            const notiMessage = isFollowBack ? "accepted your follow request" : "started following you"
 
             const notification = await Notification.create({
                 sender: currentUser._id,
                 receiver: targetUser._id,
-                type: "follow",
-                message: "started following you"
+                type: notiType,
+                message: notiMessage
             })
             const populatedNotification = await Notification.findById(notification._id).populate("sender receiver")
             const receiverSocketId = getSocketId(targetUser._id)
@@ -156,7 +230,19 @@ export const follow = async (req, res) => {
                 userId: currentUserId,
                 targetUserId,
                 following: currentUser.following,
-                isFollowing: true
+                isFollowing: true,
+                user: {
+                    _id: currentUser._id,
+                    userName: currentUser.userName,
+                    name: currentUser.name,
+                    profileImage: currentUser.profileImage
+                },
+                targetUser: {
+                    _id: targetUser._id,
+                    userName: targetUser.userName,
+                    name: targetUser.name,
+                    profileImage: targetUser.profileImage
+                }
             })
 
             return res.status(200).json({
@@ -242,5 +328,29 @@ export const markAsRead = async (req, res) => {
     } catch (error) {
         console.error("markAsRead error:", error)
         return res.status(500).json({ message: `read notification error ${error.message}` })
+    }
+}
+
+export const getSavedPosts = async (req, res) => {
+    try {
+        const userId = req.userId
+        const user = await User.findById(userId)
+            .populate({
+                path: "saved",
+                populate: [
+                    { path: "author", select: "name userName profileImage" },
+                    { path: "comments.author", select: "name userName profileImage" },
+                    { path: "comments.replies.author", select: "name userName profileImage" }
+                ]
+            })
+        if (!user) {
+            return res.status(404).json({ message: "user not found" })
+        }
+        // Filter out null posts in case a saved post was deleted
+        const savedPosts = user.saved.filter(post => post !== null)
+        return res.status(200).json(savedPosts)
+    } catch (error) {
+        console.error("getSavedPosts error:", error)
+        return res.status(500).json({ message: `get saved posts error ${error.message}` })
     }
 }

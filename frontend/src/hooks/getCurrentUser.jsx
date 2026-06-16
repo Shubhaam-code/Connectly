@@ -1,7 +1,7 @@
 import axiosInstance from '../lib/axiosInstance'
 import { useEffect } from 'react'
 import { useDispatch } from 'react-redux'
-import { setUserData } from '../redux/userSlice'
+import { setUserData, setAuthChecking } from '../redux/userSlice'
 import { setCurrentUserStory } from '../redux/storySlice'
 
 // Silent auth flow:
@@ -28,6 +28,8 @@ function getCurrentUser() {
                 if (error.response?.status !== 401) {
                     console.error("getCurrentUser error:", error.message)
                 }
+            } finally {
+                dispatch(setAuthChecking(false))
             }
         }
         fetchUser()

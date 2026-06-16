@@ -6,7 +6,8 @@ import {
     signOut,
     signUp,
     verifyOtp,
-    refreshTokens
+    refreshTokens,
+    switchAccount
 } from "../controllers/auth.controllers.js"
 import rateLimiter from "../middlewares/rateLimiter.js"
 import isAuth from "../middlewares/isAuth.js"
@@ -17,6 +18,8 @@ authRouter.post("/signup", signUp)
 
 // Rate limiter on signin — 5 attempts per IP per 15 min
 authRouter.post("/signin", rateLimiter, signIn)
+
+authRouter.post("/switch-account", switchAccount)
 
 // Refresh token rotation — called by frontend on 401
 authRouter.post("/refresh-token", refreshTokens)

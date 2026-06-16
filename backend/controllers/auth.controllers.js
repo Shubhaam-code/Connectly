@@ -93,7 +93,10 @@ export const signUp = async (req, res) => {
         delete userObj.password
 
         await cacheUserProfile(user._id, userObj)
-        return res.status(201).json(userObj)
+        return res.status(201).json({
+            ...userObj,
+            refreshToken
+        })
 
     } catch (error) {
         console.error("signUp error:", error)
@@ -173,7 +176,10 @@ export const signIn = async (req, res) => {
         // Cache user profile for fast subsequent loads
         await cacheUserProfile(user._id, userObj)
 
-        return res.status(200).json(userObj)
+        return res.status(200).json({
+            ...userObj,
+            refreshToken
+        })
 
     } catch (error) {
         console.error("signIn error:", error)
@@ -321,5 +327,47 @@ export const resetPassword = async (req, res) => {
     } catch (error) {
         console.error("resetPassword error:", error)
         return res.status(500).json({ message: `Reset password error: ${error.message}` })
+    }
+}
+
+export const switchAccount = async (req, res) => {
+    try {
+        const { refreshToken } = req.body
+        if (!refreshToken) {
+            return res.status(400).json({ message: "Refresh token is required" })
+        }
+
+        let decoded
+        try {
+            decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET)
+        } catch (err) {
+            return res.status(401).json({ message: "Session expired, please login again" })
+        }
+
+        const user = await User.findById(decoded.userId)
+        if (!user) {
+            return res.status(404).json({ message: "User not found" })
+        }
+
+        // Rotate access and refresh tokens
+        const newAccessToken = genAccessToken(user._id)
+        const newRefreshToken = genRefreshToken(user._id)
+
+        setAuthCookies(res, newAccessToken, newRefreshToken)
+        await cacheSession(user._id)
+
+        const userObj = user.toObject()
+        delete userObj.password
+
+        // Cache user profile
+        await cacheUserProfile(user._id, userObj)
+
+        return res.status(200).json({
+            ...userObj,
+            refreshToken: newRefreshToken
+        })
+    } catch (error) {
+        console.error("switchAccount error:", error)
+        return res.status(500).json({ message: `Switch account error: ${error.message}` })
     }
 }

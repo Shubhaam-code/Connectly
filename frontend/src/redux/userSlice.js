@@ -7,7 +7,8 @@ const userSlice=createSlice({
         profileData:null,
         following:[],
         searchData:null,
-        notificationData:[]
+        notificationData:[],
+        isAuthChecking:true
     },
     reducers:{
        setUserData:(state,action)=>{
@@ -28,6 +29,9 @@ const userSlice=createSlice({
        setFollowing:(state,action)=>{
         state.following=action.payload
        },
+       setAuthChecking:(state,action)=>{
+        state.isAuthChecking=action.payload
+       },
        toggleFollow:(state,action)=>{
         const targetUserId=action.payload?.toString()
         const isFollowing=state.following.some(id=>id?.toString()===targetUserId)
@@ -41,5 +45,5 @@ const userSlice=createSlice({
 
 })
 
-export const {setUserData,setSuggestedUsers,setProfileData,toggleFollow,setFollowing,setSearchData,setNotificationData}=userSlice.actions
+export const {setUserData,setSuggestedUsers,setProfileData,toggleFollow,setFollowing,setSearchData,setNotificationData,setAuthChecking}=userSlice.actions
 export default userSlice.reducer

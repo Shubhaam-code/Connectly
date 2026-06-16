@@ -4,13 +4,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setProfileData, setUserData } from '../redux/userSlice'
 import { setPostData } from '../redux/postSlice'
-import { FiSettings, FiGrid, FiVideo, FiBookmark, FiHeart, FiMessageCircle, FiLogOut, FiArrowLeft } from 'react-icons/fi'
+import { FiSettings, FiGrid, FiVideo, FiBookmark, FiHeart, FiMessageCircle, FiLogOut, FiArrowLeft, FiSearch, FiX } from 'react-icons/fi'
 import dp from "../assets/dp.webp"
 import Layout from '../components/layout/Layout'
 import FollowButton from '../components/FollowButton'
 import PostModal from '../components/posts/PostModal'
 import { setSelectedUser } from '../redux/messageSlice'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // HINGLISH: Profile page — user ka premium profile screen with grid + stats, Instagram desktop look.
 function Profile() {
@@ -19,6 +19,17 @@ function Profile() {
   const navigate = useNavigate()
   const [postType, setPostType] = useState("posts")
   const [profileLoading, setProfileLoading] = useState(true)
+  const [showFollowModal, setShowFollowModal] = useState(false)
+  const [followModalType, setFollowModalType] = useState("followers") // "followers" | "following"
+  const [followSearch, setFollowSearch] = useState("")
+  const [savedPosts, setSavedPosts] = useState([])
+  const [savedLoading, setSavedLoading] = useState(false)
+
+  const openFollowModal = (type) => {
+    setFollowModalType(type)
+    setFollowSearch("")
+    setShowFollowModal(true)
+  }
   
   const { profileData, userData } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
@@ -58,6 +69,23 @@ function Profile() {
     handleProfile()
   }, [userName, dispatch])
 
+  useEffect(() => {
+    if (postType === "saved" && isOwnProfile) {
+      const fetchSavedPosts = async () => {
+        setSavedLoading(true)
+        try {
+          const result = await axiosInstance.get("/api/user/saved-posts")
+          setSavedPosts(result.data)
+        } catch (error) {
+          console.error("fetchSavedPosts error:", error.message)
+        } finally {
+          setSavedLoading(false)
+        }
+      }
+      fetchSavedPosts()
+    }
+  }, [postType, isOwnProfile])
+
   // Filter posts, loops and saved posts safely
   const userPosts = postData?.filter(post => {
     const authorId = post.author?._id || post.author
@@ -69,9 +97,9 @@ function Profile() {
     return authorId?.toString() === profileData?._id?.toString()
   }) || []
 
-  const savedPosts = postData?.filter(post => {
-    return userData?.saved?.some(savedId => savedId?.toString() === post?._id?.toString())
-  }) || []
+  const filteredSavedPosts = savedPosts.filter(post => {
+    return userData?.saved?.some(savedId => (savedId?._id || savedId)?.toString() === post?._id?.toString())
+  })
 
   // Determine which list to display
   let displayPosts = []
@@ -80,7 +108,7 @@ function Profile() {
   } else if (postType === "loops") {
     displayPosts = userLoops
   } else if (postType === "saved") {
-    displayPosts = savedPosts
+    displayPosts = filteredSavedPosts
   }
 
   // Keyboard controls for modal navigation
@@ -223,15 +251,15 @@ function Profile() {
 
             {/* Stats Row */}
             <div className="flex justify-center md:justify-start gap-10 text-sm border-t border-b border-[#121212] py-3 md:border-0 md:py-0">
-              <div>
+              <div onClick={() => setPostType("posts")} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <span className="font-bold text-white mr-1">{profileData?.posts?.length || 0}</span>
                 <span className="text-gray-400">posts</span>
               </div>
-              <div>
+              <div onClick={() => openFollowModal("followers")} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <span className="font-bold text-white mr-1">{profileData?.followers?.length || 0}</span>
                 <span className="text-gray-400">followers</span>
               </div>
-              <div>
+              <div onClick={() => openFollowModal("following")} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <span className="font-bold text-white mr-1">{profileData?.following?.length || 0}</span>
                 <span className="text-gray-400">following</span>
               </div>
@@ -248,6 +276,33 @@ function Profile() {
                   {profileData?.bio}
                 </p>
               )}
+              {(() => {
+                const mutuals = !isOwnProfile && profileData?.followers && userData?.following
+                  ? profileData.followers.filter(follower => 
+                      userData.following.some(followingUser => 
+                        (followingUser._id || followingUser).toString() === (follower._id || follower).toString()
+                      )
+                    )
+                  : [];
+
+                if (mutuals.length === 0) return null;
+
+                return (
+                  <p className="text-xs text-gray-400 pt-1">
+                    Followed by{" "}
+                    {mutuals.slice(0, 2).map((u, i) => (
+                      <span 
+                        key={u._id} 
+                        className="font-semibold text-white hover:underline cursor-pointer"
+                        onClick={() => navigate(`/profile/${u.userName}`)}
+                      >
+                        {u.userName}{i < Math.min(mutuals.length, 2) - 1 ? ", " : ""}
+                      </span>
+                    ))}
+                    {mutuals.length > 2 && ` + ${mutuals.length - 2} more mutuals`}
+                  </p>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -294,7 +349,11 @@ function Profile() {
         </div>
 
         {/* 3-Column Posts Media Grid */}
-        {displayPosts.length > 0 ? (
+        {savedLoading && postType === "saved" ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+          </div>
+        ) : displayPosts.length > 0 ? (
           <div className="grid grid-cols-3 gap-1 md:gap-2 mt-4">
             {displayPosts.map((post, index) => {
               const isVideo = post.mediaType === "video" || postType === "loops"
@@ -385,6 +444,119 @@ function Profile() {
           onCommentAdded={handleCommentAdded}
         />
       )}
+
+      {/* Followers / Following Modal */}
+      <AnimatePresence>
+        {showFollowModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 z-[999] flex items-center justify-center p-4"
+            onClick={() => setShowFollowModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#121212] border border-[#262626] rounded-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-[#262626] flex items-center justify-between flex-shrink-0">
+                <span className="text-sm font-bold capitalize text-white">
+                  {followModalType === "followers" ? "Followers" : "Following"}
+                </span>
+                <button 
+                  onClick={() => setShowFollowModal(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <FiX size={18} />
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div className="p-4 border-b border-[#1c1c1c] flex-shrink-0">
+                <div className="flex items-center gap-2.5 px-3 py-2 bg-[#1c1c1c] rounded-xl text-xs text-gray-500 border border-transparent focus-within:border-[#333]">
+                  <FiSearch size={14} />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={followSearch}
+                    onChange={(e) => setFollowSearch(e.target.value)}
+                    className="w-full text-xs text-white bg-transparent outline-none placeholder:text-gray-600"
+                  />
+                </div>
+              </div>
+
+              {/* List Area */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {(() => {
+                  const usersList = followModalType === "followers" 
+                    ? (profileData?.followers || []) 
+                    : (profileData?.following || []);
+
+                  const filteredList = usersList.filter(user =>
+                    user.userName?.toLowerCase().includes(followSearch.toLowerCase()) ||
+                    user.name?.toLowerCase().includes(followSearch.toLowerCase())
+                  );
+
+                  if (filteredList.length === 0) {
+                    return (
+                      <p className="text-center text-xs text-gray-500 py-10">
+                        No creators found
+                      </p>
+                    );
+                  }
+
+                  return filteredList.map((user) => {
+                    const isMutual = userData?.following?.some(id => (id._id || id).toString() === user._id.toString()) && 
+                                     userData?.followers?.some(id => (id._id || id).toString() === user._id.toString());
+                    return (
+                      <div key={user._id} className="flex items-center justify-between gap-3">
+                        <div 
+                          className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                          onClick={() => {
+                            setShowFollowModal(false)
+                            navigate(`/profile/${user.userName}`)
+                          }}
+                        >
+                          <img 
+                            src={user.profileImage || dp} 
+                            alt="" 
+                            className="w-10 h-10 rounded-full object-cover bg-neutral-900 flex-shrink-0"
+                          />
+                          <div className="truncate">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-semibold text-white truncate">{user.userName}</p>
+                              {isMutual && (
+                                <span className="px-1.5 py-0.5 rounded text-[8px] bg-purple-950/40 text-purple-400 font-bold tracking-wide border border-purple-900/30">
+                                  Mutual
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-gray-500 truncate">{user.name}</p>
+                          </div>
+                        </div>
+
+                        {/* Follow Button */}
+                        <FollowButton
+                          targetUserId={user._id}
+                          tailwind="px-3 py-1.5 rounded-lg text-[10px] font-bold btn-gradient hover-scale flex-shrink-0"
+                          onFollowChange={() => {
+                            // Update details to trigger re-render of profile counts
+                            handleProfile();
+                          }}
+                        />
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Layout>
   )
 }

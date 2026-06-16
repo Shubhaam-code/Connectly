@@ -42,6 +42,14 @@ const postSchema = new mongoose.Schema({
                     ref: "User"
                 }
             ],
+            parentComment: {
+                type: mongoose.Schema.Types.ObjectId,
+                default: null
+            },
+            replyCount: {
+                type: Number,
+                default: 0
+            },
             replies:[
                 {
                     author:{
@@ -59,6 +67,10 @@ const postSchema = new mongoose.Schema({
                             ref: "User"
                         }
                     ],
+                    parentComment: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        default: null
+                    },
                     createdAt:{
                         type:Date,
                         default:Date.now

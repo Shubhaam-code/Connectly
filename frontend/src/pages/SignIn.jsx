@@ -31,8 +31,29 @@ function SignIn() {
     try {
       // FIX: Use axiosInstance — handles withCredentials and baseURL consistently
       const result = await axiosInstance.post("/api/auth/signin", { identifier, password, rememberMe })
+      
+      // Save account to savedAccounts in localStorage for account switching
+      if (result.data && result.data._id) {
+        const saved = JSON.parse(localStorage.getItem("savedAccounts") || "[]")
+        const newAcc = {
+          _id: result.data._id,
+          userName: result.data.userName,
+          name: result.data.name,
+          profileImage: result.data.profileImage,
+          refreshToken: result.data.refreshToken
+        }
+        const existsIdx = saved.findIndex(acc => acc._id === newAcc._id)
+        if (existsIdx > -1) {
+          saved[existsIdx] = newAcc
+        } else {
+          saved.push(newAcc)
+        }
+        localStorage.setItem("savedAccounts", JSON.stringify(saved))
+      }
+
       dispatch(setUserData(result.data))
       setLoading(false)
+      navigate("/")
     } catch (error) {
       setLoading(false)
       setErr(error.response?.data?.message || "Something went wrong")

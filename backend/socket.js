@@ -11,7 +11,7 @@ const io=new Server(server,{
     }
 })
 
-const userSocketMap={}
+export const userSocketMap={}
 
 export const getSocketId=(receiverId)=>{
 return userSocketMap[receiverId]

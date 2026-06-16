@@ -54,6 +54,35 @@ export const StoryViewer = ({ groupedStories, initialUserIndex, onClose }) => {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showViewersList, setShowViewersList] = useState(false);
+  const [replyText, setReplyText] = useState("");
+
+  const handleSendReaction = async (emoji) => {
+    try {
+      await axiosInstance.post(`/api/message/send/${activeGroup?._id}`, {
+        message: `Reacted to your story: ${emoji}`,
+        sharedStory: currentStory?._id
+      })
+      alert(`Sent reaction: ${emoji}`)
+    } catch (err) {
+      console.error("Failed to send reaction:", err)
+    }
+  }
+
+  const handleSendReply = async () => {
+    if (!replyText.trim()) return
+    const textToSend = replyText
+    setReplyText("")
+    setIsPaused(false)
+    try {
+      await axiosInstance.post(`/api/message/send/${activeGroup?._id}`, {
+        message: textToSend,
+        sharedStory: currentStory?._id
+      })
+      alert("Message sent!")
+    } catch (err) {
+      console.error("Failed to send reply:", err)
+    }
+  }
 
   const activeGroup = groupedStories[currentUserIndex];
   const currentStories = activeGroup?.stories || [];
@@ -235,6 +264,46 @@ export const StoryViewer = ({ groupedStories, initialUserIndex, onClose }) => {
           </div>
         )}
 
+        {/* Reply/Reaction bar for other users' stories */}
+        {!isOwnStory && (
+          <div className="absolute bottom-4 left-4 right-4 z-50 flex flex-col gap-2">
+            {/* Quick Reactions Emojis Row */}
+            <div className="flex items-center justify-around bg-black/40 backdrop-blur-md py-1.5 px-3 rounded-full border border-white/5 mx-6">
+              {["😂", "😮", "❤️", "😢", "👏", "🔥"].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleSendReaction(emoji)}
+                  className="text-xl hover:scale-125 transition-transform cursor-pointer"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            {/* Input message box */}
+            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/10">
+              <input
+                type="text"
+                placeholder="Send message..."
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onFocus={() => setIsPaused(true)}
+                onBlur={() => setIsPaused(false)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendReply()}
+                className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-gray-500"
+              />
+              {replyText.trim() && (
+                <button
+                  onClick={handleSendReply}
+                  className="text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Send
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Left/Right swipe/tap navigations */}
         <div
           className="absolute left-0 top-0 bottom-0 w-1/4 cursor-pointer"
@@ -376,6 +445,12 @@ export const StoriesContainer = ({ stories = [], ownStories = [], onStoryClick, 
     const groupedFollowed = stories.reduce((acc, story) => {
       if (!story.author) return acc;
       const authorId = story.author._id;
+      
+      // Skip if this is the current user's story to avoid duplicate
+      if (userData?._id && authorId.toString() === userData._id.toString()) {
+        return acc;
+      }
+
       const existing = acc.find((g) => g._id === authorId);
 
       if (existing) {

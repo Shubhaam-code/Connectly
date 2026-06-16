@@ -7,15 +7,15 @@ const messageSlice=createSlice({
         prevChatUsers:null
     },
     reducers:{
-       setSelectedUser:(state,action)=>{
-        state.selectedUser=action.payload
-       } ,
+        setSelectedUser:(state,action)=>{
+          state.selectedUser=action.payload
+        } ,
         setMessages:(state,action)=>{
-        state.messages=action.payload
-       } ,
-       setPrevChatUsers:(state,action)=>{
-state.prevChatUsers=action.payload
-       }
+          state.messages=action.payload
+        } ,
+        setPrevChatUsers:(state,action)=>{
+          state.prevChatUsers=action.payload
+        }
     }
 
 })

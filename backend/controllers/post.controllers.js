@@ -4,6 +4,35 @@ import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 import { getSocketId, io } from "../socket.js";
 
+// Helper to parse mentions like @username and create notifications
+const handleMentions = async (text, senderId, postId, type = "post") => {
+    if (!text) return
+    const mentionRegex = /@([a-zA-Z0-9_.]+)/g
+    const matches = [...text.matchAll(mentionRegex)]
+    const userNames = matches.map(m => m[1].toLowerCase().trim())
+    
+    if (userNames.length > 0) {
+        const uniqueUserNames = [...new Set(userNames)]
+        const users = await User.find({ userName: { $in: uniqueUserNames } })
+        for (const user of users) {
+            if (user._id.toString() !== senderId.toString()) {
+                const notification = await Notification.create({
+                    sender: senderId,
+                    receiver: user._id,
+                    type: "mention",
+                    post: postId,
+                    message: type === "comment" ? "mentioned you in a comment" : "mentioned you in a post"
+                })
+                const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
+                const receiverSocketId = getSocketId(user._id)
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit("newNotification", populatedNotification)
+                }
+            }
+        }
+    }
+}
+
 export const uploadPost = async (req, res) => {
     try {
         // FIX: Log req.body and req.file for debugging upload issues
@@ -30,6 +59,10 @@ export const uploadPost = async (req, res) => {
         const post = await Post.create({
             caption, media, mediaType, author: req.userId
         })
+
+        if (caption) {
+            await handleMentions(caption, req.userId, post._id, "post")
+        }
 
         // FIX: Push post to user.posts array
         const user = await User.findById(req.userId)
@@ -131,8 +164,26 @@ export const comment = async (req, res) => {
             }
             parentComment.replies.push({
                 author: req.userId,
-                message
+                message,
+                parentComment: parentComment._id
             })
+            parentComment.replyCount = parentComment.replies.length
+
+            // Notify original commenter
+            if (parentComment.author.toString() !== req.userId.toString()) {
+                const notification = await Notification.create({
+                    sender: req.userId,
+                    receiver: parentComment.author,
+                    type: "reply",
+                    post: post._id,
+                    message: "replied to your comment"
+                })
+                const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
+                const receiverSocketId = getSocketId(parentComment.author)
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit("newNotification", populatedNotification)
+                }
+            }
         } else {
             // Top level comment
             post.comments.push({
@@ -141,8 +192,8 @@ export const comment = async (req, res) => {
             })
         }
 
-        // FIX: use .toString() for proper ObjectId comparison
-        if (post.author._id.toString() != req.userId.toString()) {
+        // Notify Post Owner
+        if (post.author._id.toString() !== req.userId.toString()) {
             const notification = await Notification.create({
                 sender: req.userId,
                 receiver: post.author._id,
@@ -155,6 +206,10 @@ export const comment = async (req, res) => {
             if (receiverSocketId) {
                 io.to(receiverSocketId).emit("newNotification", populatedNotification)
             }
+        }
+        // Parse and create mention notifications
+        if (message) {
+            await handleMentions(message, req.userId, post._id, "comment")
         }
         await post.save()
         await post.populate("author", "name userName profileImage")
@@ -258,6 +313,10 @@ export const likeReply = async (req, res) => {
 export const saved = async (req, res) => {
     try {
         const postId = req.params.postId
+        const post = await Post.findById(postId)
+        if (!post) {
+            return res.status(404).json({ message: "post not found" })
+        }
         const user = await User.findById(req.userId)
         if (!user) {
             return res.status(400).json({ message: "user not found" })
@@ -269,6 +328,22 @@ export const saved = async (req, res) => {
             user.saved = user.saved.filter(id => id.toString() != postId.toString())
         } else {
             user.saved.push(postId)
+
+            // Create "save_post" notification
+            if (post.author.toString() !== req.userId.toString()) {
+                const notification = await Notification.create({
+                    sender: req.userId,
+                    receiver: post.author,
+                    type: "save_post",
+                    post: postId,
+                    message: "saved your post"
+                })
+                const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
+                const receiverSocketId = getSocketId(post.author)
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit("newNotification", populatedNotification)
+                }
+            }
         }
         await user.save()
         await user.populate("saved")

@@ -22,6 +22,7 @@ import { useSocket } from '../context/SocketContext'
 import Layout from '../components/layout/Layout'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useIsMobile } from '../hooks/useCustom'
+import { formatTime } from '../utils/formatters'
 
 // Emojis list for message reactions
 const EMOJI_OPTIONS = ["❤️", "👍", "😂", "😮", "😢", "🙏"]
@@ -34,7 +35,7 @@ function Messages() {
   const { userData } = useSelector(state => state.user)
   const { onlineUsers } = useSelector(state => state.socket)
   const { selectedUser, messages, prevChatUsers } = useSelector(state => state.message)
-  const socketRef = useSocket()
+  const socket = useSocket()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [input, setInput] = useState("")
@@ -99,6 +100,10 @@ function Messages() {
 
       // Mark as seen
       await axiosInstance.put(`/api/message/seen/${selectedUser._id}`)
+      
+      // Explicitly fetch prevChats after marking as read to sync badge states
+      const prevChatsRes = await axiosInstance.get("/api/message/prevChats")
+      dispatch(setPrevChatUsers(prevChatsRes.data || []))
     } catch (error) {
       console.error("getAllMessages error:", error)
     }
@@ -106,7 +111,10 @@ function Messages() {
 
   useEffect(() => {
     fetchPrevChats()
-  }, [])
+    return () => {
+      dispatch(setSelectedUser(null))
+    }
+  }, [dispatch])
 
   useEffect(() => {
     getAllMessages()
@@ -114,25 +122,9 @@ function Messages() {
 
   // Socket listener registration
   useEffect(() => {
-    const socket = socketRef?.current
     if (!socket) return
 
-    const handleNewMessage = (mess) => {
-      // Append if message is from or to the currently selected user
-      const isCurrentChat =
-        selectedUserRef.current &&
-        (mess.sender._id === selectedUserRef.current._id || mess.receiver._id === selectedUserRef.current._id ||
-          mess.sender === selectedUserRef.current._id || mess.receiver === selectedUserRef.current._id)
-
-      if (isCurrentChat) {
-        dispatch(setMessages([...messagesRef.current, mess]))
-        // Trigger seen status immediately since we are looking at this conversation
-        axiosInstance.put(`/api/message/seen/${selectedUserRef.current._id}`).catch(() => { })
-      }
-
-      // Refresh chats list to update order and last text
-      fetchPrevChats()
-    }
+    // Removed local handleNewMessage since it is now globally handled in App.jsx
 
     const handleMessagesSeen = ({ viewerId }) => {
       // If the viewer is the currently active user, mark our sent messages as seen
@@ -179,7 +171,6 @@ function Messages() {
       }
     }
 
-    socket.on("newMessage", handleNewMessage)
     socket.on("messagesSeen", handleMessagesSeen)
     socket.on("messageReaction", handleMessageReaction)
     socket.on("messageEdited", handleMessageEdited)
@@ -188,7 +179,6 @@ function Messages() {
     socket.on("stopTyping", handleStopTyping)
 
     return () => {
-      socket.off("newMessage", handleNewMessage)
       socket.off("messagesSeen", handleMessagesSeen)
       socket.off("messageReaction", handleMessageReaction)
       socket.off("messageEdited", handleMessageEdited)
@@ -196,7 +186,7 @@ function Messages() {
       socket.off("typing", handleTyping)
       socket.off("stopTyping", handleStopTyping)
     }
-  }, [socketRef?.current, dispatch])
+  }, [socket, dispatch])
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -217,7 +207,6 @@ function Messages() {
   const handleInputChange = (e) => {
     setInput(e.target.value)
 
-    const socket = socketRef?.current
     if (!socket || !selectedUser?._id) return
 
     if (!isTyping) {
@@ -243,7 +232,7 @@ function Messages() {
     // Stop typing indicator instantly
     if (isTyping) {
       setIsTyping(false)
-      socketRef?.current?.emit("stopTyping", { receiverId: selectedUser._id })
+      socket?.emit("stopTyping", { receiverId: selectedUser._id })
     }
 
     try {
@@ -314,9 +303,9 @@ function Messages() {
   }
 
   // Filter conversations list based on search query
-  const filteredChats = prevChatUsers?.filter(chatUser =>
-    chatUser.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    chatUser.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredChats = prevChatUsers?.filter(chat =>
+    chat.user?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    chat.user?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || []
 
   // Horizontal list of online followed users
@@ -377,14 +366,15 @@ function Messages() {
             <div className="flex-1 overflow-y-auto">
               {filteredChats.length > 0 ? (
                 <div className="divide-y divide-[#121212]">
-                  {filteredChats.map((chatUser) => {
+                  {filteredChats.map((chat) => {
+                    const chatUser = chat.user
                     const isOnline = onlineUsers?.includes(chatUser._id)
                     const isSelected = selectedUser?._id === chatUser._id
                     return (
                       <div
                         key={chatUser._id}
                         onClick={() => dispatch(setSelectedUser(chatUser))}
-                        className={`flex items-center gap-3.5 p-4 cursor-pointer transition-all ${isSelected ? "bg-[#121212]" : "hover:bg-[#121212]/50"
+                        className={`flex items-center gap-3.5 p-4 cursor-pointer transition-all border-l-2 ${isSelected ? "bg-[#1a1a1a] border-purple-500" : "hover:bg-[#121212]/50 border-transparent"
                           }`}
                       >
                         <div className="relative flex-shrink-0">
@@ -401,11 +391,21 @@ function Messages() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-semibold truncate text-white">{chatUser.userName}</span>
-                            <span className="text-[10px] text-gray-500">Active</span>
+                            <span className="text-[10px] text-gray-500">
+                              {chat.lastMessageTimestamp ? formatTime(chat.lastMessageTimestamp) : ""}
+                            </span>
                           </div>
-                          <p className="text-xs text-gray-400 truncate mt-0.5">
-                            {isOnline ? "Online now" : "Offline"}
-                          </p>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <p className={`text-xs truncate mr-2 ${chat.unreadCount > 0 ? "text-white font-bold" : "text-gray-400"}`}>
+                              {chat.lastMessageSender === userData._id ? "You: " : ""}
+                              {chat.lastMessage || (chat.lastMessageMedia ? `Sent a ${chat.lastMessageMedia}` : (isOnline ? "Online now" : "Offline"))}
+                            </p>
+                            {chat.unreadCount > 0 && (
+                              <span className="bg-blue-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0">
+                                {chat.unreadCount}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )
@@ -430,9 +430,10 @@ function Messages() {
                 {isMobile && (
                   <button
                     onClick={() => dispatch(setSelectedUser(null))}
-                    className="text-gray-400 hover:text-white p-1"
+                    className="flex items-center gap-1 text-gray-400 hover:text-white mr-2"
                   >
                     <FiArrowLeft size={20} />
+                    <span className="text-xs font-semibold">Back</span>
                   </button>
                 )}
                 <img

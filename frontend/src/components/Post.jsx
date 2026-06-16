@@ -10,6 +10,7 @@ import axiosInstance from '../lib/axiosInstance'
 import { IoSendSharp } from "react-icons/io5"
 import { useSocket } from '../context/SocketContext'
 import ShareModal from './share/ShareModal'
+import CommentsSection from './comments/CommentsSection'
 
 // HINGLISH: Post card component — dark glassmorphism style with gradient actions
 // FIX: Switched from raw axios to axiosInstance for auto auth-refresh
@@ -17,10 +18,10 @@ function Post({ post }) {
   const { userData } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
   // BUG FIX (Issue 4): Read socket from Context, not Redux
-  const socketRef = useSocket()
+  const socket = useSocket()
   const [showComment, setShowComment] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
-  const [message, setMessage] = useState("")
+  // Removed basic message state since CommentSection manages it
   const [showHeartAnim, setShowHeartAnim] = useState(false)
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -31,7 +32,7 @@ function Post({ post }) {
 
   // FIX: Safe check with toString() for ObjectId comparison
   const isLiked = post.likes.some(id => id.toString() === userData._id.toString())
-  const isSaved = userData?.saved?.some(id => id.toString() === post?._id?.toString()) || false
+  const isSaved = userData?.saved?.some(id => (id?._id || id)?.toString() === post?._id?.toString()) || false
 
   // Optimistic like — update UI instantly, revert on failure
   const handleLike = async () => {
@@ -64,18 +65,7 @@ function Post({ post }) {
     if (!isLiked) handleLike()
   }
 
-  // HINGLISH: Comment add karna
-  const handleComment = async () => {
-    if (!message.trim()) return
-    try {
-      const result = await axiosInstance.post(`/api/post/comment/${post._id}`, { message })
-      const updatedPosts = postDataRef.current.map(p => p._id === post._id ? result.data : p)
-      dispatch(setPostData(updatedPosts))
-      setMessage("")
-    } catch (error) {
-      console.error("handleComment error:", error.message)
-    }
-  }
+  // Removed basic handleComment since CommentsSection encapsulates it
 
   // HINGLISH: Post save/unsave karna
   const handleSaved = async () => {
@@ -92,7 +82,6 @@ function Post({ post }) {
   // Previously: [socketRef?.current, postData] caused socket.off/on on every like/comment,
   // creating O(n²) event listeners and causing missed events.
   useEffect(() => {
-    const socket = socketRef?.current
     if (!socket) return
     const handleLikedPost = (updatedData) => {
       const updatedPosts = postDataRef.current.map(p => p._id === updatedData.postId ? { ...p, likes: updatedData.likes } : p)
@@ -108,7 +97,7 @@ function Post({ post }) {
       socket.off("likedPost", handleLikedPost)
       socket.off("commentedPost", handleCommentedPost)
     }
-  }, [socketRef?.current, dispatch])
+  }, [socket, dispatch])
 
   return (
     // HINGLISH: Post card — dark glassmorphism style
@@ -219,47 +208,10 @@ function Post({ post }) {
         </button>
       </div>
 
-      {/* HINGLISH: Comment section — show/hide toggle se */}
+      {/* Comment section — show/hide toggle */}
       {showComment && (
-        <div className="border-t px-4 pt-3 pb-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          {/* HINGLISH: Comment input field */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-              <img src={userData?.profileImage || dp} alt="" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1 flex items-center gap-2 px-4 h-[40px] rounded-full"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <input
-                type="text"
-                placeholder="Write a comment..."
-                className="w-full text-sm bg-transparent outline-none text-white placeholder:text-gray-600"
-                onChange={(e) => setMessage(e.target.value)}
-                value={message}
-                onKeyDown={(e) => e.key === 'Enter' && handleComment()}
-              />
-              {message && (
-                <button onClick={handleComment}>
-                  <IoSendSharp className="text-purple-500 w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* HINGLISH: Existing comments list */}
-          <div className="flex flex-col gap-3 max-h-[200px] overflow-auto">
-            {post.comments?.map((com, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
-                  <img src={com.author?.profileImage || dp} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 px-3 py-2 rounded-2xl rounded-tl-sm text-sm"
-                  style={{ background: 'rgba(255,255,255,0.05)' }}>
-                  <span className="font-semibold text-white text-xs">{com.author?.userName} </span>
-                  <span style={{ color: '#D1D5DB' }}>{com.message}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="border-t px-4 py-3 bg-[#121212] max-h-[350px] overflow-y-auto" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <CommentsSection postId={post._id} comments={post.comments} />
         </div>
       )}
       {isShareOpen && (

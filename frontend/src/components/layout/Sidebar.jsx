@@ -22,6 +22,7 @@ import dp from "../../assets/dp.webp";
 export const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { userData, notificationData } = useSelector((state) => state.user);
+  const { prevChatUsers } = useSelector((state) => state.message);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -69,6 +70,10 @@ export const Sidebar = () => {
     return location.pathname === path;
   };
 
+  const unreadMessagesCount = Array.isArray(prevChatUsers)
+    ? prevChatUsers.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0)
+    : 0;
+
   const navItems = [
     { label: "Home", icon: FiHome, path: "/", id: "home" },
     { label: "Search", icon: FiSearch, path: "/search", id: "search" },
@@ -112,6 +117,13 @@ export const Sidebar = () => {
                   {unreadNotifications > 9 ? "9+" : unreadNotifications}
                 </span>
               )}
+
+              {/* Message count */}
+              {item.id === "messages" && unreadMessagesCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
+                  {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                </span>
+              )}
             </button>
           );
         })}
@@ -130,20 +142,33 @@ export const Sidebar = () => {
         {/* Logo Section */}
         <div className="h-20 px-6 flex items-center justify-between border-b border-[#121212]">
           {!isCollapsed ? (
-            <motion.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+            <div
               onClick={() => navigate("/")}
-              className="text-xl font-black tracking-wider cursor-pointer connectly-gradient-text"
+              className="flex items-center gap-2.5 cursor-pointer"
             >
-              CONNECTLY
-            </motion.h1>
+              <img
+                src="/favicon.png"
+                alt="Connectly Icon"
+                className="w-8 h-8 object-contain flex-shrink-0"
+              />
+              <motion.h1
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xl font-black tracking-wider connectly-gradient-text"
+              >
+                CONNECTLY
+              </motion.h1>
+            </div>
           ) : (
             <div
               onClick={() => navigate("/")}
-              className="w-8 h-8 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-black text-xs cursor-pointer mx-auto"
+              className="cursor-pointer mx-auto flex items-center justify-center"
             >
-              C
+              <img
+                src="/favicon.png"
+                alt="Connectly Icon"
+                className="w-8 h-8 object-contain flex-shrink-0"
+              />
             </div>
           )}
         </div>
@@ -174,6 +199,13 @@ export const Sidebar = () => {
                     {item.id === "notifications" && unreadNotifications > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
                         {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                      </span>
+                    )}
+
+                    {/* Message count */}
+                    {item.id === "messages" && unreadMessagesCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
+                        {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
                       </span>
                     )}
                   </div>

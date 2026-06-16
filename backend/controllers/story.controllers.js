@@ -1,7 +1,7 @@
 import uploadOnCloudinary from "../config/cloudinary.js"
 import Story from "../models/story.model.js"
 import User from "../models/user.model.js"
-import { io } from "../socket.js"
+import { io, getSocketId } from "../socket.js"
 
 export const uploadStory = async (req, res) => {
     try {
@@ -45,8 +45,19 @@ export const uploadStory = async (req, res) => {
             .populate("author", "name userName profileImage")
             .populate("viewers", "name userName profileImage")
 
-        // Real-time event: broadcast the newly created story
-        io.emit("newStory", populatedStory)
+        // Real-time event: broadcast to the author and the author's followers
+        const authorSocketId = getSocketId(req.userId.toString())
+        if (authorSocketId) {
+            io.to(authorSocketId).emit("newStory", populatedStory)
+        }
+        if (user.followers && user.followers.length > 0) {
+            user.followers.forEach(followerId => {
+                const followerSocketId = getSocketId(followerId.toString())
+                if (followerSocketId) {
+                    io.to(followerSocketId).emit("newStory", populatedStory)
+                }
+            })
+        }
 
         return res.status(200).json(populatedStory)
     } catch (error) {
@@ -138,8 +149,21 @@ export const deleteStory = async (req, res) => {
             story: nextLatest ? nextLatest._id : null
         })
 
-        // Broadcast to all users
-        io.emit("storyDeleted", { storyId, userId: req.userId })
+        // Send to author's socket
+        const authorSocketId = getSocketId(req.userId.toString())
+        if (authorSocketId) {
+            io.to(authorSocketId).emit("storyDeleted", { storyId, userId: req.userId })
+        }
+        // Send to followers
+        const user = await User.findById(req.userId)
+        if (user && user.followers && user.followers.length > 0) {
+            user.followers.forEach(followerId => {
+                const followerSocketId = getSocketId(followerId.toString())
+                if (followerSocketId) {
+                    io.to(followerSocketId).emit("storyDeleted", { storyId, userId: req.userId })
+                }
+            })
+        }
 
         return res.status(200).json({ message: "Story deleted successfully", storyId })
     } catch (error) {

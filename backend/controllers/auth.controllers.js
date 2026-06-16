@@ -78,7 +78,7 @@ export const recordSession = async (userId, refreshToken, req) => {
 // "Strict" blocks cookies when port differs (5173 → 8000), causing 401 on all routes.
 // In production, use "Strict" for security.
 const cookieOptions = (maxAge) => {
-    const isProduction = process.env.NODE_ENV === "production"
+    const isProduction = process.env.NODE_ENV === "production" || process.env.RENDER === "true"
     return {
         httpOnly: true,
         maxAge,

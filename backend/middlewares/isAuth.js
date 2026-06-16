@@ -10,7 +10,7 @@ const SESSION_TTL = 3600  // 1 hour
 // "Strict" blocks cross-site requests; even though both are localhost, the ports
 // differ so browsers treat them as different origins for cookie sending.
 const cookieOptions = (maxAge) => {
-    const isProduction = process.env.NODE_ENV === "production"
+    const isProduction = process.env.NODE_ENV === "production" || process.env.RENDER === "true"
     return {
         httpOnly: true,
         maxAge,

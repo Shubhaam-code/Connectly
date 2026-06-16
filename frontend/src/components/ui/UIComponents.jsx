@@ -56,26 +56,50 @@ export const Badge = ({ children, variant = "primary", className = "" }) => {
   );
 };
 
+import dp from "../../assets/dp.webp";
+
 // Avatar Component
-export const Avatar = ({ src, alt, size = "md", onClick, className = "" }) => {
+export const Avatar = React.memo(({ src, alt, size = "md", onClick, className = "" }) => {
+  const [imgSrc, setImgSrc] = React.useState(src || dp);
+
+  React.useEffect(() => {
+    const targetSrc = src || dp;
+    if (imgSrc === targetSrc) return;
+
+    let active = true;
+    const img = new Image();
+    img.src = targetSrc;
+    img.onload = () => {
+      if (active) setImgSrc(targetSrc);
+    };
+    img.onerror = () => {
+      if (active) setImgSrc(dp);
+    };
+    return () => {
+      active = false;
+    };
+  }, [src]);
+
   const sizes = {
     sm: "w-8 h-8",
     md: "w-10 h-10",
     lg: "w-16 h-16",
     xl: "w-24 h-24",
+    none: "",
   };
 
+  const sizeClass = sizes[size] !== undefined ? sizes[size] : size;
+
   return (
-    <motion.img
-      src={src}
-      alt={alt}
-      className={`${sizes[size]} rounded-full object-cover cursor-pointer ${className}`}
+    <img
+      src={imgSrc}
+      alt={alt || "avatar"}
+      className={`${sizeClass} rounded-full object-cover cursor-pointer transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] ${className}`}
       onClick={onClick}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      loading="lazy"
     />
   );
-};
+});
 
 // Card Component
 export const Card = ({ children, className = "", onClick }) => {

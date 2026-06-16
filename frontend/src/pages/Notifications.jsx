@@ -75,14 +75,14 @@ function Notifications({ compact }) {
 
   return (
     <Layout>
-      <div className="max-w-xl mx-auto px-4 py-8 bg-[#000000] text-white min-h-screen">
+      <div className="max-w-xl mx-auto px-4 py-8 bg-[var(--background)] text-[var(--text-primary)] min-h-screen">
         
         {/* Header bar */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#262626] mb-6">
+        <div className="flex items-center justify-between pb-4 border-b border-[var(--border)] mb-6">
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl font-bold tracking-tight">Notifications</h1>
             {unreadCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white animate-pulse">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--primary)] text-white animate-pulse">
                 {unreadCount} new
               </span>
             )}
@@ -90,7 +90,7 @@ function Notifications({ compact }) {
           {unreadCount > 0 && (
             <button 
               onClick={markAllRead}
-              className="text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
+              className="text-xs font-semibold text-[var(--primary)] hover:opacity-80 transition-opacity flex items-center gap-1"
             >
               <FiCheckCircle size={13} /> Mark all read
             </button>
@@ -104,28 +104,28 @@ function Notifications({ compact }) {
             return (
               <div 
                 key={sec.id} 
-                className="bg-[#121212] border border-[#262626] rounded-xl overflow-hidden transition-all duration-300"
+                className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden transition-all duration-300"
               >
                 {/* Accordion Header */}
                 <button
                   onClick={() => setExpandedSection(isExpanded ? "" : sec.id)}
-                  className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-[#1a1a1a] transition-all"
+                  className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-[var(--hover)] transition-all"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="text-purple-400">{sec.icon}</span>
-                    <span className="text-xs font-bold text-white tracking-wide">{sec.label}</span>
-                    <span className="px-1.5 py-0.5 rounded bg-[#262626] text-[9px] font-bold text-gray-400">
+                    <span className="text-[var(--primary)]">{sec.icon}</span>
+                    <span className="text-xs font-bold text-[var(--text-primary)] tracking-wide">{sec.label}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--background-secondary)] text-[9px] font-bold text-[var(--text-muted)] border border-[var(--border)]">
                       {sec.count}
                     </span>
                   </div>
-                  <span className="text-gray-500">
+                  <span className="text-[var(--text-muted)]">
                     {isExpanded ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
                   </span>
                 </button>
 
                 {/* Accordion Content */}
                 {isExpanded && (
-                  <div className="p-3 border-t border-[#1a1a1a] space-y-2 max-h-[450px] overflow-y-auto">
+                  <div className="p-3 border-t border-[var(--border)] space-y-2 max-h-[450px] overflow-y-auto">
                     {sec.items.length > 0 ? (
                       sec.items.map((noti, index) => (
                         <NotificationCard noti={noti} key={index} />

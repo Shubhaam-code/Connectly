@@ -88,10 +88,10 @@ export const ShareModal = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-[#121212] border border-[#262626] rounded-2xl w-full max-w-md overflow-hidden flex flex-col z-10 max-h-[85vh] shadow-2xl text-white"
+          className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md overflow-hidden flex flex-col z-10 max-h-[85vh] shadow-2xl text-white"
         >
           {/* Header */}
-          <div className="p-4 border-b border-[#262626] flex items-center justify-between">
+          <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
             <h2 className="text-base font-semibold">Share</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-white p-1 transition-colors">
               <FiX size={18} />
@@ -99,8 +99,8 @@ export const ShareModal = ({
           </div>
 
           {/* Search bar */}
-          <div className="p-3 border-b border-[#262626]">
-            <div className="flex items-center gap-2.5 px-3.5 h-9 bg-[#1c1c1c] border border-[#262626] rounded-xl text-gray-500">
+          <div className="p-3 border-b border-[var(--border)]">
+            <div className="flex items-center gap-2.5 px-3.5 h-9 bg-[#1c1c1c] border border-[var(--border)] rounded-xl text-gray-500">
               <FiSearch size={16} />
               <input
                 type="text"
@@ -121,7 +121,7 @@ export const ShareModal = ({
                   <button
                     key={user._id}
                     onClick={() => handleToggleUser(user._id)}
-                    className="w-full flex items-center gap-3 p-2.5 hover:bg-[#1c1c1c] rounded-xl transition-all"
+                    className="w-full flex items-center gap-3 p-2.5 hover:bg-[var(--hover)] rounded-xl transition-all"
                   >
                     <img
                       src={user.profileImage || dp}
@@ -154,7 +154,7 @@ export const ShareModal = ({
           </div>
 
           {/* Footer Action buttons */}
-          <div className="p-4 border-t border-[#262626] bg-[#161616] flex items-center justify-between gap-3">
+          <div className="p-4 border-t border-[var(--border)] bg-[#161616] flex items-center justify-between gap-3">
             <span className="text-xs text-neutral-400">
               {selectedUsers.length > 0 ? `${selectedUsers.length} selected` : "Select friends"}
             </span>

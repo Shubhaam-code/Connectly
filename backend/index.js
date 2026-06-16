@@ -13,6 +13,10 @@ import postRouter from "./routes/post.routes.js"
 import loopRouter from "./routes/loop.routes.js"
 import storyRouter from "./routes/story.routes.js"
 import messageRouter from "./routes/message.routes.js"
+import exploreRouter from "./routes/explore.routes.js"
+import newsRouter from "./routes/news.routes.js"
+import friendRouter from "./routes/friend.routes.js"
+import analyticsRouter from "./routes/analytics.routes.js"
 
 const port = process.env.PORT || 5000
 
@@ -45,6 +49,10 @@ app.use("/api/post", postRouter)
 app.use("/api/loop", loopRouter)
 app.use("/api/story", storyRouter)
 app.use("/api/message", messageRouter)
+app.use("/api/explore", exploreRouter)
+app.use("/api/news", newsRouter)
+app.use("/api/friend", friendRouter)
+app.use("/api/analytics", analyticsRouter)
 
 server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {

@@ -2,7 +2,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
-/* HINGLISH: Sab elements pe scrollbar hide kar rahe hain */
+@theme {
+  --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-text-primary: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-hover: var(--hover);
+  --color-muted: var(--muted);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+}
+
 * {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -16,13 +30,26 @@
 
 /* CONNECTLY Design Tokens */
 :root {
-  --bg-primary: #000000;
-  --bg-secondary: #121212;
-  --bg-card: #121212;
-  --border-color: #262626;
-  --text-primary: #FFFFFF;
+  --background: #000000;
+  --background-secondary: #0a0a0a;
+  --card: #121212;
+  --border: #262626;
+  --text: #FFFFFF;
   --text-secondary: #A8A8A8;
-  --accent-purple: #8B5CF6;
+  --text-muted: #737373;
+  --primary: #8B5CF6;
+  --hover: rgba(139, 92, 246, 0.15);
+  --muted: #4b5563;
+  --success: #22C55E;
+  --danger: #EF4444;
+
+  --bg-primary: var(--background);
+  --bg-secondary: var(--background-secondary);
+  --bg-card: var(--card);
+  --border-color: var(--border);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-secondary);
+  --accent-purple: var(--primary);
   --accent-pink: #EC4899;
   --accent-blue: #3B82F6;
   --gradient-connectly: linear-gradient(135deg, #8B5CF6, #EC4899, #3B82F6);
@@ -40,21 +67,34 @@
 }
 
 html.light {
-  --bg-primary: #F3F4F6;
-  --bg-secondary: #FFFFFF;
-  --bg-card: #FFFFFF;
-  --border-color: #E5E7EB;
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
+  --background: #FFFFFF;
+  --background-secondary: #F5F6F8;
+  --card: #FFFFFF;
+  --border: #E4E6EB;
+  --text: #050505;
+  --text-secondary: #65676B;
+  --text-muted: #8A8D91;
+  --primary: #8B5CF6;
+  --hover: #F0F2F5;
+  --muted: #8A8D91;
+  --success: #22C55E;
+  --danger: #EF4444;
+
+  --bg-primary: var(--background);
+  --bg-secondary: var(--background-secondary);
+  --bg-card: var(--card);
+  --border-color: var(--border);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-secondary);
   --bg-glass: rgba(255, 255, 255, 0.7);
   --border-glass: rgba(0, 0, 0, 0.08);
-  --bubble-receiver-bg: #E5E7EB;
-  --bubble-receiver-border: rgba(0, 0, 0, 0.05);
-  --bubble-receiver-text: #111827;
-  --bg-card-dark: #FFFFFF;
-  --input-bg: rgba(0, 0, 0, 0.03);
-  --input-border: rgba(0, 0, 0, 0.1);
-  --input-text: #111827;
+  --bubble-receiver-bg: #F0F2F5;
+  --bubble-receiver-border: #E4E6EB;
+  --bubble-receiver-text: #050505;
+  --bg-card-dark: var(--card);
+  --input-bg: #F0F2F5;
+  --input-border: #E4E6EB;
+  --input-text: #050505;
 }
 
 body {

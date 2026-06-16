@@ -3,12 +3,13 @@ import { motion } from "framer-motion";
 import Sidebar from "./Sidebar";
 import { useIsMobile } from "../../hooks/useCustom";
 import FloatingMessenger from "../messages/FloatingMessenger";
+import AIFriendWidget from "../friend/AIFriendWidget";
 
 export const Layout = ({ children }) => {
   const isMobile = useIsMobile();
 
   return (
-    <div className="flex h-screen bg-[#000000] text-white overflow-hidden">
+    <div className="flex h-screen bg-[var(--background)] text-[var(--text)] overflow-hidden">
       <Sidebar />
       <main className="flex-1 overflow-y-auto h-full relative" style={{ paddingBottom: isMobile ? "64px" : "0px" }}>
         <motion.div
@@ -20,7 +21,12 @@ export const Layout = ({ children }) => {
         >
           {children}
         </motion.div>
-        {!isMobile && <FloatingMessenger />}
+        {!isMobile && (
+          <>
+            <FloatingMessenger />
+            <AIFriendWidget />
+          </>
+        )}
       </main>
     </div>
   );

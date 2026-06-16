@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { MdOutlineKeyboardBackspace } from 'react-icons/md'
 import VideoPlayer from './VideoPlayer'
 import { FaEye } from 'react-icons/fa6'
+import { Avatar } from './ui/UIComponents'
 
 // HINGLISH: StoryCard — full screen immersive story viewer
 function StoryCard({ storyData }) {
@@ -76,7 +77,7 @@ function StoryCard({ storyData }) {
           </button>
           <div className="story-ring-active">
             <div className="w-9 h-9 rounded-full overflow-hidden" style={{ background: '#000' }}>
-              <img src={storyData?.author?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+              <Avatar src={storyData?.author?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
             </div>
           </div>
           <div>
@@ -106,7 +107,7 @@ function StoryCard({ storyData }) {
               {storyData?.viewers?.slice(0, 3).map((viewer, i) => (
                 <div key={i} className="w-7 h-7 rounded-full overflow-hidden border-2 border-black"
                   style={{ marginLeft: i > 0 ? '-8px' : '0' }}>
-                  <img src={viewer?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+                  <Avatar src={viewer?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
                 </div>
               ))}
             </div>
@@ -133,7 +134,7 @@ function StoryCard({ storyData }) {
               <div key={index} className="flex items-center gap-3 py-3 border-b"
                 style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                 <div className="w-10 h-10 rounded-full overflow-hidden">
-                  <img src={viewer?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+                  <Avatar src={viewer?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
                 </div>
                 <span className="text-white text-sm font-medium">{viewer?.userName}</span>
               </div>

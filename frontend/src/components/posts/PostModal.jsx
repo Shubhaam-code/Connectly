@@ -81,7 +81,7 @@ export const PostModal = ({
         onClick={onClose}
       >
         <motion.div
-          className="bg-[#121212] border border-[#262626] rounded-xl max-h-[90vh] md:h-[650px] overflow-hidden flex flex-col md:flex-row w-full max-w-4xl"
+          className="bg-[var(--card)] border border-[var(--border)] rounded-xl max-h-[90vh] md:h-[650px] overflow-hidden flex flex-col md:flex-row w-full max-w-4xl"
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
@@ -128,19 +128,19 @@ export const PostModal = ({
           </div>
 
           {/* Right Side - Post Details */}
-          <div className="w-full md:w-[360px] flex flex-col border-t md:border-t-0 md:border-l border-[#262626] max-h-[400px] md:max-h-full overflow-hidden bg-[#121212]">
+          <div className="w-full md:w-[360px] flex flex-col border-t md:border-t-0 md:border-l border-[var(--border)] max-h-[400px] md:max-h-full overflow-hidden bg-[var(--card)]">
             {/* Header */}
-            <div className="p-4 border-b border-[#262626] flex items-center justify-between">
+            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Avatar src={post.author?.profileImage || dp} alt={post.author?.userName} size="md" />
                 <div>
-                  <p className="font-semibold text-white text-sm">{post.author?.userName}</p>
-                  <p className="text-xs text-[#A8A8A8]">{post.author?.profession || "CONNECTLY creator"}</p>
+                  <p className="font-semibold text-[var(--text-primary)] text-sm">{post.author?.userName}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{post.author?.profession || "CONNECTLY creator"}</p>
                 </div>
               </div>
               <motion.button
                 onClick={onClose}
-                className="text-[#A8A8A8] hover:text-white"
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 whileHover={{ scale: 1.1 }}
               >
                 <FiX size={20} />
@@ -148,16 +148,16 @@ export const PostModal = ({
             </div>
 
             {/* Comments Area */}
-            <div className="flex-1 flex flex-col p-4 overflow-hidden bg-[#121212]">
+            <div className="flex-1 flex flex-col p-4 overflow-hidden bg-[var(--card)]">
               {/* Caption */}
-              <div className="flex items-start space-x-3 border-b border-[#1c1c1c] pb-3 flex-shrink-0">
+              <div className="flex items-start space-x-3 border-b border-[var(--border)] pb-3 flex-shrink-0">
                 <Avatar src={post.author?.profileImage || dp} alt={post.author?.userName} size="sm" />
                 <div className="flex-1">
-                  <p className="text-xs text-white">
+                  <p className="text-xs text-[var(--text-primary)]">
                     <span className="font-semibold mr-1.5">{post.author?.userName}</span>
-                    <span className="text-gray-300">{post.caption}</span>
+                    <span className="text-[var(--text-secondary)]">{post.caption}</span>
                   </p>
-                  <span className="text-[10px] text-[#A8A8A8] block mt-1">{formatTime(post.createdAt)}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] block mt-1">{formatTime(post.createdAt)}</span>
                 </div>
               </div>
 
@@ -168,8 +168,8 @@ export const PostModal = ({
             </div>
 
             {/* Actions & Likes */}
-            <div className="border-t border-[#262626] p-4 space-y-3 bg-[#121212] flex-shrink-0">
-              <div className="flex items-center justify-between text-white">
+            <div className="border-t border-[var(--border)] p-4 space-y-3 bg-[var(--card)] flex-shrink-0">
+              <div className="flex items-center justify-between text-[var(--text-primary)]">
                 <div className="flex items-center space-x-4">
                   <motion.button onClick={handleLike} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}>
                     <FiHeart size={22} className={liked ? "fill-red-500 text-red-500" : ""} />
@@ -185,8 +185,8 @@ export const PostModal = ({
                   <FiBookmark size={22} />
                 </motion.button>
               </div>
-
-              <div className="text-xs text-white font-semibold">
+ 
+              <div className="text-xs text-[var(--text-primary)] font-semibold">
                 {post.likes?.length || 0} likes
               </div>
             </div>
@@ -209,7 +209,7 @@ export const PostCard = ({ post, onClick }) => {
   return (
     <motion.div
       onClick={onClick}
-      className="aspect-square bg-gray-900 cursor-pointer overflow-hidden relative group rounded-lg"
+      className="aspect-square bg-[var(--background-secondary)] border border-[var(--border)] cursor-pointer overflow-hidden relative group rounded-lg"
       whileHover={{ scale: 1.02 }}
     >
       {post.mediaType === "video" ? (

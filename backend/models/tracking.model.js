@@ -9,7 +9,18 @@ const trackingSchema = new mongoose.Schema({
     },
     eventType: {
         type: String,
-        enum: ["profile_visit", "post_impression", "post_open", "post_like", "post_comment", "post_share"],
+        enum: [
+            "profile_visit",
+            "profile_open",
+            "post_impression",
+            "profile_impression",
+            "story_impression",
+            "follow",
+            "post_open",
+            "post_like",
+            "post_comment",
+            "post_share"
+        ],
         required: true
     },
     visitor: {
@@ -23,6 +34,10 @@ const trackingSchema = new mongoose.Schema({
     loop: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Loop"
+    },
+    story: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Story"
     }
 }, { timestamps: true });
 

@@ -106,7 +106,7 @@ function LeftHome() {
       <div className="p-4" style={{ borderTop: '1px solid #262626' }}>
         <button
           onClick={handleLogOut}
-          className="flex items-center gap-4 px-3 py-3 rounded-xl w-full text-left text-white/60 hover:text-red-400 hover:bg-white/5 transition-all duration-200"
+          className="flex items-center gap-4 px-3 py-3 rounded-xl w-full text-left text-white/60 hover:text-red-400 hover:bg-[var(--hover)] transition-all duration-200"
         >
           <MdOutlineLogout size={24} />
           <span className="text-[15px]">Log out</span>

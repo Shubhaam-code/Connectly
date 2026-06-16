@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { MdOutlineKeyboardBackspace } from 'react-icons/md'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -6,6 +6,7 @@ import dp from "../assets/dp.webp"
 import { setProfileData, setUserData } from '../redux/userSlice'
 import { ClipLoader } from 'react-spinners'
 import axiosInstance from '../lib/axiosInstance'
+import { Avatar } from '../components/ui/UIComponents'
 
 // FIX: InputField and Field are defined OUTSIDE the component function.
 // When defined inside, React recreates them on every render, causing React
@@ -13,16 +14,13 @@ import axiosInstance from '../lib/axiosInstance'
 // Defining them outside means they are stable references across renders.
 const Field = ({ label, value, onChange, placeholder }) => (
   <div className="w-full">
-    <label className="text-xs font-medium mb-1.5 block" style={{ color: '#9CA3AF' }}>{label}</label>
+    <label className="text-xs font-medium mb-1.5 block text-[var(--text-secondary)]">{label}</label>
     <input
       type="text"
       placeholder={placeholder || label}
-      className="w-full h-[50px] rounded-2xl px-4 text-sm transition-all"
-      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+      className="w-full h-[50px] rounded-2xl px-4 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-all placeholder:text-[var(--text-muted)]"
       onChange={onChange}
       value={value}
-      onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
-      onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
     />
   </div>
 )
@@ -42,6 +40,19 @@ function EditProfile() {
   const [error, setError] = useState("")
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  useEffect(() => {
+    if (userData && !isInitialized) {
+      setName(userData.name || "")
+      setUserName(userData.userName || "")
+      setBio(userData.bio || "")
+      setProfession(userData.profession || "")
+      setGender(userData.gender || "")
+      setFrontendImage(userData.profileImage || dp)
+      setIsInitialized(true)
+    }
+  }, [userData, isInitialized])
 
   const handleImage = (e) => {
     const file = e.target.files[0]
@@ -79,16 +90,15 @@ function EditProfile() {
   }
 
   return (
-    <div className="w-full min-h-screen" style={{ background: '#0D1117' }}>
+    <div className="w-full min-h-screen bg-[var(--background)] text-[var(--text-primary)]">
 
       {/* HINGLISH: Header */}
-      <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-4"
-        style={{ background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <button className="text-gray-400 hover:text-white transition-colors"
+      <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-4 bg-[var(--background)]/95 backdrop-blur-md border-b border-[var(--border)]">
+        <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
           onClick={() => navigate(`/profile/${userData?.userName}`)}>
           <MdOutlineKeyboardBackspace size={22} />
         </button>
-        <h1 className="text-base font-bold text-white">Edit Profile</h1>
+        <h1 className="text-base font-bold text-[var(--text-primary)]">Edit Profile</h1>
         <div className="w-8" /> {/* HINGLISH: Spacer for centering */}
       </div>
 
@@ -98,13 +108,13 @@ function EditProfile() {
           <div className="relative cursor-pointer" onClick={() => imageInput.current.click()}>
             <input type="file" accept="image/*" ref={imageInput} hidden onChange={handleImage} />
             <div className="story-ring-active">
-              <div className="w-[90px] h-[90px] rounded-full overflow-hidden" style={{ background: '#0D1117' }}>
-                <img src={frontendImage} alt="" className="w-full h-full object-cover" />
+              <div className="w-[90px] h-[90px] rounded-full overflow-hidden bg-[var(--background)]">
+                <Avatar src={frontendImage} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
               </div>
             </div>
             {/* HINGLISH: Camera overlay icon */}
-            <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)', border: '2px solid #0D1117' }}>
+            <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center border-2 border-[var(--background)]"
+              style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                 <circle cx="12" cy="13" r="4" />
@@ -125,16 +135,13 @@ function EditProfile() {
 
           {/* HINGLISH: Bio textarea */}
           <div className="w-full">
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: '#9CA3AF' }}>Bio</label>
+            <label className="text-xs font-medium mb-1.5 block text-[var(--text-secondary)]">Bio</label>
             <textarea
               rows={3}
               placeholder="Write something about yourself..."
-              className="w-full rounded-2xl px-4 py-3 text-sm resize-none transition-all"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+              className="w-full rounded-2xl px-4 py-3 text-sm resize-none bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors placeholder:text-[var(--text-muted)]"
               onChange={(e) => setBio(e.target.value)}
               value={bio}
-              onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
-              onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
             />
           </div>
 
@@ -142,33 +149,31 @@ function EditProfile() {
 
           {/* HINGLISH: Gender select */}
           <div className="w-full">
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: '#9CA3AF' }}>Gender</label>
+            <label className="text-xs font-medium mb-1.5 block text-[var(--text-secondary)]">Gender</label>
             <select
-              className="w-full h-[50px] rounded-2xl px-4 text-sm"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: gender ? 'white' : '#6B7280', outline: 'none', appearance: 'none' }}
+              className="w-full h-[50px] rounded-2xl px-4 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors cursor-pointer"
               value={gender}
               onChange={(e) => setGender(e.target.value)}
             >
-              <option value="" disabled style={{ background: '#1C2333' }}>Select Gender</option>
-              <option value="Male" style={{ background: '#1C2333', color: 'white' }}>Male</option>
-              <option value="Female" style={{ background: '#1C2333', color: 'white' }}>Female</option>
-              <option value="Other" style={{ background: '#1C2333', color: 'white' }}>Other</option>
-              <option value="Prefer not to say" style={{ background: '#1C2333', color: 'white' }}>Prefer not to say</option>
+              <option value="" disabled className="bg-[var(--card)] text-[var(--text-muted)]">Select Gender</option>
+              <option value="Male" className="bg-[var(--card)] text-[var(--text-primary)]">Male</option>
+              <option value="Female" className="bg-[var(--card)] text-[var(--text-primary)]">Female</option>
+              <option value="Other" className="bg-[var(--card)] text-[var(--text-primary)]">Other</option>
+              <option value="Prefer not to say" className="bg-[var(--card)] text-[var(--text-primary)]">Prefer not to say</option>
             </select>
           </div>
         </div>
 
         {/* HINGLISH: Error display */}
         {error && (
-          <div className="mt-4 p-3 rounded-xl text-sm text-red-400 text-center"
-            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+          <div className="mt-4 p-3 rounded-xl text-sm text-[var(--danger)] text-center bg-[var(--danger)]/10 border border-[var(--danger)]/20">
             {error}
           </div>
         )}
 
         {/* HINGLISH: Save button */}
         <button
-          className="w-full h-[52px] rounded-2xl font-semibold text-white btn-gradient text-sm mt-8 hover-scale"
+          className="w-full h-[52px] rounded-2xl font-semibold text-white btn-gradient text-sm mt-8 hover-scale cursor-pointer"
           onClick={handleEditProfile}
           disabled={loading}>
           {loading ? <ClipLoader size={22} color="white" /> : "Save Profile"}

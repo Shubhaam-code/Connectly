@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 
 export const SplashScreen = () => {
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-[#000000] flex flex-col items-center justify-between py-16 z-[9999] select-none">
+    <div className="fixed inset-0 w-screen h-screen bg-[var(--background)] flex flex-col items-center justify-between py-16 z-[9999] select-none">
       {/* Background radial glowing effect */}
       <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)' }} />

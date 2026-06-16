@@ -347,17 +347,17 @@ export const StoryViewer = ({ groupedStories, initialUserIndex, onClose }) => {
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            className="fixed inset-x-0 bottom-0 max-w-[480px] mx-auto bg-[#121212] border-t border-[#262626] rounded-t-2xl z-[1000] p-4 h-[400px] flex flex-col"
+            className="fixed inset-x-0 bottom-0 max-w-[480px] mx-auto bg-[var(--card)] border-t border-[var(--border)] rounded-t-2xl z-[1000] p-4 h-[400px] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center pb-3 border-b border-[#262626] mb-3">
-              <span className="text-white text-sm font-semibold flex items-center gap-2">
+            <div className="flex justify-between items-center pb-3 border-b border-[var(--border)] mb-3">
+              <span className="text-[var(--text-primary)] text-sm font-semibold flex items-center gap-2">
                 <FiEye size={16} />
                 Viewers ({currentStory.viewers?.length || 0})
               </span>
               <button
                 onClick={() => setShowViewersList(false)}
-                className="text-[#A8A8A8] hover:text-white"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
               >
                 <FiX size={20} />
               </button>
@@ -368,13 +368,13 @@ export const StoryViewer = ({ groupedStories, initialUserIndex, onClose }) => {
                 <div key={idx} className="flex items-center gap-3">
                   <Avatar src={viewer.profileImage || dp} size="sm" />
                   <div>
-                    <p className="text-white text-xs font-semibold">{viewer.userName}</p>
-                    <p className="text-[#A8A8A8] text-[10px]">{viewer.name}</p>
+                    <p className="text-[var(--text-primary)] text-xs font-semibold">{viewer.userName}</p>
+                    <p className="text-[var(--text-secondary)] text-[10px]">{viewer.name}</p>
                   </div>
                 </div>
               ))}
               {(!currentStory.viewers || currentStory.viewers.length === 0) && (
-                <div className="text-center py-10 text-xs text-[#A8A8A8]">
+                <div className="text-center py-10 text-xs text-[var(--text-muted)]">
                   No views yet
                 </div>
               )}
@@ -404,7 +404,7 @@ export const StoryBubble = ({ group, onClick, isOwn }) => {
   return (
     <motion.div
       onClick={onClick}
-      className="w-24 h-36 md:w-28 md:h-44 rounded-2xl overflow-hidden relative flex flex-col justify-between p-3 flex-shrink-0 cursor-pointer border border-[#262626] shadow-lg group"
+      className="w-24 h-36 md:w-28 md:h-44 rounded-2xl overflow-hidden relative flex flex-col justify-between p-3 flex-shrink-0 cursor-pointer border border-[var(--border)] shadow-lg group"
       whileHover={{ scale: 1.03, translateY: -2 }}
       whileTap={{ scale: 0.98 }}
       style={{
@@ -442,10 +442,10 @@ export const StoryBubble = ({ group, onClick, isOwn }) => {
       {isOwn && !hasStories && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 p-2">
           <div className="relative">
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-[#262626]">
-              <img src={userData?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-[var(--border)]">
+              <Avatar src={userData?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
             </div>
-            <div className="absolute bottom-[-4px] right-[-4px] bg-[#8B5CF6] border border-black rounded-full w-5 h-5 flex items-center justify-center text-white text-xs font-bold shadow-[0_0_8px_rgba(139,92,246,0.6)]">
+            <div className="absolute bottom-[-4px] right-[-4px] bg-[#8B5CF6] border border-[var(--background)] rounded-full w-5 h-5 flex items-center justify-center text-white text-xs font-bold shadow-[0_0_8px_rgba(139,92,246,0.6)]">
               +
             </div>
           </div>
@@ -513,7 +513,7 @@ export const StoriesContainer = ({ stories = [], ownStories = [], onStoryClick, 
   };
 
   return (
-    <div className="flex gap-3 overflow-x-auto py-4 px-4 scrollbar-none border-b border-[#121212] bg-[#000000] w-full">
+    <div className="flex gap-3 overflow-x-auto py-4 px-4 scrollbar-none border-b border-[var(--border)] bg-[var(--background)] w-full">
       {groupedList.map((group, idx) => (
         <StoryBubble
           key={group._id || idx}

@@ -3,6 +3,7 @@ import dp from "../assets/dp.webp"
 import { useNavigate } from 'react-router-dom'
 import FollowButton from './FollowButton'
 import { formatTime } from '../utils/formatters'
+import { Avatar } from './ui/UIComponents'
 
 // HINGLISH: Notification card — ek notification row ka dark glassmorphism style
 function NotificationCard({ noti, compact }) {
@@ -11,14 +12,14 @@ function NotificationCard({ noti, compact }) {
   if (compact) {
     // HINGLISH: Compact version — sidebar ke andar
     return (
-      <div className="flex items-center gap-2 p-2 rounded-xl cursor-pointer hover:bg-white/5 transition-all">
+      <div className="flex items-center gap-2 p-2 rounded-xl cursor-pointer hover:bg-[var(--hover)] transition-all">
         <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-          <img src={noti.sender?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+          <Avatar src={noti.sender?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-white truncate">
+          <p className="text-xs text-[var(--text-primary)] truncate">
             <span className="font-semibold">{noti.sender?.userName}</span>{' '}
-            <span style={{ color: '#9CA3AF' }}>{noti.message}</span>
+            <span className="text-[var(--text-secondary)]">{noti.message}</span>
           </p>
         </div>
       </div>
@@ -41,34 +42,37 @@ function NotificationCard({ noti, compact }) {
     // HINGLISH: Full notification card
     <div 
       onClick={handleClick}
-      className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer hover:bg-white/5 transition-all ${!noti.isRead ? 'bg-purple-950/20' : ''}`}
-      style={{ border: !noti.isRead ? '1px solid rgba(124,58,237,0.2)' : '1px solid rgba(255,255,255,0.04)' }}>
+      className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer hover:bg-[var(--hover)] transition-all ${
+        !noti.isRead 
+          ? 'bg-purple-500/5 dark:bg-purple-950/20 border border-[var(--primary)]/20 shadow-sm' 
+          : 'border border-[var(--border)]'
+      }`}
+    >
 
       {/* HINGLISH: Sender avatar with gradient ring */}
       <div className="relative flex-shrink-0">
         <div className={`${!noti.isRead ? 'story-ring-active' : 'story-ring-seen'}`}>
-          <div className="w-11 h-11 rounded-full overflow-hidden" style={{ background: '#000000' }}>
-            <img src={noti.sender?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+          <div className="w-11 h-11 rounded-full overflow-hidden bg-[var(--background)]">
+            <Avatar src={noti.sender?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
           </div>
         </div>
         {/* HINGLISH: Unread dot */}
         {!noti.isRead && (
-          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)', borderColor: '#000000' }} />
+          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--background)] bg-gradient-to-r from-purple-600 to-pink-500 shadow-sm animate-pulse" />
         )}
       </div>
 
       {/* HINGLISH: Notification text + follow button */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white">
-          <span className="font-semibold"
+        <p className="text-sm text-[var(--text-primary)]">
+          <span className="font-semibold hover:underline"
             onClick={() => navigate(`/profile/${noti.sender?.userName}`)}
             style={{ cursor: 'pointer' }}>
             {noti.sender?.userName}
           </span>{' '}
-          <span style={{ color: '#9CA3AF' }}>{noti.message}</span>
+          <span className="text-[var(--text-secondary)]">{noti.message}</span>
         </p>
-        <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>{formatTime(noti.createdAt)}</p>
+        <p className="text-xs mt-0.5 text-[var(--text-muted)]">{formatTime(noti.createdAt)}</p>
       </div>
 
       {/* HINGLISH: Media thumbnail (post/loop) ya Follow button */}

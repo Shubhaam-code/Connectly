@@ -316,36 +316,36 @@ function Messages() {
 
   return (
     <Layout>
-      <div className="flex h-full bg-[#000000] text-white overflow-hidden relative">
+      <div className="flex h-full bg-[var(--background)] text-[var(--text-primary)] overflow-hidden relative">
 
         {/* Left Panel: Conversation list (shown on desktop, or on mobile when selectedUser is null) */}
         {(!isMobile || !selectedUser) && (
-          <div className="w-full md:w-[350px] border-r border-[#262626] h-full flex flex-col flex-shrink-0">
+          <div className="w-full md:w-[350px] border-r border-[var(--border)] h-full flex flex-col flex-shrink-0 bg-[var(--background)]">
             {/* Header */}
-            <div className="p-5 border-b border-[#262626] flex-shrink-0 space-y-4">
+            <div className="p-5 border-b border-[var(--border)] flex-shrink-0 space-y-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-xl font-bold tracking-tight">Messages</h1>
-                <div className="w-8 h-8 rounded-full bg-[#121212] flex items-center justify-center text-xs border border-[#262626] text-gray-400">
+                <div className="w-8 h-8 rounded-full bg-[var(--background-secondary)] flex items-center justify-center text-xs border border-[var(--border)] text-[var(--text-secondary)] font-semibold">
                   {prevChatUsers?.length || 0}
                 </div>
               </div>
 
               {/* Search */}
-              <div className="flex items-center gap-2.5 px-3.5 h-9 bg-[#121212] border border-[#262626] rounded-xl text-gray-500">
+              <div className="flex items-center gap-2.5 px-3.5 h-9 bg-[var(--background-secondary)] border border-[var(--border)] rounded-xl text-[var(--text-secondary)]">
                 <GoSearch size={16} />
                 <input
                   type="text"
                   placeholder="Search chats..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full text-xs text-white bg-transparent outline-none placeholder:text-gray-600"
+                  className="w-full text-xs text-[var(--text-primary)] bg-transparent outline-none placeholder:text-[var(--text-muted)]"
                 />
               </div>
             </div>
 
             {/* Online users horizontal row */}
             {onlineFollowed.length > 0 && (
-              <div className="px-5 py-3 border-b border-[#121212] overflow-x-auto flex-shrink-0 flex gap-4 scrollbar-none">
+              <div className="px-5 py-3 border-b border-[var(--border)] overflow-x-auto flex-shrink-0 flex gap-4 scrollbar-none">
                 {onlineFollowed.map(u => (
                   <div
                     key={u._id}
@@ -354,18 +354,18 @@ function Messages() {
                   >
                     <div className="relative">
                       <img src={u.profileImage || dp} alt="" className="w-11 h-11 rounded-full object-cover border-2 border-green-500 p-0.5" />
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-black rounded-full" />
+                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full" />
                     </div>
-                    <span className="text-[10px] text-gray-400 truncate w-12 text-center">{u.userName}</span>
+                    <span className="text-[10px] text-[var(--text-secondary)] truncate w-12 text-center">{u.userName}</span>
                   </div>
                 ))}
               </div>
             )}
 
             {/* Conversations list */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto bg-[var(--background)]">
               {filteredChats.length > 0 ? (
-                <div className="divide-y divide-[#121212]">
+                <div className="divide-y divide-[var(--border)]">
                   {filteredChats.map((chat) => {
                     const chatUser = chat.user
                     const isOnline = onlineUsers?.includes(chatUser._id)
@@ -374,29 +374,29 @@ function Messages() {
                       <div
                         key={chatUser._id}
                         onClick={() => dispatch(setSelectedUser(chatUser))}
-                        className={`flex items-center gap-3.5 p-4 cursor-pointer transition-all border-l-2 ${isSelected ? "bg-[#1a1a1a] border-purple-500" : "hover:bg-[#121212]/50 border-transparent"
+                        className={`flex items-center gap-3.5 p-4 cursor-pointer transition-all border-l-2 ${isSelected ? "bg-[var(--hover)] border-purple-500 font-bold" : "hover:bg-[var(--hover)]/60 border-transparent"
                           }`}
                       >
                         <div className="relative flex-shrink-0">
                           <img
                             src={chatUser.profileImage || dp}
                             alt=""
-                            className="w-12 h-12 rounded-full object-cover bg-neutral-900"
+                            className="w-12 h-12 rounded-full object-cover bg-[var(--background-secondary)]"
                           />
                           {isOnline && (
-                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-black rounded-full" />
+                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full" />
                           )}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold truncate text-white">{chatUser.userName}</span>
-                            <span className="text-[10px] text-gray-500">
+                            <span className="text-sm font-semibold truncate text-[var(--text-primary)]">{chatUser.userName}</span>
+                            <span className="text-[10px] text-[var(--text-muted)]">
                               {chat.lastMessageTimestamp ? formatTime(chat.lastMessageTimestamp) : ""}
                             </span>
                           </div>
                           <div className="flex items-center justify-between mt-0.5">
-                            <p className={`text-xs truncate mr-2 ${chat.unreadCount > 0 ? "text-white font-bold" : "text-gray-400"}`}>
+                            <p className={`text-xs truncate mr-2 ${chat.unreadCount > 0 ? "text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)]"}`}>
                               {chat.lastMessageSender === userData._id ? "You: " : ""}
                               {chat.lastMessage || (chat.lastMessageMedia ? `Sent a ${chat.lastMessageMedia}` : (isOnline ? "Online now" : "Offline"))}
                             </p>
@@ -412,7 +412,7 @@ function Messages() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-20 px-6 text-gray-500">
+                <div className="text-center py-20 px-6 text-[var(--text-secondary)] bg-[var(--background)]">
                   <p className="text-sm">No chats found</p>
                   <p className="text-xs mt-1">Select a creator from recommendations or profile to chat!</p>
                 </div>
@@ -423,14 +423,14 @@ function Messages() {
 
         {/* Middle Panel: Active Conversation Thread */}
         {selectedUser ? (
-          <div className="flex-1 h-full flex flex-col bg-[#000000] relative">
+          <div className="flex-1 h-full flex flex-col bg-[var(--background)] relative">
             {/* Header */}
-            <div className="h-16 px-4 border-b border-[#262626] flex items-center justify-between flex-shrink-0 sticky top-0 bg-[#000000]/90 backdrop-blur-md z-30">
+            <div className="h-16 px-4 border-b border-[var(--border)] flex items-center justify-between flex-shrink-0 sticky top-0 bg-[var(--background)]/90 backdrop-blur-md z-30">
               <div className="flex items-center gap-3">
                 {isMobile && (
                   <button
                     onClick={() => dispatch(setSelectedUser(null))}
-                    className="flex items-center gap-1 text-gray-400 hover:text-white mr-2"
+                    className="flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mr-2 cursor-pointer"
                   >
                     <FiArrowLeft size={20} />
                     <span className="text-xs font-semibold">Back</span>
@@ -444,12 +444,12 @@ function Messages() {
                 />
                 <div>
                   <h2
-                    className="text-sm font-bold hover:underline cursor-pointer"
+                    className="text-sm font-bold hover:underline cursor-pointer text-[var(--text-primary)]"
                     onClick={() => navigate(`/profile/${selectedUser.userName}`)}
                   >
                     {selectedUser.userName}
                   </h2>
-                  <p className="text-[10px] text-gray-400">
+                  <p className="text-[10px] text-[var(--text-secondary)]">
                     {onlineUsers?.includes(selectedUser._id) ? "Active now" : "Offline"}
                   </p>
                 </div>
@@ -458,14 +458,14 @@ function Messages() {
               {/* Action: Info Details Trigger */}
               <button
                 onClick={() => setShowDetails(!showDetails)}
-                className={`p-2 rounded-full transition-all ${showDetails ? "bg-[#262626] text-white" : "text-gray-400 hover:text-white"}`}
+                className={`p-2 rounded-full transition-all cursor-pointer ${showDetails ? "bg-[var(--hover)] text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
               >
                 <FiInfo size={20} />
               </button>
             </div>
 
             {/* Messages Thread Container */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--background)]">
               <AnimatePresence initial={false}>
                 {messages?.map((msg) => {
                   const isOwn = msg.sender === userData._id || msg.sender?._id === userData._id
@@ -482,7 +482,7 @@ function Messages() {
                     >
                       {/* Replying-to label inside bubble */}
                       {msg.replyTo && (
-                        <div className="text-[10px] text-gray-500 mb-0.5 flex items-center gap-1">
+                        <div className="text-[10px] text-[var(--text-secondary)] mb-0.5 flex items-center gap-1">
                           <FiCornerUpLeft size={10} />
                           Replying to {msg.replyTo.sender === userData._id ? "yourself" : selectedUser.userName}
                         </div>
@@ -498,7 +498,7 @@ function Messages() {
                                 fileInputRef.current.focus()
                               }}
                               title="Reply"
-                              className="p-1 hover:bg-[#262626] rounded-full text-gray-400 hover:text-white text-xs"
+                              className="p-1 hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs cursor-pointer"
                             >
                               <FiCornerUpLeft size={14} />
                             </button>
@@ -508,21 +508,21 @@ function Messages() {
                                 setEditText(msg.message)
                               }}
                               title="Edit"
-                              className="p-1 hover:bg-[#262626] rounded-full text-gray-400 hover:text-white text-xs"
+                              className="p-1 hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs cursor-pointer"
                             >
                               <FiEdit2 size={14} />
                             </button>
                             <button
                               onClick={() => handleDeleteMessage(msg._id)}
                               title="Delete"
-                              className="p-1 hover:bg-red-950/40 rounded-full text-red-500 text-xs"
+                              className="p-1 hover:bg-red-500/10 rounded-full text-red-500 text-xs cursor-pointer"
                             >
                               <FiTrash2 size={14} />
                             </button>
                             <button
                               onClick={() => setReactionPopoverId(reactionPopoverId === msg._id ? null : msg._id)}
                               title="React"
-                              className="p-1 hover:bg-[#262626] rounded-full text-gray-400 hover:text-white text-xs"
+                              className="p-1 hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs cursor-pointer"
                             >
                               <FiSmile size={14} />
                             </button>
@@ -534,13 +534,13 @@ function Messages() {
                           onDoubleClick={() => handleToggleReaction(msg._id, "❤️")}
                           className={`rounded-2xl px-4 py-2.5 text-sm select-none relative break-words shadow-md transition-all ${isOwn
                               ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-br-none"
-                              : "bg-[#1e1e1e] text-white rounded-bl-none border border-[#2d2d2d]"
+                              : "bg-[var(--bubble-receiver-bg)] text-[var(--bubble-receiver-text)] rounded-bl-none border border-[var(--bubble-receiver-border)]"
                             }`}
                         >
                           {/* Reply Quote preview inside bubble */}
                           {msg.replyTo && (
-                            <div className="bg-black/35 border-l-2 border-purple-400 px-2.5 py-1 mb-2 rounded text-[11px] text-gray-300 max-w-full truncate">
-                              <span className="font-bold text-gray-400 block text-[9px]">
+                            <div className="bg-[var(--background-secondary)]/85 border-l-2 border-purple-400 px-2.5 py-1 mb-2 rounded text-[11px] text-[var(--text-secondary)] max-w-full truncate">
+                              <span className="font-bold text-[var(--text-muted)] block text-[9px]">
                                 {msg.replyTo.sender === userData._id ? "You" : selectedUser.userName}
                               </span>
                               {msg.replyTo.message || "Media message"}
@@ -549,14 +549,14 @@ function Messages() {
 
                           {/* Image rendering */}
                           {msg.image && (
-                            <div className="mb-2 max-w-sm rounded-lg overflow-hidden border border-[#2d2d2d]">
+                            <div className="mb-2 max-w-sm rounded-lg overflow-hidden border border-[var(--border)]">
                               <img src={msg.image} alt="Shared media" className="w-full object-cover max-h-60" />
                             </div>
                           )}
 
                           {/* Video rendering */}
                           {msg.video && (
-                            <div className="mb-2 max-w-sm rounded-lg overflow-hidden border border-[#2d2d2d]">
+                            <div className="mb-2 max-w-sm rounded-lg overflow-hidden border border-[var(--border)]">
                               <video src={msg.video} controls className="w-full max-h-60" />
                             </div>
                           )}
@@ -565,14 +565,14 @@ function Messages() {
                           {msg.sharedPost && (
                             <div
                               onClick={() => navigate(`/profile/${msg.sharedPost.author?.userName || ''}`)}
-                              className="cursor-pointer border border-[#262626] bg-[#121212] rounded-lg p-2.5 max-w-[240px] mt-1 space-y-2 hover:bg-[#1a1a1a] transition-all text-left"
+                              className="cursor-pointer border border-[var(--border)] bg-[var(--card)] rounded-lg p-2.5 max-w-[240px] mt-1 space-y-2 hover:bg-[var(--hover)] transition-all text-left"
                             >
                               <div className="flex items-center gap-2">
                                 <img src={msg.sharedPost.author?.profileImage || dp} alt="" className="w-5 h-5 rounded-full object-cover" />
-                                <span className="text-[11px] font-bold text-gray-300">{msg.sharedPost.author?.userName}</span>
+                                <span className="text-[11px] font-bold text-[var(--text-secondary)]">{msg.sharedPost.author?.userName}</span>
                               </div>
                               <img src={msg.sharedPost.media} alt="" className="w-full h-32 object-cover rounded" />
-                              <p className="text-[10px] text-gray-400 line-clamp-2">{msg.sharedPost.caption}</p>
+                              <p className="text-[10px] text-[var(--text-muted)] line-clamp-2">{msg.sharedPost.caption}</p>
                             </div>
                           )}
 
@@ -583,33 +583,33 @@ function Messages() {
                                 type="text"
                                 value={editText}
                                 onChange={(e) => setEditText(e.target.value)}
-                                className="bg-black/50 text-white text-xs px-2 py-1 rounded outline-none border border-white/20"
+                                className="bg-[var(--background-secondary)] text-[var(--text-primary)] text-xs px-2 py-1 rounded outline-none border border-[var(--border)]"
                                 autoFocus
                               />
                               <div className="flex justify-end gap-1.5">
                                 <button
                                   onClick={() => setEditingMessageId(null)}
-                                  className="text-[10px] bg-[#262626] hover:bg-[#333] px-2 py-1 rounded font-semibold text-gray-300"
+                                  className="text-[10px] bg-[var(--hover)] hover:bg-[var(--background-secondary)] px-2 py-1 rounded font-semibold text-[var(--text-secondary)] cursor-pointer"
                                 >
                                   Cancel
                                 </button>
                                 <button
                                   onClick={() => handleSaveEdit(msg._id)}
-                                  className="text-[10px] bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded font-semibold"
+                                  className="text-[10px] bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded font-semibold cursor-pointer text-white"
                                 >
                                   Save
                                 </button>
                               </div>
                             </div>
                           ) : (
-                            <p className={isDeleted ? "text-gray-500 italic text-xs" : "leading-relaxed"}>
+                            <p className={isDeleted ? "text-[var(--text-muted)] italic text-xs" : "leading-relaxed text-inherit"}>
                               {msg.message}
                             </p>
                           )}
 
                           {/* Reactions pills */}
                           {msg.reactions && msg.reactions.length > 0 && (
-                            <div className={`absolute -bottom-2 flex gap-0.5 bg-[#262626] border border-[#3c3c3c] px-1.5 py-0.5 rounded-full z-10 ${isOwn ? 'left-2' : 'right-2'}`}>
+                            <div className={`absolute -bottom-2 flex gap-0.5 bg-[var(--background-secondary)] border border-[var(--border)] px-1.5 py-0.5 rounded-full z-10 ${isOwn ? 'left-2' : 'right-2'}`}>
                               {msg.reactions.map((reaction, rIdx) => (
                                 <span key={rIdx} title={reaction.user?.userName} className="text-xs">
                                   {reaction.emoji}
@@ -624,7 +624,7 @@ function Messages() {
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
                             <button
                               onClick={() => setReactionPopoverId(reactionPopoverId === msg._id ? null : msg._id)}
-                              className="p-1 hover:bg-[#262626] rounded-full text-gray-400 hover:text-white"
+                              className="p-1 hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
                             >
                               <FiSmile size={14} />
                             </button>
@@ -633,7 +633,7 @@ function Messages() {
                                 setReplyingToMessage(msg)
                                 fileInputRef.current.focus()
                               }}
-                              className="p-1 hover:bg-[#262626] rounded-full text-gray-400 hover:text-white"
+                              className="p-1 hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
                             >
                               <FiCornerUpLeft size={14} />
                             </button>
@@ -643,12 +643,12 @@ function Messages() {
 
                       {/* Reactions Popover */}
                       {reactionPopoverId === msg._id && (
-                        <div className={`absolute bottom-full mb-1 z-50 bg-[#1e1e1e] border border-[#2d2d2d] p-1.5 rounded-full flex gap-2 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`}>
+                        <div className={`absolute bottom-full mb-1 z-50 bg-[var(--card)] border border-[var(--border)] p-1.5 rounded-full flex gap-2 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`}>
                           {EMOJI_OPTIONS.map(emoji => (
                             <button
                               key={emoji}
                               onClick={() => handleToggleReaction(msg._id, emoji)}
-                              className="hover:scale-125 transition-transform text-sm"
+                              className="hover:scale-125 transition-transform text-sm cursor-pointer"
                             >
                               {emoji}
                             </button>
@@ -658,13 +658,13 @@ function Messages() {
 
                       {/* Seen / Edited receipts */}
                       <div className="flex items-center gap-1.5 mt-1">
-                        {isEdited && <span className="text-[9px] text-gray-500">(edited)</span>}
+                        {isEdited && <span className="text-[9px] text-[var(--text-muted)]">(edited)</span>}
                         {isOwn && (
-                          <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
+                          <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
                             {msg.seen ? (
-                              <span className="text-blue-400 text-[9px] font-semibold">Seen</span>
+                              <span className="text-blue-500 text-[9px] font-semibold">Seen</span>
                             ) : (
-                              <FiCheck size={10} className="text-gray-600" />
+                              <FiCheck size={10} className="text-[var(--text-muted)]" />
                             )}
                           </span>
                         )}
@@ -676,11 +676,11 @@ function Messages() {
 
               {/* Typing animation bubble */}
               {otherUserTyping && (
-                <div className="flex items-center gap-2 text-xs text-gray-500 italic px-4 py-1">
+                <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] italic px-4 py-1">
                   <div className="flex gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="w-1.5 h-1.5 bg-[var(--text-secondary)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-[var(--text-secondary)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-[var(--text-secondary)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                   <span>{selectedUser.userName} is typing...</span>
                 </div>
@@ -690,11 +690,11 @@ function Messages() {
             </div>
 
             {/* Input & Upload Form */}
-            <div className="border-t border-[#262626] p-4 bg-[#000000] flex-shrink-0">
+            <div className="border-t border-[var(--border)] p-4 bg-[var(--background)] flex-shrink-0">
 
               {/* Media Send Preview */}
               {previewUrl && (
-                <div className="relative inline-block mb-3 bg-[#121212] p-1 rounded-xl border border-[#262626]">
+                <div className="relative inline-block mb-3 bg-[var(--card)] p-1 rounded-xl border border-[var(--border)]">
                   {fileType === "video" ? (
                     <video src={previewUrl} className="h-20 w-32 rounded-lg object-cover" muted />
                   ) : (
@@ -705,7 +705,7 @@ function Messages() {
                       setPreviewUrl(null)
                       setBackendFile(null)
                     }}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold"
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer"
                   >
                     ✕
                   </button>
@@ -714,12 +714,12 @@ function Messages() {
 
               {/* Replying-to label */}
               {replyingToMessage && (
-                <div className="flex items-center justify-between px-3 py-1.5 bg-[#121212] border border-[#262626] rounded-lg text-xs mb-3 text-gray-300">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs mb-3 text-[var(--text-secondary)]">
                   <div className="truncate">
                     <span className="font-semibold text-purple-400">Replying to {replyingToMessage.sender === userData._id ? "yourself" : selectedUser.userName}:</span>
-                    <span className="ml-1 text-gray-400">{replyingToMessage.message || "Attachment"}</span>
+                    <span className="ml-1 text-[var(--text-muted)]">{replyingToMessage.message || "Attachment"}</span>
                   </div>
-                  <button className="text-gray-400 hover:text-white" onClick={() => setReplyingToMessage(null)}>✕</button>
+                  <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer" onClick={() => setReplyingToMessage(null)}>✕</button>
                 </div>
               )}
 
@@ -736,7 +736,7 @@ function Messages() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current.click()}
-                  className="p-2 bg-[#121212] border border-[#262626] hover:bg-[#1e1e1e] rounded-full text-gray-400 hover:text-white transition-colors"
+                  className="p-2 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 >
                   <FiImage size={18} />
                 </button>
@@ -746,14 +746,14 @@ function Messages() {
                   placeholder="Message..."
                   value={input}
                   onChange={handleInputChange}
-                  className="flex-1 bg-[#121212] border border-[#262626] rounded-full px-5 py-2.5 text-xs text-white outline-none focus:border-[#4d4d4d] placeholder:text-neutral-600"
+                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-full px-5 py-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)] placeholder:text-[var(--text-muted)]"
                 />
 
                 {(input.trim() || backendFile) && (
                   <button
                     type="submit"
                     disabled={sending}
-                    className="p-2.5 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-all flex items-center justify-center disabled:bg-neutral-800 disabled:text-neutral-600"
+                    className="p-2.5 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-all flex items-center justify-center disabled:bg-[var(--background-secondary)] disabled:text-[var(--text-muted)] cursor-pointer"
                   >
                     <FiSend size={16} />
                   </button>
@@ -764,14 +764,14 @@ function Messages() {
         ) : (
           /* Desktop Right panel default placeholder */
           !isMobile && (
-            <div className="flex-1 h-full flex flex-col items-center justify-center bg-[#000000] text-center p-8">
-              <div className="w-24 h-24 rounded-full border border-[#262626] flex items-center justify-center text-gray-500 mb-6 bg-[#121212]">
+            <div className="flex-1 h-full flex flex-col items-center justify-center bg-[var(--background)] text-center p-8">
+              <div className="w-24 h-24 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] mb-6 bg-[var(--card)]">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold">Your Messages</h2>
-              <p className="text-sm text-gray-500 mt-2 max-w-sm">
+              <h2 className="text-xl font-bold text-[var(--text-primary)]">Your Messages</h2>
+              <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-sm">
                 Send private photos and messages to a friend or group. Start the conversation from recommended creators.
               </p>
             </div>
@@ -780,9 +780,9 @@ function Messages() {
 
         {/* Right Details Panel: Profile Info & Shared Gallery (visible when toggled and user is selected) */}
         {!isMobile && selectedUser && showDetails && (
-          <div className="w-[280px] border-l border-[#262626] h-full bg-[#000000] flex flex-col flex-shrink-0 z-20">
+          <div className="w-[280px] border-l border-[var(--border)] h-full bg-[var(--background)] flex flex-col flex-shrink-0 z-20">
             {/* Header */}
-            <div className="p-5 border-b border-[#262626] text-center flex flex-col items-center gap-3">
+            <div className="p-5 border-b border-[var(--border)] text-center flex flex-col items-center gap-3">
               <img
                 src={selectedUser.profileImage || dp}
                 alt=""
@@ -791,18 +791,18 @@ function Messages() {
               />
               <div>
                 <h3
-                  className="font-bold text-sm hover:underline cursor-pointer"
+                  className="font-bold text-sm hover:underline cursor-pointer text-[var(--text-primary)]"
                   onClick={() => navigate(`/profile/${selectedUser.userName}`)}
                 >
                   {selectedUser.name}
                 </h3>
-                <p className="text-xs text-gray-500">@{selectedUser.userName}</p>
+                <p className="text-xs text-[var(--text-secondary)]">@{selectedUser.userName}</p>
               </div>
             </div>
 
             {/* Gallery grid of shared attachments */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--background)]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5">
                 <FiGrid size={12} />
                 Shared Attachments
               </h4>
@@ -811,7 +811,7 @@ function Messages() {
                   {sharedMedia.map((m, idx) => (
                     <div
                       key={m._id || idx}
-                      className="aspect-square bg-neutral-900 rounded overflow-hidden cursor-pointer hover:opacity-85 transition-opacity"
+                      className="aspect-square bg-[var(--background-secondary)] rounded overflow-hidden cursor-pointer hover:opacity-85 transition-opacity"
                     >
                       {m.image ? (
                         <img src={m.image} alt="" className="w-full h-full object-cover" />
@@ -822,7 +822,7 @@ function Messages() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-500 italic">No media shared in this chat yet</p>
+                <p className="text-xs text-[var(--text-muted)] italic">No media shared in this chat yet</p>
               )}
             </div>
           </div>

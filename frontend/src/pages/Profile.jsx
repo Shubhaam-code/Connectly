@@ -12,6 +12,7 @@ import PostModal from '../components/posts/PostModal'
 import { setSelectedUser } from '../redux/messageSlice'
 import { motion, AnimatePresence } from 'framer-motion'
 import { StoryViewer } from '../components/stories/StoryViewer'
+import { Avatar } from '../components/ui/UIComponents'
 
 // HINGLISH: Profile page — user ka premium profile screen with grid + stats, Instagram desktop look.
 function Profile() {
@@ -226,10 +227,10 @@ function Profile() {
     dispatch(setPostData(updatedPosts))
   }
 
-  if (profileLoading && !profileData) {
+  if (profileLoading && (!profileData || profileData.userName?.toLowerCase() !== userName?.toLowerCase())) {
     return (
       <Layout>
-        <div className="w-full h-full flex items-center justify-center bg-[#000000]">
+        <div className="w-full h-full flex items-center justify-center bg-[var(--background)]">
           <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
         </div>
       </Layout>
@@ -240,15 +241,15 @@ function Profile() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-8 bg-[#000000] text-white min-h-screen">
+      <div className="max-w-4xl mx-auto px-4 py-8 bg-[var(--background)] text-[var(--text)] min-h-screen">
         
         {/* Mobile Sticky / Top header */}
-        <div className="flex items-center justify-between border-b border-[#262626] pb-4 mb-8 md:hidden">
-          <button className="text-[#A8A8A8] hover:text-white" onClick={() => navigate('/')}>
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-4 mb-8 md:hidden">
+          <button className="text-[var(--text-secondary)] hover:text-[var(--text)]" onClick={() => navigate('/')}>
             <FiArrowLeft size={22} />
           </button>
           <span className="font-bold text-sm tracking-wide">{profileData?.userName}</span>
-          <button className="text-[#A8A8A8] hover:text-white" onClick={() => isOwnProfile ? navigate('/settings') : null}>
+          <button className="text-[var(--text-secondary)] hover:text-[var(--text)]" onClick={() => isOwnProfile ? navigate('/settings') : null}>
             <FiSettings size={20} />
           </button>
         </div>
@@ -260,18 +261,19 @@ function Profile() {
             <div className={`w-24 h-24 md:w-36 md:h-36 rounded-full flex items-center justify-center transition-all duration-300 ${
               profileStories.length > 0
                 ? "p-[3px] bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 animate-pulse hover:scale-105"
-                : "p-[1px] border border-[#262626] hover:border-purple-500"
+                : "p-[1px] border border-[var(--border)] hover:border-[var(--primary)]"
             }`}>
-              <div className="w-full h-full rounded-full overflow-hidden border-4 border-black bg-[#121212]">
-                <img
+              <div className="w-full h-full rounded-full overflow-hidden border-4 border-[var(--background)] bg-[var(--card)]">
+                <Avatar
                   src={profileData?.profileImage || dp}
                   alt={profileData?.userName}
-                  className="w-full h-full object-cover"
+                  size="w-full h-full"
+                  className="w-full h-full hover:scale-100"
                 />
               </div>
             </div>
             {profileData?.isOnline && (
-              <span className="absolute bottom-1 right-1 md:bottom-3 md:right-3 w-4.5 h-4.5 bg-green-500 border-4 border-black rounded-full" />
+              <span className="absolute bottom-1 right-1 md:bottom-3 md:right-3 w-4.5 h-4.5 bg-green-500 border-4 border-[var(--background)] rounded-full" />
             )}
           </div>
           <input
@@ -301,13 +303,13 @@ function Profile() {
                   <>
                     <button
                       onClick={() => navigate('/editprofile')}
-                      className="px-4 py-1.5 bg-[#121212] border border-[#262626] rounded-lg text-sm font-semibold text-white hover:bg-[#1a1a1a] transition-all"
+                      className="px-4 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-sm font-semibold text-[var(--text)] hover:bg-[var(--hover)] transition-all"
                     >
                       Edit Profile
                     </button>
                     <button
                       onClick={handleLogOut}
-                      className="px-3 py-1.5 bg-[#121212] border border-red-900/30 rounded-lg text-sm font-semibold text-red-500 hover:bg-red-950/20 transition-all flex items-center gap-1"
+                      className="px-3 py-1.5 bg-[var(--card)] border border-[var(--danger)]/30 rounded-lg text-sm font-semibold text-[var(--danger)] hover:bg-[var(--danger)]/5 transition-all flex items-center gap-1"
                     >
                       <FiLogOut size={14} /> Log Out
                     </button>
@@ -324,7 +326,7 @@ function Profile() {
                         dispatch(setSelectedUser(profileData))
                         navigate('/messages')
                       }}
-                      className="px-4 py-1.5 bg-[#121212] border border-[#262626] rounded-lg text-sm font-semibold text-white hover:bg-[#1a1a1a] transition-all"
+                      className="px-4 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-sm font-semibold text-[var(--text)] hover:bg-[var(--hover)] transition-all"
                     >
                       Message
                     </button>
@@ -334,29 +336,29 @@ function Profile() {
             </div>
 
             {/* Stats Row */}
-            <div className="flex justify-center md:justify-start gap-10 text-sm border-t border-b border-[#121212] py-3 md:border-0 md:py-0">
+            <div className="flex justify-center md:justify-start gap-10 text-sm border-t border-b border-[var(--border)] py-3 md:border-0 md:py-0">
               <div onClick={() => setPostType("posts")} className="cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="font-bold text-white mr-1">{profileData?.posts?.length || 0}</span>
-                <span className="text-gray-400">posts</span>
+                <span className="font-bold text-[var(--text)] mr-1">{profileData?.posts?.length || 0}</span>
+                <span className="text-[var(--text-secondary)]">posts</span>
               </div>
               <div onClick={() => openFollowModal("followers")} className="cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="font-bold text-white mr-1">{profileData?.followers?.length || 0}</span>
-                <span className="text-gray-400">followers</span>
+                <span className="font-bold text-[var(--text)] mr-1">{profileData?.followers?.length || 0}</span>
+                <span className="text-[var(--text-secondary)]">followers</span>
               </div>
               <div onClick={() => openFollowModal("following")} className="cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="font-bold text-white mr-1">{profileData?.following?.length || 0}</span>
-                <span className="text-gray-400">following</span>
+                <span className="font-bold text-[var(--text)] mr-1">{profileData?.following?.length || 0}</span>
+                <span className="text-[var(--text-secondary)]">following</span>
               </div>
             </div>
 
             {/* Name & Bio */}
             <div className="space-y-1">
-              <h2 className="font-semibold text-sm text-white">{profileData?.name}</h2>
-              <span className="text-xs font-semibold text-purple-400 block">
+              <h2 className="font-semibold text-sm text-[var(--text)]">{profileData?.name}</h2>
+              <span className="text-xs font-semibold text-[var(--primary)] block">
                 {profileData?.profession || "CONNECTLY Creator"}
               </span>
               {profileData?.bio && (
-                <p className="text-sm text-gray-300 font-normal leading-relaxed whitespace-pre-wrap max-w-lg mx-auto md:mx-0">
+                <p className="text-sm text-[var(--text-secondary)] font-normal leading-relaxed whitespace-pre-wrap max-w-lg mx-auto md:mx-0">
                   {profileData?.bio}
                 </p>
               )}
@@ -372,12 +374,12 @@ function Profile() {
                 if (mutuals.length === 0) return null;
 
                 return (
-                  <p className="text-xs text-gray-400 pt-1">
+                  <p className="text-xs text-[var(--text-secondary)] pt-1">
                     Followed by{" "}
                     {mutuals.slice(0, 2).map((u, i) => (
                       <span 
                         key={u._id} 
-                        className="font-semibold text-white hover:underline cursor-pointer"
+                        className="font-semibold text-[var(--text)] hover:underline cursor-pointer"
                         onClick={() => navigate(`/profile/${u.userName}`)}
                       >
                         {u.userName}{i < Math.min(mutuals.length, 2) - 1 ? ", " : ""}
@@ -392,14 +394,14 @@ function Profile() {
         </div>
 
         {/* Tab Row (Instagram Style top border) */}
-        <div className="flex justify-center border-t border-[#262626]">
+        <div className="flex justify-center border-t border-[var(--border)]">
           <div className="flex gap-8 md:gap-12">
             <button
               onClick={() => setPostType("posts")}
               className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
                 postType === "posts"
-                  ? "border-white text-white"
-                  : "border-transparent text-gray-500 hover:text-white"
+                  ? "border-[var(--text)] text-[var(--text)]"
+                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
               }`}
             >
               <FiGrid size={12} />
@@ -409,8 +411,8 @@ function Profile() {
               onClick={() => setPostType("loops")}
               className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
                 postType === "loops"
-                  ? "border-white text-white"
-                  : "border-transparent text-gray-500 hover:text-white"
+                  ? "border-[var(--text)] text-[var(--text)]"
+                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
               }`}
             >
               <FiVideo size={12} />
@@ -422,8 +424,8 @@ function Profile() {
                   onClick={() => setPostType("saved")}
                   className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
                     postType === "saved"
-                      ? "border-white text-white"
-                      : "border-transparent text-gray-500 hover:text-white"
+                      ? "border-[var(--text)] text-[var(--text)]"
+                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
                   }`}
                 >
                   <FiBookmark size={12} />
@@ -433,8 +435,8 @@ function Profile() {
                   onClick={() => setPostType("analytics")}
                   className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
                     postType === "analytics"
-                      ? "border-white text-white"
-                      : "border-transparent text-gray-500 hover:text-white"
+                      ? "border-[var(--text)] text-[var(--text)]"
+                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
                   }`}
                 >
                   <FiBarChart2 size={12} />
@@ -448,21 +450,21 @@ function Profile() {
         {/* 3-Column Posts Media Grid or Analytics View */}
         {postType === "analytics" && isOwnProfile ? (
           <div className="space-y-6 mt-4 animate-fade-in">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#262626] pb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[var(--border)] pb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">Creator Analytics</h3>
-                <p className="text-xs text-gray-400">Monitor your audience reach and content engagement</p>
+                <h3 className="text-lg font-bold text-[var(--text)]">Creator Analytics</h3>
+                <p className="text-xs text-[var(--text-secondary)]">Monitor your audience reach and content engagement</p>
               </div>
               {/* Period Toggle Capsules */}
-              <div className="flex bg-[#121212] border border-[#262626] p-1 rounded-xl">
+              <div className="flex bg-[var(--card)] border border-[var(--border)] p-1 rounded-xl">
                 {["today", "7days", "30days"].map((p) => (
                   <button
                     key={p}
                     onClick={() => setAnalyticsPeriod(p)}
-                    className={`px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-semibold uppercase tracking-wider transition-all ${
+                    className={`px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
                       analyticsPeriod === p
-                        ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
-                        : "text-gray-400 hover:text-white"
+                        ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text)]"
                     }`}
                   >
                     {p === "today" ? "Today" : p === "7days" ? "7 Days" : "30 Days"}
@@ -485,12 +487,12 @@ function Profile() {
                   { label: "Total Comments", value: analyticsData?.comments, desc: "Comments left on your posts" },
                   { label: "Total Shares", value: analyticsData?.shares, desc: "Times your posts were shared" }
                 ].map((card, idx) => (
-                  <div key={idx} className="bg-[#121212] border border-[#262626] rounded-2xl p-5 hover:border-purple-500/40 transition-all group flex flex-col justify-between min-h-[140px]">
+                  <div key={idx} className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--primary)]/40 transition-all group flex flex-col justify-between min-h-[140px]">
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{card.label}</p>
-                      <p className="text-[10px] text-gray-500 mt-1 leading-snug">{card.desc}</p>
+                      <p className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">{card.label}</p>
+                      <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-snug">{card.desc}</p>
                     </div>
-                    <p className="text-3xl font-bold mt-4 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform origin-left">
+                    <p className="text-3xl font-bold mt-4 bg-gradient-to-r from-[var(--primary)] to-pink-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform origin-left">
                       {card.value || 0}
                     </p>
                   </div>
@@ -513,7 +515,7 @@ function Profile() {
                     setSelectedPostIndex(index)
                     setIsModalOpen(true)
                   }}
-                  className="aspect-square bg-[#121212] overflow-hidden relative group cursor-pointer border border-[#1a1a1a] rounded-sm"
+                  className="aspect-square bg-[var(--card)] overflow-hidden relative group cursor-pointer border border-[var(--border)] rounded-sm"
                 >
                   {isVideo ? (
                     <video
@@ -558,7 +560,7 @@ function Profile() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full border border-[#262626] flex items-center justify-center text-gray-500">
+            <div className="w-16 h-16 rounded-full border border-[var(--border)] flex items-center justify-center text-gray-500">
               {postType === "posts" ? <FiGrid size={24} /> : postType === "loops" ? <FiVideo size={24} /> : <FiBookmark size={24} />}
             </div>
             <h3 className="font-semibold text-lg">
@@ -608,32 +610,32 @@ function Profile() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#121212] border border-[#262626] rounded-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]"
+              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="px-5 py-4 border-b border-[#262626] flex items-center justify-between flex-shrink-0">
-                <span className="text-sm font-bold capitalize text-white">
+              <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between flex-shrink-0">
+                <span className="text-sm font-bold capitalize text-[var(--text)]">
                   {followModalType === "followers" ? "Followers" : "Following"}
                 </span>
                 <button 
                   onClick={() => setShowFollowModal(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text)]"
                 >
                   <FiX size={18} />
                 </button>
               </div>
 
               {/* Search Bar */}
-              <div className="p-4 border-b border-[#1c1c1c] flex-shrink-0">
-                <div className="flex items-center gap-2.5 px-3 py-2 bg-[#1c1c1c] rounded-xl text-xs text-gray-500 border border-transparent focus-within:border-[#333]">
+              <div className="p-4 border-b border-[var(--border)] flex-shrink-0">
+                <div className="flex items-center gap-2.5 px-3 py-2 bg-[var(--background-secondary)] rounded-xl text-xs text-[var(--text-secondary)] border border-[var(--border)] focus-within:border-[var(--primary)]">
                   <FiSearch size={14} />
                   <input
                     type="text"
                     placeholder="Search..."
                     value={followSearch}
                     onChange={(e) => setFollowSearch(e.target.value)}
-                    className="w-full text-xs text-white bg-transparent outline-none placeholder:text-gray-600"
+                    className="w-full text-xs text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--text-secondary)]"
                   />
                 </div>
               </div>
@@ -652,7 +654,7 @@ function Profile() {
 
                   if (filteredList.length === 0) {
                     return (
-                      <p className="text-center text-xs text-gray-500 py-10">
+                      <p className="text-center text-xs text-[var(--text-secondary)] py-10">
                         No creators found
                       </p>
                     );
@@ -670,21 +672,22 @@ function Profile() {
                             navigate(`/profile/${user.userName}`)
                           }}
                         >
-                          <img 
+                          <Avatar 
                             src={user.profileImage || dp} 
-                            alt="" 
-                            className="w-10 h-10 rounded-full object-cover bg-neutral-900 flex-shrink-0"
+                            alt={user.userName} 
+                            size="w-10 h-10"
+                            className="bg-[var(--background-secondary)] flex-shrink-0"
                           />
                           <div className="truncate">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-xs font-semibold text-white truncate">{user.userName}</p>
+                              <p className="text-xs font-semibold text-[var(--text)] truncate">{user.userName}</p>
                               {isMutual && (
-                                <span className="px-1.5 py-0.5 rounded text-[8px] bg-purple-950/40 text-purple-400 font-bold tracking-wide border border-purple-900/30">
+                                <span className="px-1.5 py-0.5 rounded text-[8px] bg-[var(--primary)]/10 text-[var(--primary)] font-bold tracking-wide border border-[var(--primary)]/20">
                                   Mutual
                                 </span>
                               )}
                             </div>
-                            <p className="text-[10px] text-gray-500 truncate">{user.name}</p>
+                            <p className="text-[10px] text-[var(--text-secondary)] truncate">{user.name}</p>
                           </div>
                         </div>
 
@@ -730,11 +733,11 @@ function Profile() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#121212] border border-[#262626] rounded-2xl w-full max-w-xs overflow-hidden flex flex-col"
+              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-xs overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-5 py-4 border-b border-[#262626] text-center">
-                <span className="text-sm font-bold text-white">Profile Photo Options</span>
+              <div className="px-5 py-4 border-b border-[var(--border)] text-center">
+                <span className="text-sm font-bold text-[var(--text)]">Profile Photo Options</span>
               </div>
               <div className="flex flex-col text-sm">
                 {profileStories.length > 0 && (
@@ -748,7 +751,7 @@ function Profile() {
                         stories: profileStories
                       }])
                     }}
-                    className="py-3.5 border-b border-[#262626] text-purple-400 font-bold hover:bg-white/5 transition-all"
+                    className="py-3.5 border-b border-[var(--border)] text-[var(--primary)] font-bold hover:bg-[var(--hover)] transition-all"
                   >
                     View Story
                   </button>
@@ -759,7 +762,7 @@ function Profile() {
                     setShowPhotoPreview(true)
                     setZoomScale(1)
                   }}
-                  className="py-3.5 border-b border-[#262626] text-white hover:bg-white/5 transition-all"
+                  className="py-3.5 border-b border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-all"
                 >
                   View Profile Photo
                 </button>
@@ -770,7 +773,7 @@ function Profile() {
                         setShowAvatarOptions(false)
                         fileInputRef.current?.click()
                       }}
-                      className="py-3.5 border-b border-[#262626] text-blue-400 hover:bg-white/5 transition-all font-semibold"
+                      className="py-3.5 border-b border-[var(--border)] text-blue-500 dark:text-blue-400 hover:bg-[var(--hover)] transition-all font-semibold"
                     >
                       Change Profile Photo
                     </button>
@@ -780,7 +783,7 @@ function Profile() {
                           setShowAvatarOptions(false)
                           handleRemovePhoto()
                         }}
-                        className="py-3.5 text-red-500 hover:bg-white/5 transition-all font-semibold"
+                        className="py-3.5 text-red-500 hover:bg-[var(--hover)] transition-all font-semibold"
                       >
                         Remove Profile Photo
                       </button>

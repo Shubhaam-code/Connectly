@@ -41,7 +41,7 @@ function Loops() {
 
   return (
     <Layout>
-      <div className="w-full h-full bg-[#000000] flex justify-center relative overflow-hidden">
+      <div className="w-full h-full bg-[var(--background)] flex justify-center relative overflow-hidden">
 
         {/* Snap scroll container */}
         <div 

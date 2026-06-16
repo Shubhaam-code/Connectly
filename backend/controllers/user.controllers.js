@@ -328,6 +328,13 @@ export const follow = async (req, res) => {
                 targetUser.followers.push(currentUserId)
             }
 
+            // Record follow tracking event for social analytics
+            await Tracking.create({
+                owner: targetUserId,
+                eventType: "follow",
+                visitor: currentUserId
+            })
+
             const isFollowBack = currentUser.followers.some(id => id.toString() === targetUserId.toString())
             const notiType = isFollowBack ? "follow_accepted" : "follow"
             const notiMessage = isFollowBack ? "accepted your follow request" : "started following you"

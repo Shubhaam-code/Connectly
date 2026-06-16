@@ -13,17 +13,14 @@ import axiosInstance from '../lib/axiosInstance'
 // FIX: InputField defined OUTSIDE component — prevents remount on every keystroke
 const InputField = ({ icon, placeholder, type = "text", value, onChange, onKeyDown }) => (
   <div className="relative">
-    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">{icon}</div>
+    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</div>
     <input
       type={type}
       placeholder={placeholder}
-      className="w-full h-[50px] rounded-xl pl-11 pr-4 text-sm"
-      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+      className="w-full h-[50px] rounded-xl pl-11 pr-4 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-all placeholder:text-[var(--text-muted)]"
       onChange={onChange}
       value={value}
       onKeyDown={onKeyDown}
-      onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
-      onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
     />
   </div>
 )
@@ -89,8 +86,7 @@ function SignUp() {
 
   return (
     // HINGLISH: Full screen dark background with animated orbs
-    <div className="w-full min-h-screen flex items-center justify-center relative overflow-hidden py-8"
-      style={{ background: 'linear-gradient(135deg, #0D1117 0%, #1a0d2e 50%, #0D1117 100%)' }}>
+    <div className="w-full min-h-screen flex items-center justify-center relative overflow-hidden py-8 bg-gradient-to-br from-[var(--background)] to-[var(--background-secondary)] text-[var(--text-primary)]">
 
       {/* HINGLISH: Background blobs */}
       <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full orb-float"
@@ -100,20 +96,15 @@ function SignUp() {
 
       {/* HINGLISH: Sign up card */}
       <div className="w-full max-w-[420px] mx-4 fade-in" style={{ zIndex: 10 }}>
-        <div className="rounded-3xl p-8" style={{
-          background: 'rgba(28, 35, 51, 0.75)',
-          backdropFilter: 'blur(30px)',
-          border: '1px solid rgba(124, 58, 237, 0.3)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.1)'
-        }}>
+        <div className="rounded-3xl p-8 border border-[var(--border)] shadow-2xl bg-[var(--card)]/90 backdrop-blur-2xl">
 
           {/* HINGLISH: Header section */}
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold gradient-text mb-1">CONNECTLY</h1>
-            <p className="text-sm" style={{ color: '#9CA3AF' }}>Connect. Express. Be you.</p>
+            <p className="text-sm text-[var(--text-secondary)]">Connect. Express. Be you.</p>
             <div className="mt-3">
-              <h2 className="text-xl font-semibold text-white">Create account ✨</h2>
-              <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Join CONNECTLY today</p>
+              <h2 className="text-xl font-semibold text-[var(--text-primary)]">Create account ✨</h2>
+              <p className="text-sm mt-1 text-[var(--text-muted)]">Join CONNECTLY today</p>
             </div>
           </div>
 
@@ -144,7 +135,7 @@ function SignUp() {
 
             {/* HINGLISH: Password with toggle */}
             <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
@@ -152,15 +143,12 @@ function SignUp() {
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Password (min 6 characters)"
-                className="w-full h-[50px] rounded-xl pl-11 pr-12 text-sm"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+                className="w-full h-[50px] rounded-xl pl-11 pr-12 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-all placeholder:text-[var(--text-muted)]"
                 onChange={(e) => setPassword(e.target.value)}
                 value={password}
                 onKeyDown={handleKeyDown}
-                onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.background = 'rgba(124,58,237,0.08)' }}
-                onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)' }}
               />
-              <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? <IoIosEyeOff size={20} /> : <IoIosEye size={20} />}
               </button>
@@ -168,8 +156,7 @@ function SignUp() {
           </div>
 
           {err && (
-            <div className="mb-4 p-3 rounded-xl text-sm text-red-400 text-center"
-              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <div className="mb-4 p-3 rounded-xl text-sm text-[var(--danger)] text-center bg-[var(--danger)]/10 border border-[var(--danger)]/20">
               {err}
             </div>
           )}
@@ -183,9 +170,9 @@ function SignUp() {
             {loading ? <ClipLoader size={22} color="white" /> : "Sign Up"}
           </button>
 
-          <p className="text-center mt-5 text-sm" style={{ color: '#6B7280' }}>
+          <p className="text-center mt-5 text-sm text-[var(--text-muted)]">
             Already have an account?{" "}
-            <span className="font-semibold cursor-pointer hover:opacity-80" style={{ color: '#7C3AED' }}
+            <span className="font-semibold cursor-pointer text-[var(--primary)] hover:opacity-85 transition-opacity"
               onClick={() => navigate("/signin")}>
               Login
             </span>

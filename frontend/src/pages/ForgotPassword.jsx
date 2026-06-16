@@ -62,8 +62,7 @@ function ForgotPassword() {
   }
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #0D1117 0%, #1a0d2e 50%, #0D1117 100%)' }}>
+    <div className="w-full min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[var(--background)] to-[var(--background-secondary)] text-[var(--text-primary)]">
 
       {/* HINGLISH: Animated background orbs */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full orb-float"
@@ -72,15 +71,10 @@ function ForgotPassword() {
         style={{ background: 'radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)' }} />
 
       <div className="w-full max-w-[420px] mx-4 fade-in" style={{ zIndex: 10 }}>
-        <div className="rounded-3xl p-8" style={{
-          background: 'rgba(28, 35, 51, 0.75)',
-          backdropFilter: 'blur(30px)',
-          border: '1px solid rgba(124, 58, 237, 0.3)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5)'
-        }}>
+        <div className="glass rounded-3xl p-8 border border-[var(--border)] shadow-2xl bg-[var(--card)]/90 backdrop-blur-2xl">
 
           {/* HINGLISH: Back button */}
-          <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
+          <button className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors mb-6 cursor-pointer"
             onClick={() => step === 1 ? navigate("/signin") : setStep(1)}>
             <MdOutlineKeyboardBackspace size={22} />
             <span className="text-sm">Back</span>
@@ -100,11 +94,11 @@ function ForgotPassword() {
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-white">{step === 1 ? "Verify your number" : "Enter OTP"}</h2>
-            <p className="text-sm mt-2" style={{ color: '#6B7280' }}>
+            <h2 className="text-2xl font-bold text-[var(--text-primary)]">{step === 1 ? "Verify your number" : "Enter OTP"}</h2>
+            <p className="text-sm mt-2 text-[var(--text-secondary)]">
               {step === 1 ? "Enter the five-digit code sent to" : `Code sent to ${email}`}
             </p>
-            {step === 1 && <p className="text-sm mt-1 font-semibold" style={{ color: '#9CA3AF' }}>+91 XXXXX-XXXXX</p>}
+            {step === 1 && <p className="text-sm mt-1 font-semibold text-[var(--text-secondary)]">+91 XXXXX-XXXXX</p>}
           </div>
 
           {/* HINGLISH: Step 1 — Email input */}
@@ -114,15 +108,12 @@ function ForgotPassword() {
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="w-full h-[52px] rounded-2xl px-4 text-sm"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+                  className="w-full h-[52px] rounded-2xl px-4 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors placeholder:text-[var(--text-muted)]"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onFocus={(e) => { e.target.style.borderColor = '#7C3AED' }}
-                  onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                 />
               </div>
-              {err && <p className="text-red-400 text-sm text-center mb-3">{err}</p>}
+              {err && <p className="text-[var(--danger)] text-sm text-center mb-3">{err}</p>}
               <button className="w-full h-[52px] rounded-2xl font-semibold text-white btn-gradient text-sm"
                 onClick={handleSendOtp} disabled={loading}>
                 {loading ? <ClipLoader size={22} color="white" /> : "Send OTP"}
@@ -141,19 +132,13 @@ function ForgotPassword() {
                     id={`otp-${index}`}
                     type="text"
                     maxLength={1}
-                    className="w-[60px] h-[60px] text-center text-2xl font-bold rounded-2xl"
+                    className="w-[60px] h-[60px] text-center text-2xl font-bold rounded-2xl bg-[var(--input-bg)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all"
                     style={{
-                      background: 'rgba(124,58,237,0.1)',
-                      border: digit ? '2px solid #7C3AED' : '1px solid rgba(255,255,255,0.15)',
-                      color: 'white',
-                      outline: 'none',
-                      transition: 'all 0.2s'
+                      border: digit ? '2px solid var(--primary)' : '1px solid var(--input-border)',
                     }}
                     value={digit}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    onFocus={(e) => { e.target.style.borderColor = '#7C3AED'; e.target.style.boxShadow = '0 0 15px rgba(124,58,237,0.3)' }}
-                    onBlur={(e) => { e.target.style.boxShadow = 'none' }}
                   />
                 ))}
               </div>
@@ -162,33 +147,30 @@ function ForgotPassword() {
                 <input
                   type="password"
                   placeholder="New Password"
-                  className="w-full h-[52px] rounded-2xl px-4 text-sm"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' }}
+                  className="w-full h-[52px] rounded-2xl px-4 text-sm bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors placeholder:text-[var(--text-muted)]"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  onFocus={(e) => { e.target.style.borderColor = '#7C3AED' }}
-                  onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                 />
               </div>
 
-              {err && <p className="text-red-400 text-sm text-center mb-3">{err}</p>}
-              {success && <p className="text-green-400 text-sm text-center mb-3">{success}</p>}
+              {err && <p className="text-[var(--danger)] text-sm text-center mb-3">{err}</p>}
+              {success && <p className="text-[var(--success)] text-sm text-center mb-3">{success}</p>}
 
               <button className="w-full h-[52px] rounded-2xl font-semibold text-white btn-gradient text-sm"
                 onClick={handleResetPassword} disabled={loading}>
                 {loading ? <ClipLoader size={22} color="white" /> : "Reset Password"}
               </button>
 
-              <p className="text-center mt-4 text-sm" style={{ color: '#6B7280' }}>
+              <p className="text-center mt-4 text-sm text-[var(--text-muted)]">
                 Resend code in{" "}
-                <span style={{ color: '#7C3AED' }}>00:30</span>
+                <span className="text-[var(--primary)] font-semibold">00:30</span>
               </p>
             </>
           )}
 
           {/* HINGLISH: Secure verification notice */}
           <div className="mt-6 text-center">
-            <p className="text-xs" style={{ color: '#4B5563' }}>🔒 Secure verification • Your data is protected</p>
+            <p className="text-xs text-[var(--text-muted)]">🔒 Secure verification • Your data is protected</p>
           </div>
         </div>
       </div>

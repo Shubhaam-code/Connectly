@@ -28,6 +28,7 @@ import { setMessages, setPrevChatUsers } from './redux/messageSlice'
 import { useSocket } from './context/SocketContext'
 import AIFriend from './pages/AIFriend'
 import Settings from './pages/Settings'
+import Explore from './pages/Explore'
 import axiosInstance, { SERVER_URL } from './lib/axiosInstance'
 import SplashScreen from './components/ui/SplashScreen'
 
@@ -308,6 +309,7 @@ function App() {
       <Route path='/loops' element={userData ? <Loops /> : <Navigate to={"/signin"} />} />
       <Route path='/ai-friend' element={userData ? <AIFriend /> : <Navigate to={"/signin"} />} />
       <Route path='/settings' element={userData ? <Settings /> : <Navigate to={"/signin"} />} />
+      <Route path='/explore' element={userData ? <Explore /> : <Navigate to={"/signin"} />} />
     </Routes>
   )
 }

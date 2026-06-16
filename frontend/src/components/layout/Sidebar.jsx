@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FiHome,
+  FiCompass,
   FiSearch,
   FiMessageCircle,
   FiBell,
@@ -19,6 +20,7 @@ import { setUserData } from "../../redux/userSlice";
 import axiosInstance from "../../lib/axiosInstance";
 import dp from "../../assets/dp.webp";
 import AccountSwitcherModal from "./AccountSwitcherModal";
+import { Avatar } from "../ui/UIComponents";
 
 export const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -78,6 +80,7 @@ export const Sidebar = () => {
 
   const navItems = [
     { label: "Home", icon: FiHome, path: "/", id: "home" },
+    { label: "Explore", icon: FiCompass, path: "/explore", id: "explore" },
     { label: "Search", icon: FiSearch, path: "/search", id: "search" },
     { label: "Messages", icon: FiMessageCircle, path: "/messages", id: "messages" },
     { label: "Notifications", icon: FiBell, path: "/notifications", id: "notifications" },
@@ -90,7 +93,7 @@ export const Sidebar = () => {
   // Mobile Bottom Bar Layout
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#000000] border-t border-[#262626] flex items-center justify-around z-40 px-2">
+      <div className="fixed bottom-0 left-0 right-0 h-16 bg-[var(--background)] border-t border-[var(--border)] flex items-center justify-around z-40 px-2 text-[var(--text)]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -99,14 +102,15 @@ export const Sidebar = () => {
             <button
               key={item.id}
               onClick={() => handleNavigate(item.path)}
-              className="relative p-3 flex items-center justify-center text-white"
+              className="relative p-3 flex items-center justify-center text-[var(--text)]"
             >
               {item.id === "profile" ? (
-                <div className={`w-7 h-7 rounded-full overflow-hidden border ${active ? "border-white" : "border-transparent"}`}>
-                  <img
+                <div className={`w-7 h-7 rounded-full overflow-hidden border ${active ? "border-[var(--text)]" : "border-transparent"}`}>
+                  <Avatar
                     src={userData?.profileImage || dp}
                     alt="profile"
-                    className="w-full h-full object-cover"
+                    size="w-full h-full"
+                    className="w-full h-full hover:scale-100"
                   />
                 </div>
               ) : (
@@ -138,11 +142,11 @@ export const Sidebar = () => {
     <motion.div
       animate={{ width: isCollapsed ? 72 : 244 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="h-screen bg-[#000000] border-r border-[#262626] z-20 flex flex-col justify-between overflow-hidden flex-shrink-0"
+      className="h-screen bg-[var(--background)] border-r border-[var(--border)] z-20 flex flex-col justify-between overflow-hidden flex-shrink-0 text-[var(--text)]"
     >
       <div>
         {/* Logo Section */}
-        <div className="h-20 px-6 flex items-center justify-between border-b border-[#121212]">
+        <div className="h-20 px-6 flex items-center justify-between border-b border-[var(--border)]">
           {!isCollapsed ? (
             <div
               onClick={() => navigate("/")}
@@ -185,8 +189,8 @@ export const Sidebar = () => {
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.path)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all relative group text-white hover:bg-[#121212] ${
-                  active ? "bg-[#8B5CF6]/10" : ""
+                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all relative group text-[var(--text)] hover:bg-[var(--hover)] ${
+                  active ? "bg-[var(--primary)]/10" : ""
                 }`}
               >
                 {active && (
@@ -194,16 +198,17 @@ export const Sidebar = () => {
                 )}
 
                 {item.id === "profile" ? (
-                  <div className={`w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border ${active ? "border-white" : "border-transparent"}`}>
-                    <img
+                  <div className={`w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border ${active ? "border-[var(--text)]" : "border-transparent"}`}>
+                    <Avatar
                       src={userData?.profileImage || dp}
                       alt="profile"
-                      className="w-full h-full object-cover"
+                      size="w-full h-full"
+                      className="w-full h-full hover:scale-100"
                     />
                   </div>
                 ) : (
                   <div className="relative">
-                    <Icon size={22} className={active ? "text-white stroke-[2.5]" : "text-[#A8A8A8] group-hover:text-white transition-colors"} />
+                    <Icon size={22} className={active ? "text-[var(--text)] stroke-[2.5]" : "text-[var(--text-secondary)] group-hover:text-[var(--text)] transition-colors"} />
                     {item.id === "notifications" && unreadNotifications > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
                         {unreadNotifications > 9 ? "9+" : unreadNotifications}
@@ -223,7 +228,7 @@ export const Sidebar = () => {
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className={`text-sm ${active ? "font-bold text-white" : "text-[#EFEFEF] font-normal"}`}
+                    className={`text-sm ${active ? "font-bold text-[var(--text)]" : "text-[var(--text)] font-normal"}`}
                   >
                     {item.label}
                   </motion.span>
@@ -231,7 +236,7 @@ export const Sidebar = () => {
 
                 {/* Collapsed Tooltip */}
                 {isCollapsed && (
-                  <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#262626] text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                  <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg">
                     {item.label}
                   </div>
                 )}
@@ -242,15 +247,15 @@ export const Sidebar = () => {
       </div>
 
       {/* Footer Settings/Logout Section */}
-      <div className="p-3 border-t border-[#121212] space-y-1">
+      <div className="p-3 border-t border-[var(--border)] space-y-1">
         <button
           onClick={() => navigate("/settings")}
-          className="w-full flex items-center gap-4 px-4 py-3 text-white hover:bg-[#121212] rounded-xl transition-all group relative"
+          className="w-full flex items-center gap-4 px-4 py-3 text-[var(--text)] hover:bg-[var(--hover)] rounded-xl transition-all group relative"
         >
-          <FiSettings size={22} className="text-[#A8A8A8] group-hover:text-white transition-colors" />
-          {!isCollapsed && <span className="text-sm text-[#EFEFEF]">Settings</span>}
+          <FiSettings size={22} className="text-[var(--text-secondary)] group-hover:text-[var(--text)] transition-colors" />
+          {!isCollapsed && <span className="text-sm text-[var(--text)]">Settings</span>}
           {isCollapsed && (
-            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#262626] text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
               Settings
             </div>
           )}
@@ -258,12 +263,12 @@ export const Sidebar = () => {
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-4 px-4 py-3 text-red-500 hover:bg-red-950/20 rounded-xl transition-all group relative"
+          className="w-full flex items-center gap-4 px-4 py-3 text-[var(--danger)] hover:bg-[var(--danger)]/10 rounded-xl transition-all group relative cursor-pointer"
         >
           <FiLogOut size={22} />
           {!isCollapsed && <span className="text-sm font-semibold">Logout</span>}
           {isCollapsed && (
-            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#262626] text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
               Logout
             </div>
           )}
@@ -272,7 +277,7 @@ export const Sidebar = () => {
         {/* Collapse Toggle Button */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex items-center gap-4 px-4 py-3 text-[#A8A8A8] hover:bg-[#121212] rounded-xl transition-all hidden lg:flex"
+          className="w-full flex items-center gap-4 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--hover)] rounded-xl transition-all hidden lg:flex"
         >
           {isCollapsed ? <FiChevronRight size={22} /> : <FiChevronLeft size={22} />}
           {!isCollapsed && <span className="text-sm">Collapse sidebar</span>}
@@ -281,30 +286,30 @@ export const Sidebar = () => {
         {/* User Profile Card */}
         {userData && (
           <div
-            className="mt-2 p-2.5 border-t border-[#121212] flex items-center justify-between gap-3 cursor-pointer hover:bg-[#121212]/50 rounded-xl transition-all relative group min-w-0"
+            className="mt-2 p-2.5 border-t border-[var(--border)] flex items-center justify-between gap-3 cursor-pointer hover:bg-[var(--hover)] rounded-xl transition-all relative group min-w-0"
             onClick={() => setIsSwitcherOpen(true)}
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-[#262626]">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-[var(--border)]">
                   <img src={userData.profileImage || dp} alt="" className="w-full h-full object-cover" />
                 </div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border border-black bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border border-[var(--background)] bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
               </div>
               {!isCollapsed && (
                 <div className="truncate text-left">
-                  <p className="text-xs font-bold text-white truncate">{userData.name}</p>
-                  <p className="text-[10px] text-gray-500 truncate">@{userData.userName}</p>
+                  <p className="text-xs font-bold text-[var(--text)] truncate">{userData.name}</p>
+                  <p className="text-[10px] text-[var(--text-secondary)] truncate">@{userData.userName}</p>
                 </div>
               )}
             </div>
             {!isCollapsed && (
-              <span className="text-gray-500 hover:text-white transition-colors text-xs font-semibold select-none mr-1">
+              <span className="text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors text-xs font-semibold select-none mr-1">
                 •••
               </span>
             )}
             {isCollapsed && (
-              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#262626] text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                 Switch Accounts
               </div>
             )}

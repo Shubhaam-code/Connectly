@@ -4,7 +4,7 @@ axios.defaults.withCredentials = true
 
 const SERVER_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     ? "http://localhost:8000"
-    : "https://connectly-fgdh.onrender.com"
+    : "https://connectly-8iyg.onrender.com"
 
 // ─── Centralized Axios Instance ───────────────────────────────────────────────
 // All API calls go through this instance so:

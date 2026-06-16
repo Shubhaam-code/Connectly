@@ -17,7 +17,7 @@ import messageRouter from "./routes/message.routes.js"
 const port = process.env.PORT || 5000
 
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: ["https://connectly-lemon.vercel.app"],
     credentials: true
 }))
 

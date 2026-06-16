@@ -1,6 +1,10 @@
 import axios from "axios"
 
-const SERVER_URL = "https://connectly-fgdh.onrender.com"
+axios.defaults.withCredentials = true
+
+const SERVER_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8000"
+    : "https://connectly-fgdh.onrender.com"
 
 // ─── Centralized Axios Instance ───────────────────────────────────────────────
 // All API calls go through this instance so:
@@ -11,7 +15,7 @@ const SERVER_URL = "https://connectly-fgdh.onrender.com"
 const axiosInstance = axios.create({
     baseURL: SERVER_URL,
     withCredentials: true,   // CRITICAL: sends httpOnly cookies cross-origin
-    timeout: 15000
+    timeout: 60000
 })
 
 axiosInstance.interceptors.request.use((config) => {
@@ -41,8 +45,8 @@ const subscribeToRefresh = (callback) => {
 }
 
 // After refresh completes, replay all pending requests
-const onRefreshed = () => {
-    refreshSubscribers.forEach(callback => callback())
+const onRefreshed = (refreshError = null) => {
+    refreshSubscribers.forEach(callback => callback(refreshError))
     refreshSubscribers = []
 }
 
@@ -73,8 +77,12 @@ axiosInstance.interceptors.response.use(
         // If another request is already refreshing, wait for it
         if (isRefreshing) {
             return new Promise((resolve, reject) => {
-                subscribeToRefresh(() => {
-                    resolve(axiosInstance(originalRequest))
+                subscribeToRefresh((refreshError) => {
+                    if (refreshError) {
+                        reject(refreshError)
+                    } else {
+                        resolve(axiosInstance(originalRequest))
+                    }
                 })
             })
         }
@@ -88,7 +96,7 @@ axiosInstance.interceptors.response.use(
             await axiosInstance.post("/api/auth/refresh-token")
 
             // Refresh succeeded — replay all waiting requests
-            onRefreshed()
+            onRefreshed(null)
             isRefreshing = false
 
             // Retry the original request with new cookie
@@ -97,7 +105,7 @@ axiosInstance.interceptors.response.use(
         } catch (refreshError) {
             // Refresh failed — session is truly expired
             isRefreshing = false
-            refreshSubscribers = []
+            onRefreshed(refreshError)
 
             // Dispatch a custom event so React can redirect to /signin
             window.dispatchEvent(new CustomEvent("auth:logout"))

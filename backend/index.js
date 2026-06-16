@@ -16,8 +16,10 @@ import messageRouter from "./routes/message.routes.js"
 
 const port = process.env.PORT || 5000
 
+app.set("trust proxy", 1)
+
 app.use(cors({
-    origin: ["https://connectly-lemon.vercel.app"],
+    origin: ["https://connectly-lemon.vercel.app", "http://localhost:5173", "http://localhost:5174"],
     credentials: true
 }))
 

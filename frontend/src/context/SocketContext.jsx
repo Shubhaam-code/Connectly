@@ -20,6 +20,8 @@ export function SocketProvider({ children }) {
         if (userData) {
             // Create socket connection when user logs in
             const newSocket = io(serverUrl, {
+                withCredentials: true,
+                transports: ["websocket", "polling"],
                 query: { userId: userData._id }
             })
             setSocket(newSocket)

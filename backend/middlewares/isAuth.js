@@ -9,12 +9,16 @@ const SESSION_TTL = 3600  // 1 hour
 // sameSite: "Lax" is REQUIRED for local dev (localhost:5173 → localhost:8000)
 // "Strict" blocks cross-site requests; even though both are localhost, the ports
 // differ so browsers treat them as different origins for cookie sending.
-const cookieOptions = (maxAge) => ({
-    httpOnly: true,
-    maxAge,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax"
-})
+const cookieOptions = (maxAge) => {
+    const isProduction = process.env.NODE_ENV === "production"
+    return {
+        httpOnly: true,
+        maxAge,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        path: "/"
+    }
+}
 
 // ── isAuth Middleware ─────────────────────────────────────────────────────────
 const isAuth = async (req, res, next) => {

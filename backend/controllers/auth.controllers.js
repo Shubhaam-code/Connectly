@@ -77,12 +77,16 @@ export const recordSession = async (userId, refreshToken, req) => {
 // sameSite: "Lax" is required for local development.
 // "Strict" blocks cookies when port differs (5173 → 8000), causing 401 on all routes.
 // In production, use "Strict" for security.
-const cookieOptions = (maxAge) => ({
-    httpOnly: true,
-    maxAge,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax"
-})
+const cookieOptions = (maxAge) => {
+    const isProduction = process.env.NODE_ENV === "production"
+    return {
+        httpOnly: true,
+        maxAge,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        path: "/"
+    }
+}
 
 // Helper: set auth cookies (access + refresh pair)
 const setAuthCookies = (res, accessToken, refreshToken, rememberMe = false) => {

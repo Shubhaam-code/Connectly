@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { MdOutlineKeyboardBackspace } from 'react-icons/md'
 import { IoSendSharp } from 'react-icons/io5'
-import Nav from '../components/Nav'
+import Layout from '../components/layout/Layout'
+import dp from "../assets/dp.webp"
 
 // HINGLISH: AI Friend page — CONNECTLY ka AI companion "ConnectlyAI"
 // Ye ek simulated AI chat hai — future mein OpenAI se connect hoga
 function AIFriend() {
   const navigate = useNavigate()
+  const { userData } = useSelector(state => state.user)
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
@@ -70,141 +73,135 @@ function AIFriend() {
   }, [messages, isTyping])
 
   return (
-    <div className="w-full h-screen flex flex-col" style={{ background: '#0D1117' }}>
+    <Layout>
+      <div className="w-full h-[calc(100vh-4rem)] md:h-screen flex flex-col overflow-hidden bg-[var(--bg-primary)]">
 
-      {/* HINGLISH: AI Friend header */}
-      <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
-        style={{
-          background: 'rgba(13,17,23,0.95)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)'
-        }}>
-        <button className="text-gray-400 hover:text-white transition-colors"
-          onClick={() => navigate('/')}>
-          <MdOutlineKeyboardBackspace size={22} />
-        </button>
+        {/* HINGLISH: AI Friend header */}
+        <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0 bg-[var(--bg-secondary)] border-b border-[var(--border-color)]">
+          <button className="text-[#A8A8A8] hover:text-white transition-colors"
+            onClick={() => navigate('/')}>
+            <MdOutlineKeyboardBackspace size={22} />
+          </button>
 
-        {/* HINGLISH: AI avatar — pulsing orb */}
-        <div className="w-10 h-10 rounded-full flex items-center justify-center ai-orb-pulse"
-          style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-          <span className="text-lg">🤖</span>
-        </div>
-
-        <div className="flex-1">
-          <div className="text-sm font-bold text-white">AI Friend</div>
-          <div className="text-xs" style={{ color: '#10B981' }}>● Your Companion • Always Online</div>
-        </div>
-
-        {/* HINGLISH: Info icon */}
-        <button className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(255,255,255,0.05)' }}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </button>
-      </div>
-
-      {/* HINGLISH: Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
-
-        {/* HINGLISH: AI avatar + intro card at top */}
-        <div className="flex flex-col items-center gap-3 mb-4">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center ai-orb-pulse"
+          {/* HINGLISH: AI avatar — pulsing orb */}
+          <div className="w-10 h-10 rounded-full flex items-center justify-center ai-orb-pulse"
             style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-            <span className="text-3xl">🤖</span>
+            <span className="text-lg">🤖</span>
           </div>
-          <div className="text-center">
-            <h2 className="text-white font-bold text-lg">ConnectlyAI</h2>
-            <p className="text-sm" style={{ color: '#9CA3AF' }}>Your emotional companion</p>
+
+          <div className="flex-1">
+            <div className="text-sm font-bold text-[var(--text-primary)]">AI Friend</div>
+            <div className="text-xs" style={{ color: '#10B981' }}>● Your Companion • Always Online</div>
           </div>
+
+          {/* HINGLISH: Info icon */}
+          <button className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-secondary)]">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </button>
         </div>
 
-        {/* HINGLISH: Chat messages */}
-        {messages.map((msg, index) => (
-          <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} gap-3`}>
-            {msg.sender === 'ai' && (
+        {/* HINGLISH: Messages area */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
+
+          {/* HINGLISH: AI avatar + intro card at top */}
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center ai-orb-pulse"
+              style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
+              <span className="text-3xl">🤖</span>
+            </div>
+            <div className="text-center">
+              <h2 className="text-[var(--text-primary)] font-bold text-lg">ConnectlyAI</h2>
+              <p className="text-sm text-[var(--text-secondary)]">Your emotional companion</p>
+            </div>
+          </div>
+
+          {/* HINGLISH: Chat messages */}
+          {messages.map((msg, index) => (
+            <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} gap-3 items-end`}>
+              {msg.sender === 'ai' && (
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
+                  <span className="text-xs">🤖</span>
+                </div>
+              )}
+              <div className={`max-w-[70%] flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                <div className={`px-4 py-3 text-sm leading-relaxed whitespace-pre-line ${
+                  msg.sender === 'user'
+                    ? 'bubble-sender rounded-2xl rounded-br-sm'
+                    : 'bubble-receiver rounded-2xl rounded-bl-sm'
+                }`}>
+                  {msg.text}
+                </div>
+                <span className="text-[10px] mt-1 px-1 text-[var(--text-secondary)] opacity-60">{msg.time}</span>
+              </div>
+              {msg.sender === 'user' && (
+                <img
+                  src={userData?.profileImage || dp}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[var(--border-color)] bg-neutral-900"
+                />
+              )}
+            </div>
+          ))}
+
+          {/* HINGLISH: AI typing indicator */}
+          {isTyping && (
+            <div className="flex gap-3 items-end">
               <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-                <span className="text-sm">🤖</span>
+                <span className="text-xs">🤖</span>
               </div>
-            )}
-            <div className={`max-w-[75%] flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-              <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line
-                ${msg.sender === 'user' ? 'bubble-sender' : ''}`}
-                style={msg.sender === 'ai' ? {
-                  background: 'rgba(124,58,237,0.1)',
-                  border: '1px solid rgba(124,58,237,0.2)',
-                  color: '#E5E7EB',
-                  borderRadius: '20px 20px 20px 4px'
-                } : {}}>
-                {msg.text}
+              <div className="bubble-receiver px-4 py-3 rounded-2xl flex items-center gap-1.5">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="w-2 h-2 rounded-full bg-[var(--text-secondary)] opacity-60 animate-pulse"
+                    style={{
+                      animationDelay: `${i * 0.2}s`
+                    }} />
+                ))}
               </div>
-              <span className="text-[10px] mt-1 px-1" style={{ color: '#4B5563' }}>{msg.time}</span>
             </div>
-          </div>
-        ))}
+          )}
 
-        {/* HINGLISH: AI typing indicator */}
-        {isTyping && (
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-              <span className="text-sm">🤖</span>
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* HINGLISH: Suggestion chips — quick conversation starters */}
+        <div className="px-4 pb-3 flex gap-2 overflow-x-auto flex-shrink-0 scrollbar-none">
+          {suggestions.map((s, i) => (
+            <button key={i}
+              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold hover-scale bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] hover:border-purple-500/50 transition-all"
+              onClick={() => { setInput(s.text); }}>
+              <span>{s.icon}</span>
+              <span>{s.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* HINGLISH: Message input */}
+        <div className="flex-shrink-0 px-4 py-3 bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 flex items-center px-4 h-[48px] rounded-full bg-[var(--bg-primary)] border border-[var(--border-color)] focus-within:border-purple-500/50 transition-all">
+              <input
+                type="text"
+                placeholder="Talk with your AI friend..."
+                className="flex-1 text-sm text-[var(--text-primary)] bg-transparent outline-none placeholder:text-gray-500"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              />
             </div>
-            <div className="px-4 py-3 rounded-2xl flex items-center gap-1.5"
-              style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
-              {[0, 1, 2].map(i => (
-                <div key={i} className="w-2 h-2 rounded-full"
-                  style={{
-                    background: '#7C3AED',
-                    animation: 'glowPulse 1s ease-in-out infinite',
-                    animationDelay: `${i * 0.2}s`
-                  }} />
-              ))}
-            </div>
+            <button
+              className="w-12 h-12 rounded-full flex items-center justify-center btn-gradient flex-shrink-0 hover-scale"
+              onClick={handleSend}>
+              <IoSendSharp className="text-white" size={18} />
+            </button>
           </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* HINGLISH: Suggestion chips — quick conversation starters */}
-      <div className="px-4 pb-3 flex gap-2 overflow-x-auto flex-shrink-0">
-        {suggestions.map((s, i) => (
-          <button key={i}
-            className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-full text-sm hover-scale"
-            style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', color: '#C4B5FD' }}
-            onClick={() => { setInput(s.text); }}>
-            <span>{s.icon}</span>
-            <span className="text-xs">{s.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* HINGLISH: Message input */}
-      <div className="flex-shrink-0 px-4 py-3"
-        style={{ background: 'rgba(13,17,23,0.95)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center gap-3">
-          <div className="flex-1 flex items-center px-4 h-[48px] rounded-full"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.2)' }}>
-            <input
-              type="text"
-              placeholder="Talk with your AI friend..."
-              className="flex-1 text-sm text-white bg-transparent outline-none placeholder:text-gray-600"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            />
-          </div>
-          <button
-            className="w-12 h-12 rounded-full flex items-center justify-center btn-gradient flex-shrink-0 hover-scale"
-            onClick={handleSend}>
-            <IoSendSharp className="text-white" size={18} />
-          </button>
         </div>
       </div>
-    </div>
+    </Layout>
   )
 }
 

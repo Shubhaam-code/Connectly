@@ -2,6 +2,8 @@ import uploadOnCloudinary from "../config/cloudinary.js";
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import Notification from "../models/notification.model.js";
+import Tracking from "../models/tracking.model.js";
+import Post from "../models/post.model.js";
 import { getSocketId, io } from "../socket.js";
 
 export const sendMessage = async (req, res) => {
@@ -40,6 +42,19 @@ export const sendMessage = async (req, res) => {
 
         const newMessage = await Message.create(messageData)
 
+        // Track post share event in analytics
+        if (sharedPost) {
+            const postDoc = await Post.findById(sharedPost)
+            if (postDoc && postDoc.author.toString() !== senderId.toString()) {
+                await Tracking.create({
+                    owner: postDoc.author,
+                    eventType: "post_share",
+                    visitor: senderId,
+                    post: sharedPost
+                })
+            }
+        }
+
         let conversation = await Conversation.findOne({
             participants: { $all: [senderId, receiverId] }
         })
@@ -57,13 +72,33 @@ export const sendMessage = async (req, res) => {
             .populate("sender", "name userName profileImage")
             .populate("receiver", "name userName profileImage")
             .populate("replyTo")
-            .populate("sharedPost")
-            .populate("sharedLoop")
-            .populate("sharedStory")
+            .populate({
+                path: "sharedPost",
+                populate: { path: "author", select: "name userName profileImage" }
+            })
+            .populate({
+                path: "sharedLoop",
+                populate: { path: "author", select: "name userName profileImage" }
+            })
+            .populate({
+                path: "sharedStory",
+                populate: { path: "author", select: "name userName profileImage" }
+            })
+
+        const msgObj = populatedMessage.toObject()
+        if (populatedMessage._doc.sharedPost && !populatedMessage.sharedPost) {
+            msgObj.sharedPostDeleted = true
+        }
+        if (populatedMessage._doc.sharedLoop && !populatedMessage.sharedLoop) {
+            msgObj.sharedLoopDeleted = true
+        }
+        if (populatedMessage._doc.sharedStory && !populatedMessage.sharedStory) {
+            msgObj.sharedStoryDeleted = true
+        }
 
         const receiverSocketId = getSocketId(receiverId)
         if (receiverSocketId) {
-            io.to(receiverSocketId).emit("newMessage", populatedMessage)
+            io.to(receiverSocketId).emit("newMessage", msgObj)
         }
 
         // Create a notification for the receiver
@@ -85,7 +120,7 @@ export const sendMessage = async (req, res) => {
             io.to(receiverSocketId).emit("newNotification", populatedNotification)
         }
 
-        return res.status(200).json(populatedMessage)
+        return res.status(200).json(msgObj)
     } catch (error) {
         console.error("sendMessage error:", error)
         return res.status(500).json({ message: `send Message error: ${error.message}` })
@@ -104,13 +139,28 @@ export const getAllMessages = async (req, res) => {
                 { path: "sender", select: "name userName profileImage" },
                 { path: "receiver", select: "name userName profileImage" },
                 { path: "replyTo" },
-                { path: "sharedPost" },
-                { path: "sharedLoop" },
-                { path: "sharedStory" }
+                { path: "sharedPost", populate: { path: "author", select: "name userName profileImage" } },
+                { path: "sharedLoop", populate: { path: "author", select: "name userName profileImage" } },
+                { path: "sharedStory", populate: { path: "author", select: "name userName profileImage" } }
             ]
         })
 
-        return res.status(200).json(conversation?.messages || [])
+        const messages = conversation?.messages || []
+        const processedMessages = messages.map(msg => {
+            const msgObj = msg.toObject()
+            if (msg._doc.sharedPost && !msg.sharedPost) {
+                msgObj.sharedPostDeleted = true
+            }
+            if (msg._doc.sharedLoop && !msg.sharedLoop) {
+                msgObj.sharedLoopDeleted = true
+            }
+            if (msg._doc.sharedStory && !msg.sharedStory) {
+                msgObj.sharedStoryDeleted = true
+            }
+            return msgObj
+        })
+
+        return res.status(200).json(processedMessages)
 
     } catch (error) {
         console.error("getAllMessages error:", error)

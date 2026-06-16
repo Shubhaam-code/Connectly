@@ -99,6 +99,43 @@ function Post({ post }) {
     }
   }, [socket, dispatch])
 
+  const renderCaptionWithCodeBlocks = (caption) => {
+    if (!caption) return null;
+    const parts = caption.split(/(```[\s\S]*?```)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith("```") && part.endsWith("```")) {
+        const lines = part.slice(3, -3).trim().split("\n");
+        let lang = "";
+        let codeLines = lines;
+        if (lines[0] && /^[a-zA-Z0-9_-]+$/.test(lines[0])) {
+          lang = lines[0];
+          codeLines = lines.slice(1);
+        }
+        const codeText = codeLines.join("\n");
+        return (
+          <div key={index} className="my-3 bg-[#0E1118] border border-[#262626] rounded-xl overflow-hidden font-mono text-xs text-white shadow-inner" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-[#161B22]/60 px-4 py-2 border-b border-[#262626] flex justify-between items-center text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+              <span>{lang || "code"}</span>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(codeText);
+                }}
+                className="hover:text-white transition-colors"
+              >
+                Copy
+              </button>
+            </div>
+            <pre className="p-4 overflow-x-auto select-text leading-relaxed">
+              <code>{codeText}</code>
+            </pre>
+          </div>
+        );
+      }
+      return <span key={index} className="whitespace-pre-line">{part}</span>;
+    });
+  };
+
   return (
     // HINGLISH: Post card — dark glassmorphism style
     <div className="w-full overflow-hidden fade-in mb-4"
@@ -157,7 +194,7 @@ function Post({ post }) {
       {post.caption && (
         <div className="px-4 pt-3 pb-1">
           <span className="text-sm font-semibold text-white">{post.author?.userName} </span>
-          <span className="text-sm" style={{ color: '#D1D5DB' }}>{post.caption}</span>
+          <div className="text-sm inline text-gray-300">{renderCaptionWithCodeBlocks(post.caption)}</div>
         </div>
       )}
 

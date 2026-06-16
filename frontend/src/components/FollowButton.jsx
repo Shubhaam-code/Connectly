@@ -1,62 +1,59 @@
 import axiosInstance from '../lib/axiosInstance'
-import React, { useState } from 'react'
+import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toggleFollow } from '../redux/userSlice'
 
-// Follow button — supports Follow, Following, Follow Back, and Requested states
+// Follow button — supports Follow, Following, Follow Back, and Friends (mutual) states
 function FollowButton({ targetUserId, tailwind, onFollowChange }) {
   const { following, userData } = useSelector(state => state.user)
   const dispatch = useDispatch()
-  const [requested, setRequested] = useState(false)
 
   // Apne aap ko follow nahi kar sakte
   if (targetUserId === userData?._id) return null
 
   const isFollowing = following.some(id => id.toString() === targetUserId?.toString())
   const isFollower = userData?.followers?.some(f => (f._id || f).toString() === targetUserId?.toString())
-  // Mock private account logic: 20% of users are simulated as private
-  const isPrivate = targetUserId ? (targetUserId.toString().charCodeAt(targetUserId.toString().length - 1) % 5 === 0) : false;
 
   const handleFollow = async () => {
     try {
-      if (isPrivate && !isFollowing) {
-        if (requested) {
-          // Cancel request
-          setRequested(false)
-        } else {
-          // Send request
-          setRequested(true)
-          await axiosInstance.get(`/api/user/follow/${targetUserId}`)
-          if (onFollowChange) onFollowChange()
-          dispatch(toggleFollow(targetUserId))
-        }
-      } else {
-        await axiosInstance.get(`/api/user/follow/${targetUserId}`)
-        if (onFollowChange) onFollowChange()
-        dispatch(toggleFollow(targetUserId))
-      }
+      await axiosInstance.get(`/api/user/follow/${targetUserId}`)
+      if (onFollowChange) onFollowChange()
+      dispatch(toggleFollow(targetUserId))
     } catch (error) {
       console.error("follow error:", error.message)
     }
   }
 
   let buttonText = "Follow"
-  if (isFollowing) {
+  if (isFollowing && isFollower) {
+    buttonText = "Friends"
+  } else if (isFollowing) {
     buttonText = "Following"
-  } else if (isPrivate && requested) {
-    buttonText = "Requested"
   } else if (isFollower) {
     buttonText = "Follow Back"
   }
 
-  const isStyledFollowing = isFollowing || (isPrivate && requested)
+  const isStyledFollowing = isFollowing
 
-  // Agar custom tailwind diya hai to use karo, warna default style
+  // If follow state is active, strip out gradient classes to resolve specificity conflicts
+  let classes = tailwind || ""
+  if (isStyledFollowing) {
+    classes = classes
+      .split(" ")
+      .filter(c => !c.includes("gradient") && !c.includes("from-") && !c.includes("to-") && !c.includes("via-"))
+      .join(" ")
+  }
+
   if (tailwind) {
     return (
-      <button className={tailwind} onClick={handleFollow} style={
-        !isStyledFollowing ? {} : { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }
-      }>
+      <button 
+        className={`${classes} transition-all duration-300 ${
+          isStyledFollowing 
+            ? "bg-white/[0.08] hover:bg-white/[0.12] border border-white/10 text-white" 
+            : ""
+        }`} 
+        onClick={handleFollow}
+      >
         {buttonText}
       </button>
     )
@@ -64,13 +61,14 @@ function FollowButton({ targetUserId, tailwind, onFollowChange }) {
 
   return (
     <button
-      className="px-4 py-1.5 rounded-full text-xs font-semibold transition-all hover-scale"
+      className="px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 hover-scale"
       style={{
         background: isStyledFollowing ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #7C3AED, #EC4899)',
         color: 'white',
         border: isStyledFollowing ? '1px solid rgba(255,255,255,0.15)' : 'none'
       }}
-      onClick={handleFollow}>
+      onClick={handleFollow}
+    >
       {buttonText}
     </button>
   )

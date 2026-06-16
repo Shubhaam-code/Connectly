@@ -2,6 +2,7 @@ import uploadOnCloudinary from "../config/cloudinary.js";
 import Notification from "../models/notification.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
+import Tracking from "../models/tracking.model.js";
 import { getSocketId, io } from "../socket.js";
 
 // Helper to parse mentions like @username and create notifications
@@ -114,6 +115,17 @@ export const like = async (req, res) => {
             post.likes = post.likes.filter(id => id.toString() != req.userId.toString())
         } else {
             post.likes.push(req.userId)
+
+            // Track like
+            if (post.author._id.toString() !== req.userId.toString()) {
+                await Tracking.create({
+                    owner: post.author._id,
+                    eventType: "post_like",
+                    visitor: req.userId,
+                    post: post._id
+                })
+            }
+
             // FIX: use .toString() for proper ObjectId comparison
             if (post.author._id.toString() != req.userId.toString()) {
                 const notification = await Notification.create({
@@ -211,6 +223,17 @@ export const comment = async (req, res) => {
         if (message) {
             await handleMentions(message, req.userId, post._id, "comment")
         }
+
+        // Track comment
+        if (post.author._id.toString() !== req.userId.toString()) {
+            await Tracking.create({
+                owner: post.author._id,
+                eventType: "post_comment",
+                visitor: req.userId,
+                post: post._id
+            })
+        }
+
         await post.save()
         await post.populate("author", "name userName profileImage")
         await post.populate({ path: "comments.author", select: "name userName profileImage" })
@@ -380,5 +403,56 @@ export const deletePost = async (req, res) => {
     } catch (error) {
         console.error("deletePost error:", error)
         return res.status(500).json({ message: `deletePost error: ${error.message}` })
+    }
+}
+
+export const trackPostOpen = async (req, res) => {
+    try {
+        const { postId } = req.params
+        const post = await Post.findById(postId)
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" })
+        }
+
+        if (post.author.toString() !== req.userId.toString()) {
+            await Tracking.create({
+                owner: post.author,
+                eventType: "post_open",
+                visitor: req.userId,
+                post: postId
+            })
+        }
+        return res.status(200).json({ message: "Post open tracked successfully" })
+    } catch (error) {
+        console.error("trackPostOpen error:", error)
+        return res.status(500).json({ message: `Tracking error: ${error.message}` })
+    }
+}
+
+export const trackPostImpression = async (req, res) => {
+    try {
+        const { postIds } = req.body
+        if (!postIds) {
+            return res.status(400).json({ message: "postIds required" })
+        }
+
+        const ids = Array.isArray(postIds) ? postIds : [postIds]
+
+        for (const id of ids) {
+            const post = await Post.findById(id)
+            if (post && post.author.toString() !== req.userId.toString()) {
+                await Tracking.create({
+                    owner: post.author,
+                    eventType: "post_impression",
+                    visitor: req.userId,
+                    post: id
+                })
+            }
+        }
+
+        return res.status(200).json({ message: "Impressions tracked successfully" })
+    } catch (error) {
+        console.error("trackPostImpression error:", error)
+        return res.status(500).json({ message: `Tracking error: ${error.message}` })
     }
 }

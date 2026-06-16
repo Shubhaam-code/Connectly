@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import Sidebar from "./Sidebar";
 import { useIsMobile } from "../../hooks/useCustom";
+import FloatingMessenger from "../messages/FloatingMessenger";
 
 export const Layout = ({ children }) => {
   const isMobile = useIsMobile();
@@ -19,6 +20,7 @@ export const Layout = ({ children }) => {
         >
           {children}
         </motion.div>
+        {!isMobile && <FloatingMessenger />}
       </main>
     </div>
   );

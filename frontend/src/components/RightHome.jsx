@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux'
 import dp from "../assets/dp.webp"
 import FollowButton from './FollowButton'
 import AccountSwitcherModal from './layout/AccountSwitcherModal'
+import { FiFileText, FiMessageSquare, FiHeart, FiBookmark, FiChevronRight } from 'react-icons/fi'
 
 function RightHome() {
   const { userData, suggestedUsers, following } = useSelector(state => state.user)
@@ -83,6 +84,79 @@ function RightHome() {
           )}
         </div>
       </div>
+
+      {/* Activity Widget */}
+      {userData && (
+        <div className="mb-6" style={{ borderTop: '1px solid #121212', paddingTop: '16px' }}>
+          <div className="px-1 mb-4">
+            <span className="text-sm font-semibold" style={{ color: '#A8A8A8' }}>Your Activity</span>
+          </div>
+
+          <div className="flex flex-col gap-3.5 bg-[#121212] border border-[#262626] rounded-xl p-4">
+            {/* Posts */}
+            <div 
+              onClick={() => navigate(`/profile/${userData.userName}`)}
+              className="flex items-center justify-between cursor-pointer group/item"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#8B5CF6]/15 flex items-center justify-center text-[#8B5CF6]">
+                  <FiFileText size={16} />
+                </div>
+                <span className="text-xs font-medium text-gray-300 group-hover/item:text-white transition-colors">Posts</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-400 group-hover/item:text-white transition-colors">
+                <span className="text-xs font-bold">{userData.activityStats?.postsCount ?? (userData.posts?.length || 0)}</span>
+                <FiChevronRight size={12} />
+              </div>
+            </div>
+
+            {/* Comments */}
+            <div className="flex items-center justify-between cursor-pointer group/item">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400">
+                  <FiMessageSquare size={16} />
+                </div>
+                <span className="text-xs font-medium text-gray-300 group-hover/item:text-white transition-colors">Comments</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-400 group-hover/item:text-white transition-colors">
+                <span className="text-xs font-bold">{userData.activityStats?.commentsCount ?? 0}</span>
+                <FiChevronRight size={12} />
+              </div>
+            </div>
+
+            {/* Likes */}
+            <div className="flex items-center justify-between cursor-pointer group/item">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#EC4899]/15 flex items-center justify-center text-[#EC4899]">
+                  <FiHeart size={16} />
+                </div>
+                <span className="text-xs font-medium text-gray-300 group-hover/item:text-white transition-colors">Likes</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-400 group-hover/item:text-white transition-colors">
+                <span className="text-xs font-bold">{userData.activityStats?.likesCount ?? 0}</span>
+                <FiChevronRight size={12} />
+              </div>
+            </div>
+
+            {/* Bookmarks */}
+            <div 
+              onClick={() => navigate(`/profile/${userData.userName}?tab=saved`)}
+              className="flex items-center justify-between cursor-pointer group/item"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-yellow-500/15 flex items-center justify-center text-yellow-500">
+                  <FiBookmark size={16} />
+                </div>
+                <span className="text-xs font-medium text-gray-300 group-hover/item:text-white transition-colors">Bookmarks</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-400 group-hover/item:text-white transition-colors">
+                <span className="text-xs font-bold">{userData.activityStats?.bookmarksCount ?? (userData.saved?.length || 0)}</span>
+                <FiChevronRight size={12} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="px-1 pb-8">

@@ -9,16 +9,19 @@ import { setCurrentUserStory } from '../redux/storySlice'
 import { setLoopData } from '../redux/loopSlice'
 import { ClipLoader } from 'react-spinners'
 import axiosInstance from '../lib/axiosInstance'
-
 // HINGLISH: Upload page — media upload karne ka premium camera-style screen
 // FIX: Switched all upload functions from raw axios to axiosInstance for auto auth-refresh
 function Upload() {
   const navigate = useNavigate()
-  const [uploadType, setUploadType] = useState("post")
+  const searchParams = new URLSearchParams(window.location.search)
+  const queryType = searchParams.get("type")
+  const isCode = searchParams.get("code") === "true"
+
+  const [uploadType, setUploadType] = useState(queryType || "post")
   const [frontendMedia, setFrontendMedia] = useState(null)
   const [backendMedia, setBackendMedia] = useState(null)
   const [mediaType, setMediaType] = useState("")
-  const [caption, setCaption] = useState("")
+  const [caption, setCaption] = useState(isCode ? "```javascript\n\n```" : "")
   const [error, setError] = useState("")
   const mediaInput = useRef()
   const dispatch = useDispatch()

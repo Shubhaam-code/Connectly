@@ -1,6 +1,22 @@
 import express from "express"
 import isAuth from "../middlewares/isAuth.js"
-import { editProfile, follow, followingList, getAllNotifications, getCurrentUser, getProfile, markAsRead, search, suggestedUsers, getSavedPosts } from "../controllers/user.controllers.js"
+import {
+    editProfile,
+    follow,
+    followingList,
+    getAllNotifications,
+    getCurrentUser,
+    getProfile,
+    markAsRead,
+    search,
+    suggestedUsers,
+    getSavedPosts,
+    getUserAnalytics,
+    getActiveSessions,
+    revokeSession,
+    createSupportTicket,
+    deleteAccount
+} from "../controllers/user.controllers.js"
 import { upload } from "../middlewares/multer.js"
 
 const userRouter = express.Router()
@@ -14,7 +30,13 @@ userRouter.get("/search", isAuth, search)
 userRouter.get("/getAllNotifications", isAuth, getAllNotifications)
 userRouter.get("/saved-posts", isAuth, getSavedPosts)
 userRouter.post("/markAsRead", isAuth, markAsRead)
-// FIX: Removed duplicate /search route (was declared twice)
 userRouter.post("/editProfile", isAuth, upload.single("profileImage"), editProfile)
+
+// New analytics, sessions, support, and account deletion routes
+userRouter.get("/analytics", isAuth, getUserAnalytics)
+userRouter.get("/sessions", isAuth, getActiveSessions)
+userRouter.delete("/sessions/:sessionId", isAuth, revokeSession)
+userRouter.post("/support", isAuth, createSupportTicket)
+userRouter.delete("/delete-account", isAuth, deleteAccount)
 
 export default userRouter

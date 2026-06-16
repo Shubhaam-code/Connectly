@@ -2,7 +2,18 @@ import express from "express"
 import isAuth from "../middlewares/isAuth.js"
 
 import { upload } from "../middlewares/multer.js"
-import { comment, deletePost, getAllPosts, like, saved, uploadPost, likeComment, likeReply } from "../controllers/post.controllers.js"
+import {
+    comment,
+    deletePost,
+    getAllPosts,
+    like,
+    saved,
+    uploadPost,
+    likeComment,
+    likeReply,
+    trackPostOpen,
+    trackPostImpression
+} from "../controllers/post.controllers.js"
 
 const postRouter = express.Router()
 
@@ -13,7 +24,10 @@ postRouter.get("/saved/:postId", isAuth, saved)
 postRouter.post("/comment/:postId", isAuth, comment)
 postRouter.get("/comment/like/:postId/:commentId", isAuth, likeComment)
 postRouter.get("/comment/reply/like/:postId/:commentId/:replyId", isAuth, likeReply)
-// FIX: Added delete post route
 postRouter.delete("/delete/:postId", isAuth, deletePost)
+
+// New analytics tracking routes
+postRouter.post("/track/open/:postId", isAuth, trackPostOpen)
+postRouter.post("/track/impression", isAuth, trackPostImpression)
 
 export default postRouter

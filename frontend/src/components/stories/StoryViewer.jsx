@@ -396,39 +396,64 @@ export const StoryBubble = ({ group, onClick, isOwn }) => {
     (s) => !s.viewers?.some((v) => (v._id || v).toString() === userData?._id?.toString())
   );
 
+  // Background media
+  const backgroundMedia = hasStories 
+    ? group.stories[0]?.media 
+    : (group.avatar || dp);
+
   return (
     <motion.div
       onClick={onClick}
-      className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0"
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      className="w-24 h-36 md:w-28 md:h-44 rounded-2xl overflow-hidden relative flex flex-col justify-between p-3 flex-shrink-0 cursor-pointer border border-[#262626] shadow-lg group"
+      whileHover={{ scale: 1.03, translateY: -2 }}
+      whileTap={{ scale: 0.98 }}
+      style={{
+        background: `linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%), url(${backgroundMedia})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}
     >
-      {/* Outer ring */}
-      <div
-        className={`w-16 h-16 rounded-full p-[2px] flex items-center justify-center relative ${hasStories
-            ? hasUnseen
-              ? "bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600"
-              : "border border-[#262626]"
-            : ""
-          }`}
-      >
-        <div className="w-full h-full rounded-full bg-black p-[2.5px] overflow-hidden flex items-center justify-center">
-          <img
-            src={group.avatar || dp}
-            alt={group.username}
-            className="w-full h-full object-cover rounded-full"
-          />
-        </div>
-
-        {/* Plus badge on empty own story bubble */}
-        {!hasStories && isOwn && (
-          <div className="absolute bottom-0 right-0 bg-blue-500 border-2 border-black rounded-full w-5 h-5 flex items-center justify-center text-white text-xs font-bold">
-            +
+      {/* Top: Avatar with Ring */}
+      <div className="z-10 flex justify-start w-full">
+        {isOwn && !hasStories ? (
+          <div className="w-0 h-0" />
+        ) : (
+          <div
+            className={`w-9 h-9 rounded-full p-[1.5px] flex items-center justify-center ${
+              hasStories
+                ? hasUnseen
+                  ? "bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#A855F7] animate-pulse"
+                  : "border border-white/20"
+                : ""
+            }`}
+          >
+            <div className="w-full h-full rounded-full bg-black overflow-hidden flex items-center justify-center p-[1px]">
+              <img
+                src={group.avatar || dp}
+                alt=""
+                className="w-full h-full object-cover rounded-full"
+              />
+            </div>
           </div>
         )}
       </div>
 
-      <span className="text-xs text-white max-w-[72px] truncate">
+      {/* Middle/Center: Plus icon for empty own story */}
+      {isOwn && !hasStories && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 p-2">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-[#262626]">
+              <img src={userData?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="absolute bottom-[-4px] right-[-4px] bg-[#8B5CF6] border border-black rounded-full w-5 h-5 flex items-center justify-center text-white text-xs font-bold shadow-[0_0_8px_rgba(139,92,246,0.6)]">
+              +
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom: Username */}
+      <span className="text-[10px] md:text-xs font-bold text-white max-w-full truncate z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-left select-none">
         {isOwn ? "Your Story" : group.username}
       </span>
     </motion.div>
@@ -488,7 +513,7 @@ export const StoriesContainer = ({ stories = [], ownStories = [], onStoryClick, 
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto py-3 px-4 scrollbar-none border-b border-[#262626]">
+    <div className="flex gap-3 overflow-x-auto py-4 px-4 scrollbar-none border-b border-[#121212] bg-[#000000] w-full">
       {groupedList.map((group, idx) => (
         <StoryBubble
           key={group._id || idx}

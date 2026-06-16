@@ -2,17 +2,65 @@ import uploadOnCloudinary from "../config/cloudinary.js"
 import Notification from "../models/notification.model.js"
 import User from "../models/user.model.js"
 import Post from "../models/post.model.js"
+import Loop from "../models/loop.model.js"
+import Tracking from "../models/tracking.model.js"
+import Session from "../models/session.model.js"
+import SupportTicket from "../models/support.model.js"
 import { getSocketId, io, userSocketMap } from "../socket.js"
+import redis from "../config/redis.js"
 
 export const getCurrentUser = async (req, res) => {
     try {
         const userId = req.userId
         const user = await User.findById(userId)
-            .populate("posts loops story following followers")
+            .populate("posts loops story following followers blockedUsers mutedUsers")
         if (!user) {
             return res.status(400).json({ message: "user not found" })
         }
-        return res.status(200).json(user)
+
+        // Calculate activity stats
+        const postsCount = await Post.countDocuments({ author: userId })
+        const loopsCount = await Loop.countDocuments({ author: userId })
+        const bookmarksCount = user.saved?.length || 0
+
+        const likedPostsCount = await Post.countDocuments({ likes: userId })
+        const likedLoopsCount = await Loop.countDocuments({ likes: userId })
+
+        const postsWithComments = await Post.find({ "comments.author": userId })
+        let commentsCount = 0
+        postsWithComments.forEach(p => {
+            p.comments.forEach(c => {
+                if (c.author?.toString() === userId.toString()) {
+                    commentsCount++
+                }
+                if (c.replies) {
+                    c.replies.forEach(r => {
+                        if (r.author?.toString() === userId.toString()) {
+                            commentsCount++
+                        }
+                    })
+                }
+            })
+        })
+
+        const loopsWithComments = await Loop.find({ "comments.author": userId })
+        loopsWithComments.forEach(l => {
+            l.comments.forEach(c => {
+                if (c.author?.toString() === userId.toString()) {
+                    commentsCount++
+                }
+            })
+        })
+
+        const userObj = user.toObject()
+        userObj.activityStats = {
+            postsCount: postsCount + loopsCount,
+            commentsCount,
+            likesCount: likedPostsCount + likedLoopsCount,
+            bookmarksCount
+        }
+
+        return res.status(200).json(userObj)
     } catch (error) {
         console.error("getCurrentUser error:", error)
         return res.status(500).json({ message: `get current user error ${error.message}` })
@@ -87,7 +135,12 @@ export const suggestedUsers = async (req, res) => {
 
 export const editProfile = async (req, res) => {
     try {
-        const { name, userName, bio, profession, gender } = req.body
+        const {
+            name, userName, bio, profession, gender,
+            email, phone, twoFactorEnabled, profileVisibility, postVisibility, storyVisibility,
+            messagePermissions, pushNotifications, emailNotifications, messageNotifications,
+            blockedUsers, mutedUsers, blockUserId, unblockUserId, muteUserId, unmuteUserId
+        } = req.body
         const user = await User.findById(req.userId).select("-password")
         if (!user) {
             return res.status(400).json({ message: "user not found" })
@@ -101,8 +154,21 @@ export const editProfile = async (req, res) => {
             }
         }
 
-        // FIX: Only upload image if a file was provided
-        if (req.file) {
+        // Check email conflict if email is changing
+        if (email && email.toLowerCase().trim() !== user.email) {
+            const normalizedEmail = email.toLowerCase().trim()
+            const sameUserWithEmail = await User.findOne({ email: normalizedEmail }).select("-password")
+            if (sameUserWithEmail && sameUserWithEmail._id.toString() !== req.userId.toString()) {
+                return res.status(400).json({ message: "email already exist" })
+            }
+            user.email = normalizedEmail
+        }
+
+        // Check if removing profile image
+        if (req.body.removeProfileImage === "true" || req.body.removeProfileImage === true || req.body.profileImage === "") {
+            user.profileImage = ""
+        } else if (req.file) {
+            // FIX: Only upload image if a file was provided
             const profileImage = await uploadOnCloudinary(req.file.path)
             if (profileImage) {
                 user.profileImage = profileImage
@@ -111,12 +177,56 @@ export const editProfile = async (req, res) => {
             }
         }
 
+        // Secure Password Change support
+        if (req.body.newPassword && req.body.currentPassword) {
+            const bcrypt = (await import("bcryptjs")).default
+            const userWithPass = await User.findById(req.userId).select("+password")
+            const isMatch = await bcrypt.compare(req.body.currentPassword, userWithPass.password)
+            if (!isMatch) {
+                return res.status(400).json({ message: "Incorrect current password" })
+            }
+            const salt = await bcrypt.genSalt(10)
+            user.password = await bcrypt.hash(req.body.newPassword, salt)
+        }
+
         // FIX: Only update fields that are provided (don't overwrite with undefined)
         if (name !== undefined) user.name = name
         if (userName !== undefined) user.userName = userName
         if (bio !== undefined) user.bio = bio
         if (profession !== undefined) user.profession = profession
         if (gender !== undefined) user.gender = gender
+
+        // New preference fields
+        if (phone !== undefined) user.phone = phone
+        if (twoFactorEnabled !== undefined) user.twoFactorEnabled = twoFactorEnabled
+        if (profileVisibility !== undefined) user.profileVisibility = profileVisibility
+        if (postVisibility !== undefined) user.postVisibility = postVisibility
+        if (storyVisibility !== undefined) user.storyVisibility = storyVisibility
+        if (messagePermissions !== undefined) user.messagePermissions = messagePermissions
+        if (pushNotifications !== undefined) user.pushNotifications = pushNotifications
+        if (emailNotifications !== undefined) user.emailNotifications = emailNotifications
+        if (messageNotifications !== undefined) user.messageNotifications = messageNotifications
+
+        if (blockedUsers !== undefined) user.blockedUsers = blockedUsers
+        if (mutedUsers !== undefined) user.mutedUsers = mutedUsers
+
+        // Inline block/unblock, mute/unmute helpers
+        if (blockUserId) {
+            if (!user.blockedUsers.includes(blockUserId)) {
+                user.blockedUsers.push(blockUserId)
+            }
+        }
+        if (unblockUserId) {
+            user.blockedUsers = user.blockedUsers.filter(id => id.toString() !== unblockUserId.toString())
+        }
+        if (muteUserId) {
+            if (!user.mutedUsers.includes(muteUserId)) {
+                user.mutedUsers.push(muteUserId)
+            }
+        }
+        if (unmuteUserId) {
+            user.mutedUsers = user.mutedUsers.filter(id => id.toString() !== unmuteUserId.toString())
+        }
 
         await user.save()
 
@@ -136,10 +246,20 @@ export const getProfile = async (req, res) => {
         const userName = req.params.userName
         const user = await User.findOne({ userName })
             .select("-password")
-            .populate("posts loops followers following")
+            .populate("posts loops followers following story")
         if (!user) {
             return res.status(404).json({ message: "user not found" })
         }
+
+        // Track profile visit if visitor is not the owner
+        if (req.userId && req.userId.toString() !== user._id.toString()) {
+            await Tracking.create({
+                owner: user._id,
+                eventType: "profile_visit",
+                visitor: req.userId
+            })
+        }
+
         return res.status(200).json(user)
     } catch (error) {
         console.error("getProfile error:", error)
@@ -352,5 +472,151 @@ export const getSavedPosts = async (req, res) => {
     } catch (error) {
         console.error("getSavedPosts error:", error)
         return res.status(500).json({ message: `get saved posts error ${error.message}` })
+    }
+}
+
+export const getUserAnalytics = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { period = "7days" } = req.query
+
+        let startDate = new Date()
+        if (period === "today") {
+            startDate.setHours(0, 0, 0, 0)
+        } else if (period === "30days") {
+            startDate.setDate(startDate.getDate() - 30)
+        } else {
+            startDate.setDate(startDate.getDate() - 7)
+        }
+
+        const records = await Tracking.find({
+            owner: userId,
+            createdAt: { $gte: startDate }
+        })
+
+        let profileViews = 0
+        let impressions = 0
+        let likes = 0
+        let comments = 0
+        let shares = 0
+        const uniqueVisitors = new Set()
+
+        records.forEach(r => {
+            if (r.visitor) {
+                uniqueVisitors.add(r.visitor.toString())
+            }
+            if (r.eventType === "profile_visit") profileViews++
+            else if (r.eventType === "post_impression") impressions++
+            else if (r.eventType === "post_like") likes++
+            else if (r.eventType === "post_comment") comments++
+            else if (r.eventType === "post_share") shares++
+        })
+
+        return res.status(200).json({
+            profileViews,
+            impressions,
+            reach: uniqueVisitors.size,
+            likes,
+            comments,
+            shares
+        })
+    } catch (error) {
+        console.error("getUserAnalytics error:", error)
+        return res.status(500).json({ message: `Analytics loading error: ${error.message}` })
+    }
+}
+
+export const getActiveSessions = async (req, res) => {
+    try {
+        const userId = req.userId
+        const sessions = await Session.find({ user: userId }).sort({ lastActive: -1 })
+        return res.status(200).json(sessions)
+    } catch (error) {
+        console.error("getActiveSessions error:", error)
+        return res.status(500).json({ message: `Sessions loading error: ${error.message}` })
+    }
+}
+
+export const revokeSession = async (req, res) => {
+    try {
+        const userId = req.userId
+        const sessionId = req.params.sessionId
+
+        const session = await Session.findOne({ _id: sessionId, user: userId })
+        if (!session) {
+            return res.status(404).json({ message: "Session not found or unauthorized" })
+        }
+
+        await Session.findByIdAndDelete(sessionId)
+        return res.status(200).json({ message: "Session revoked successfully" })
+    } catch (error) {
+        console.error("revokeSession error:", error)
+        return res.status(500).json({ message: `Session revocation error: ${error.message}` })
+    }
+}
+
+export const createSupportTicket = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { email, category, message } = req.body
+
+        if (!email || !category || !message) {
+            return res.status(400).json({ message: "All fields are required" })
+        }
+
+        const ticket = await SupportTicket.create({
+            user: userId,
+            email,
+            category,
+            message
+        })
+
+        return res.status(201).json({ message: "Support ticket submitted successfully", ticket })
+    } catch (error) {
+        console.error("createSupportTicket error:", error)
+        return res.status(500).json({ message: `Support submission error: ${error.message}` })
+    }
+}
+
+export const deleteAccount = async (req, res) => {
+    try {
+        const userId = req.userId
+
+        const user = await User.findById(userId)
+        if (!user) {
+            return res.status(404).json({ message: "User not found" })
+        }
+
+        // Delete associated posts & loops
+        await Post.deleteMany({ author: userId })
+        await Loop.deleteMany({ author: userId })
+
+        // Delete associated user data models
+        await Session.deleteMany({ user: userId })
+        await Tracking.deleteMany({ owner: userId })
+        await SupportTicket.deleteMany({ user: userId })
+
+        // Remove from followers / following lists of other users
+        await User.updateMany(
+            { followers: userId },
+            { $pull: { followers: userId } }
+        )
+        await User.updateMany(
+            { following: userId },
+            { $pull: { following: userId } }
+        )
+
+        // Delete user
+        await User.findByIdAndDelete(userId)
+
+        // Clear cookies
+        res.clearCookie("accessToken")
+        res.clearCookie("refreshToken")
+        res.clearCookie("token")
+
+        return res.status(200).json({ message: "Account deleted successfully" })
+    } catch (error) {
+        console.error("deleteAccount error:", error)
+        return res.status(500).json({ message: `Account deletion error: ${error.message}` })
     }
 }

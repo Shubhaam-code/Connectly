@@ -18,9 +18,11 @@ import { useIsMobile } from "../../hooks/useCustom";
 import { setUserData } from "../../redux/userSlice";
 import axiosInstance from "../../lib/axiosInstance";
 import dp from "../../assets/dp.webp";
+import AccountSwitcherModal from "./AccountSwitcherModal";
 
 export const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const { userData, notificationData } = useSelector((state) => state.user);
   const { prevChatUsers } = useSelector((state) => state.message);
   const navigate = useNavigate();
@@ -183,8 +185,14 @@ export const Sidebar = () => {
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.path)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all relative group text-white hover:bg-[#121212]`}
+                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all relative group text-white hover:bg-[#121212] ${
+                  active ? "bg-[#8B5CF6]/10" : ""
+                }`}
               >
+                {active && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-[#8B5CF6] to-[#EC4899] rounded-r-md shadow-[0_0_10px_rgba(139,92,246,0.8)]" />
+                )}
+
                 {item.id === "profile" ? (
                   <div className={`w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border ${active ? "border-white" : "border-transparent"}`}>
                     <img
@@ -269,7 +277,42 @@ export const Sidebar = () => {
           {isCollapsed ? <FiChevronRight size={22} /> : <FiChevronLeft size={22} />}
           {!isCollapsed && <span className="text-sm">Collapse sidebar</span>}
         </button>
+
+        {/* User Profile Card */}
+        {userData && (
+          <div
+            className="mt-2 p-2.5 border-t border-[#121212] flex items-center justify-between gap-3 cursor-pointer hover:bg-[#121212]/50 rounded-xl transition-all relative group min-w-0"
+            onClick={() => setIsSwitcherOpen(true)}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative flex-shrink-0">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-[#262626]">
+                  <img src={userData.profileImage || dp} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border border-black bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+              </div>
+              {!isCollapsed && (
+                <div className="truncate text-left">
+                  <p className="text-xs font-bold text-white truncate">{userData.name}</p>
+                  <p className="text-[10px] text-gray-500 truncate">@{userData.userName}</p>
+                </div>
+              )}
+            </div>
+            {!isCollapsed && (
+              <span className="text-gray-500 hover:text-white transition-colors text-xs font-semibold select-none mr-1">
+                •••
+              </span>
+            )}
+            {isCollapsed && (
+              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#262626] text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                Switch Accounts
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      <AccountSwitcherModal isOpen={isSwitcherOpen} onClose={() => setIsSwitcherOpen(false)} />
     </motion.div>
   );
 };

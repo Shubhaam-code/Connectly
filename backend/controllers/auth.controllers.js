@@ -1,6 +1,7 @@
 import sendMail from "../config/Mail.js"
 import { genAccessToken, genRefreshToken } from "../config/token.js"
 import User from "../models/user.model.js"
+import Session from "../models/session.model.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import redis from "../config/redis.js"
@@ -8,6 +9,69 @@ import redis from "../config/redis.js"
 // Cache TTLs
 const SESSION_TTL = 3600         // 1 hour
 const USER_CACHE_TTL = 1800      // 30 min user profile
+
+const parseUserAgent = (uaString) => {
+    let deviceType = "Desktop"
+    let browserName = "Chrome"
+    let osName = "Windows"
+
+    if (!uaString) return { deviceType, browserName, osName }
+
+    const ua = uaString.toLowerCase()
+
+    if (ua.includes("mobi") || ua.includes("android") || ua.includes("iphone")) {
+        deviceType = "Mobile"
+    } else if (ua.includes("tablet") || ua.includes("ipad")) {
+        deviceType = "Tablet"
+    }
+
+    if (ua.includes("windows")) {
+        osName = "Windows"
+    } else if (ua.includes("macintosh") || ua.includes("mac os")) {
+        osName = "macOS"
+    } else if (ua.includes("linux")) {
+        osName = "Linux"
+    } else if (ua.includes("iphone") || ua.includes("ipad")) {
+        osName = "iOS"
+    } else if (ua.includes("android")) {
+        osName = "Android"
+    }
+
+    if (ua.includes("firefox")) {
+        browserName = "Firefox"
+    } else if (ua.includes("opr") || ua.includes("opera")) {
+        browserName = "Opera"
+    } else if (ua.includes("edg") || ua.includes("edge")) {
+        browserName = "Edge"
+    } else if (ua.includes("chrome")) {
+        browserName = "Chrome"
+    } else if (ua.includes("safari")) {
+        browserName = "Safari"
+    }
+
+    return { deviceType, browserName, osName }
+}
+
+export const recordSession = async (userId, refreshToken, req) => {
+    try {
+        const uaString = req.headers["user-agent"] || ""
+        const ipAddress = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1"
+        const { deviceType, browserName, osName } = parseUserAgent(uaString)
+        
+        await Session.create({
+            user: userId,
+            refreshToken,
+            userAgent: uaString.substring(0, 150),
+            ipAddress,
+            deviceType,
+            browserName,
+            osName,
+            lastActive: new Date()
+        })
+    } catch (err) {
+        console.error("Failed to record session:", err)
+    }
+}
 
 // ── Cookie helper ─────────────────────────────────────────────────────────────
 // sameSite: "Lax" is required for local development.
@@ -87,6 +151,7 @@ export const signUp = async (req, res) => {
 
         setAuthCookies(res, accessToken, refreshToken, true)
         await cacheSession(user._id)
+        await recordSession(user._id, refreshToken, req)
 
         // Return user without password
         const userObj = user.toObject()
@@ -163,11 +228,29 @@ export const signIn = async (req, res) => {
             await user.save()
         }
 
+        if (user.twoFactorEnabled) {
+            const otp = Math.floor(1000 + Math.random() * 9000).toString()
+            user.resetOtp = otp
+            user.otpExpires = new Date(Date.now() + 5 * 60 * 1000)
+            user.isOtpVerified = false
+            await user.save()
+            try {
+                await sendMail(user.email, otp)
+            } catch (mailErr) {
+                console.error("Failed to send 2FA email:", mailErr)
+            }
+            return res.status(200).json({
+                twoFactorRequired: true,
+                email: user.email
+            })
+        }
+
         const accessToken = genAccessToken(user._id, rememberMe)
         const refreshToken = genRefreshToken(user._id)
 
         setAuthCookies(res, accessToken, refreshToken, rememberMe)
         await cacheSession(user._id)
+        await recordSession(user._id, refreshToken, req)
 
         // Return user without password
         const userObj = user.toObject()
@@ -194,6 +277,11 @@ export const signOut = async (req, res) => {
         if (req.userId && !redis.isStub) {
             await redis.del(`session:${req.userId}`)
             await redis.del(`user:${req.userId}`)
+        }
+
+        const token = req.cookies.refreshToken
+        if (token) {
+            await Session.deleteOne({ refreshToken: token })
         }
 
         res.clearCookie("accessToken")
@@ -353,6 +441,10 @@ export const switchAccount = async (req, res) => {
         const newAccessToken = genAccessToken(user._id)
         const newRefreshToken = genRefreshToken(user._id)
 
+        // Revoke the old session, record the new one
+        await Session.deleteOne({ refreshToken })
+        await recordSession(user._id, newRefreshToken, req)
+
         setAuthCookies(res, newAccessToken, newRefreshToken)
         await cacheSession(user._id)
 
@@ -369,5 +461,45 @@ export const switchAccount = async (req, res) => {
     } catch (error) {
         console.error("switchAccount error:", error)
         return res.status(500).json({ message: `Switch account error: ${error.message}` })
+    }
+}
+
+export const verify2fa = async (req, res) => {
+    try {
+        const { email, otp } = req.body
+        if (!email || !otp) {
+            return res.status(400).json({ message: "Email and OTP code are required" })
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() })
+        if (!user || user.resetOtp !== otp || user.otpExpires < Date.now()) {
+            return res.status(400).json({ message: "Invalid or expired OTP code" })
+        }
+
+        // OTP is correct! Clear it
+        user.resetOtp = undefined
+        user.otpExpires = undefined
+        await user.save()
+
+        // Generate tokens
+        const accessToken = genAccessToken(user._id, false)
+        const refreshToken = genRefreshToken(user._id)
+
+        setAuthCookies(res, accessToken, refreshToken, false)
+        await cacheSession(user._id)
+        await recordSession(user._id, refreshToken, req)
+
+        const userObj = user.toObject()
+        delete userObj.password
+
+        await cacheUserProfile(user._id, userObj)
+
+        return res.status(200).json({
+            ...userObj,
+            refreshToken
+        })
+    } catch (error) {
+        console.error("verify2fa error:", error)
+        return res.status(500).json({ message: `2FA verification error: ${error.message}` })
     }
 }

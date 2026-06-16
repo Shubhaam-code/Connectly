@@ -7,12 +7,15 @@ import {
     signUp,
     verifyOtp,
     refreshTokens,
-    switchAccount
+    switchAccount,
+    verify2fa
 } from "../controllers/auth.controllers.js"
 import rateLimiter from "../middlewares/rateLimiter.js"
 import isAuth from "../middlewares/isAuth.js"
 
 const authRouter = express.Router()
+
+authRouter.post("/verify-2fa", verify2fa)
 
 authRouter.post("/signup", signUp)
 

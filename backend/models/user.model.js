@@ -96,6 +96,60 @@ const userSchema = new mongoose.Schema({
     },
     lockUntil: {
         type: Date
+    },
+
+    // Privacy & Preferences
+    phone: {
+        type: String,
+        default: ""
+    },
+    twoFactorEnabled: {
+        type: Boolean,
+        default: false
+    },
+    profileVisibility: {
+        type: String,
+        enum: ["public", "private"],
+        default: "public"
+    },
+    postVisibility: {
+        type: String,
+        enum: ["public", "followers"],
+        default: "public"
+    },
+    storyVisibility: {
+        type: String,
+        enum: ["public", "followers"],
+        default: "public"
+    },
+    messagePermissions: {
+        type: String,
+        enum: ["everyone", "followers"],
+        default: "everyone"
+    },
+    blockedUsers: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }
+    ],
+    mutedUsers: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }
+    ],
+    pushNotifications: {
+        type: Boolean,
+        default: true
+    },
+    emailNotifications: {
+        type: Boolean,
+        default: true
+    },
+    messageNotifications: {
+        type: Boolean,
+        default: true
     }
 
 }, { timestamps: true })

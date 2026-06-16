@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CONNECTLY — Connect. Express. Be you.</title>
     <meta name="description" content="CONNECTLY — A premium social media experience. Share posts, stories, loops and connect with your world." />
+    <script>
+      (function() {
+        const theme = localStorage.getItem("theme") || "system";
+        if (theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+        } else {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

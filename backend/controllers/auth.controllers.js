@@ -303,9 +303,12 @@ export const signOut = async (req, res) => {
 export const refreshTokens = async (req, res) => {
     try {
         const token = req.cookies.refreshToken
+          console.log("Cookies:", req.cookies)
+  console.log("RefreshToken:", req.cookies?.refreshToken)
 
         if (!token) {
             return res.status(401).json({ message: "No refresh token" })
+            
         }
 
         let decoded

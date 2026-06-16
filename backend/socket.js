@@ -6,7 +6,7 @@ const server=http.createServer(app)
 
 const io=new Server(server,{
     cors:{
-        origin:["https://connectly-lemon.vercel.app/"],
+        origin:["https://connectly-lemon.vercel.app"],
         methods:["GET","POST"]
     }
 })

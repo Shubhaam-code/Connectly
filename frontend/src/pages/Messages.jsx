@@ -12,11 +12,15 @@ import {
   FiCheck,
   FiSend,
   FiImage,
-  FiGrid
+  FiGrid,
+  FiMic,
+  FiPlay,
+  FiPause
 } from 'react-icons/fi'
 import { GoSearch } from 'react-icons/go'
 import dp from "../assets/dp.webp"
-import axiosInstance from '../lib/axiosInstance'
+import axiosInstance, { SERVER_URL } from '../lib/axiosInstance'
+import { renderMessageText } from '../components/ui/MarkdownRenderer'
 import { setMessages, setSelectedUser, setPrevChatUsers } from '../redux/messageSlice'
 import { useSocket } from '../context/SocketContext'
 import Layout from '../components/layout/Layout'
@@ -24,18 +28,172 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useIsMobile } from '../hooks/useCustom'
 import { formatTime } from '../utils/formatters'
 
+// Helper for formatting time (m:ss)
+const formatTimeStr = (secs) => {
+  if (isNaN(secs) || !isFinite(secs)) return "0:00";
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+};
+
+// Reusable Voice Message Player Component
+const VoicePlayer = ({ audioUrl, duration, isOwn }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(duration || 0);
+  const [speed, setSpeed] = useState(1); // 1x, 1.5x, 2x
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+
+    const onLoadedMetadata = () => {
+      if (!duration) {
+        setTotalDuration(audio.duration);
+      }
+    };
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('ended', onEnded);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('ended', onEnded);
+    };
+  }, [audioUrl, duration]);
+
+  const togglePlay = (e) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.playbackRate = speed;
+      audioRef.current.play().catch(err => console.error("Audio playback error:", err));
+      setIsPlaying(true);
+    }
+  };
+
+  const handleSpeedChange = (e) => {
+    e.stopPropagation();
+    let nextSpeed = 1;
+    if (speed === 1) nextSpeed = 1.5;
+    else if (speed === 1.5) nextSpeed = 2;
+    setSpeed(nextSpeed);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextSpeed;
+    }
+  };
+
+  const handleSeek = (e) => {
+    e.stopPropagation();
+    const value = parseFloat(e.target.value);
+    setCurrentTime(value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = value;
+    }
+  };
+
+  const textClass = isOwn ? "text-white" : "text-[var(--text-primary)]";
+  const bgClass = isOwn ? "bg-white/10 hover:bg-white/20" : "bg-[var(--border)] hover:bg-[var(--hover)]";
+  const speedBgClass = isOwn ? "bg-white/10 hover:bg-white/20 border-white/5" : "bg-[var(--background-secondary)] border-[var(--border)] text-[var(--text-primary)]";
+  
+  const progressPercent = (currentTime / (totalDuration || 1)) * 100;
+  const sliderStyle = isOwn
+    ? { background: `linear-gradient(to right, #fff 0%, #fff ${progressPercent}%, rgba(255,255,255,0.2) ${progressPercent}%, rgba(255,255,255,0.2) 100%)` }
+    : { background: `linear-gradient(to right, #8B5CF6 0%, #EC4899 ${progressPercent}%, rgba(120,120,120,0.2) ${progressPercent}%, rgba(120,120,120,0.2) 100%)` };
+
+  return (
+    <div className={`flex items-center gap-3 py-1.5 px-1 font-sans text-xs ${textClass} min-w-[210px] md:min-w-[250px] select-none`}>
+      {/* Play/Pause Button */}
+      <button
+        type="button"
+        onClick={togglePlay}
+        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer flex-shrink-0 ${bgClass}`}
+      >
+        {isPlaying ? <FiPause size={14} /> : <FiPlay size={14} className="ml-0.5" />}
+      </button>
+
+      {/* Progress & Info */}
+      <div className="flex-1 flex flex-col gap-1 text-left min-w-0">
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min="0"
+            max={totalDuration || 100}
+            value={currentTime}
+            onChange={handleSeek}
+            className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#EC4899] outline-none"
+            style={sliderStyle}
+          />
+        </div>
+        <div className="flex justify-between items-center text-[9px] opacity-80">
+          <span>{formatTimeStr(currentTime)}</span>
+          <span>{formatTimeStr(totalDuration)}</span>
+        </div>
+      </div>
+
+      {/* Speed Badge */}
+      <button
+        type="button"
+        onClick={handleSpeedChange}
+        className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide uppercase border active:scale-90 transition-all cursor-pointer flex-shrink-0 ${speedBgClass}`}
+      >
+        {speed}x
+      </button>
+    </div>
+  );
+};
+
 // Emojis list for message reactions
 const EMOJI_OPTIONS = ["❤️", "👍", "😂", "😮", "😢", "🙏"]
+
+const AI_USER = {
+  _id: "ai-friend",
+  userName: "friend_ai",
+  name: "Friend AI",
+  profileImage: "🤖",
+  isAI: true
+};
 
 function Messages() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const isMobile = useIsMobile()
 
+  const [lastAIMessage, setLastAIMessage] = useState(() => {
+    const saved = localStorage.getItem('connectly_ai_friend_messages');
+    if (saved) {
+      try {
+        const msgs = JSON.parse(saved);
+        if (msgs.length > 0) {
+          const lastMsg = msgs[msgs.length - 1];
+          return lastMsg.message || (lastMsg.messageType === "audio" ? "🎤 Voice Note" : "");
+        }
+      } catch (e) {}
+    }
+    return "Online";
+  });
+
   const { userData } = useSelector(state => state.user)
   const { onlineUsers } = useSelector(state => state.socket)
   const { selectedUser, messages, prevChatUsers } = useSelector(state => state.message)
   const socket = useSocket()
+
+  const isAIFriend = selectedUser?._id === "ai-friend" || selectedUser?.userName === "friend_ai" || selectedUser?.isAI;
+  const aiChatFromDb = prevChatUsers?.find(chat => chat.user?.userName === "friend_ai" || chat.user?.isAI === true);
 
   const [searchQuery, setSearchQuery] = useState("")
   const [input, setInput] = useState("")
@@ -47,6 +205,25 @@ function Messages() {
   const [backendFile, setBackendFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [fileType, setFileType] = useState("image") // "image" | "video"
+
+  // Voice Recording state
+  const [recordingState, setRecordingState] = useState("idle") // "idle" | "recording" | "preview"
+  const [recordingDuration, setRecordingDuration] = useState(0)
+  const [recordedBlob, setRecordedBlob] = useState(null)
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState(null)
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false)
+  const [previewSpeed, setPreviewSpeed] = useState(1)
+  const [previewCurrentTime, setPreviewCurrentTime] = useState(0)
+  const [amplitudes, setAmplitudes] = useState([10, 15, 8, 20, 12, 18, 25, 14, 10, 16, 22, 12])
+
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
+  const recordingTimerIntervalRef = useRef(null)
+  const audioContextRef = useRef(null)
+  const analyserRef = useRef(null)
+  const dataArrayRef = useRef(null)
+  const sourceRef = useRef(null)
+  const previewAudioRef = useRef(null)
 
   // Reply message state
   const [replyingToMessage, setReplyingToMessage] = useState(null)
@@ -69,6 +246,15 @@ function Messages() {
   // Refs for socket handlers to prevent stale closure issues
   const messagesRef = useRef(messages)
   const selectedUserRef = useRef(selectedUser)
+
+  useEffect(() => {
+    return () => {
+      if (recordingTimerIntervalRef.current) clearInterval(recordingTimerIntervalRef.current)
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {})
+      }
+    }
+  }, [])
 
   useEffect(() => {
     messagesRef.current = messages
@@ -94,6 +280,19 @@ function Messages() {
   // Fetch messages for selected conversation
   const getAllMessages = async () => {
     if (!selectedUser?._id) return
+    if (isAIFriend) {
+      const saved = localStorage.getItem('connectly_ai_friend_messages')
+      if (saved) {
+        try {
+          dispatch(setMessages(JSON.parse(saved)))
+        } catch (e) {
+          setInitialAIMessages()
+        }
+      } else {
+        setInitialAIMessages()
+      }
+      return
+    }
     try {
       const result = await axiosInstance.get(`/api/message/getAll/${selectedUser._id}`)
       dispatch(setMessages(result.data || []))
@@ -109,12 +308,41 @@ function Messages() {
     }
   }
 
+  const setInitialAIMessages = () => {
+    const defaultMsgs = [
+      {
+        _id: 'greet',
+        sender: 'assistant',
+        message: 'Hey! 💜 I am your Connectly Companion. I am here to chat, brainstorm, write code, or just listen. Ask me anything! ✨',
+        createdAt: new Date().toISOString()
+      }
+    ]
+    dispatch(setMessages(defaultMsgs))
+    localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(defaultMsgs))
+    setLastAIMessage(defaultMsgs[0].message)
+  }
+
+  const handleClearAIMemory = () => {
+    if (window.confirm("Wipe our chat memory? 💜")) {
+      setInitialAIMessages()
+    }
+  }
+
   useEffect(() => {
     fetchPrevChats()
+    if (window.location.pathname === "/chat") {
+      dispatch(setSelectedUser(AI_USER))
+    }
     return () => {
       dispatch(setSelectedUser(null))
     }
   }, [dispatch])
+
+  useEffect(() => {
+    if (selectedUser?._id === "ai-friend" && aiChatFromDb?.user) {
+      dispatch(setSelectedUser(aiChatFromDb.user))
+    }
+  }, [prevChatUsers, selectedUser, aiChatFromDb])
 
   useEffect(() => {
     getAllMessages()
@@ -203,6 +431,195 @@ function Messages() {
     setFileType(file.type.startsWith("video/") ? "video" : "image")
   }
 
+  // Voice recording volume meter
+  const startVolumeAnalyzer = (stream) => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 64;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      analyserRef.current = analyser;
+      audioContextRef.current = audioContext;
+      sourceRef.current = source;
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      dataArrayRef.current = dataArray;
+
+      const updateWave = () => {
+        if (!analyserRef.current) return;
+        analyserRef.current.getByteFrequencyData(dataArray);
+        const newAmps = [];
+        const step = Math.floor(bufferLength / 12) || 1;
+        for (let i = 0; i < 12; i++) {
+          const val = dataArray[i * step] || 0;
+          const height = Math.max(4, Math.round((val / 255) * 28));
+          newAmps.push(height);
+        }
+        setAmplitudes(newAmps);
+        requestAnimationFrame(updateWave);
+      };
+
+      updateWave();
+    } catch (err) {
+      console.error("Volume analyzer setup failed:", err);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const options = { mimeType: 'audio/webm' };
+      let recorder;
+      try {
+        recorder = new MediaRecorder(stream, options);
+      } catch (e) {
+        recorder = new MediaRecorder(stream);
+      }
+
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        setRecordedBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setAudioPreviewUrl(url);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setRecordingState("recording");
+      setRecordingDuration(0);
+
+      recordingTimerIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
+      startVolumeAnalyzer(stream);
+    } catch (err) {
+      console.error("Failed to start recording:", err);
+      alert("Could not access microphone. Please check your recording permissions.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerIntervalRef.current) {
+      clearInterval(recordingTimerIntervalRef.current);
+    }
+
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+    sourceRef.current = null;
+
+    setRecordingState("preview");
+  };
+
+  const discardRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerIntervalRef.current) {
+      clearInterval(recordingTimerIntervalRef.current);
+    }
+
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+    sourceRef.current = null;
+
+    setRecordingState("idle");
+    setRecordedBlob(null);
+    setAudioPreviewUrl(null);
+    setRecordingDuration(0);
+    setIsPlayingPreview(false);
+    setPreviewCurrentTime(0);
+    setPreviewSpeed(1);
+  };
+
+  const handleSendVoiceMessage = async () => {
+    if (!recordedBlob || !selectedUser?._id) return;
+
+    setSending(true);
+    try {
+      const formData = new FormData();
+      formData.append("messageType", "audio");
+      formData.append("audioDuration", recordingDuration);
+      formData.append("image", recordedBlob, "voice_message.webm");
+
+      if (replyingToMessage) {
+        formData.append("replyTo", replyingToMessage._id);
+      }
+
+      const result = await axiosInstance.post(
+        `/api/message/send/${selectedUser._id}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      dispatch(setMessages([...messages, result.data]));
+      discardRecording();
+      fetchPrevChats();
+    } catch (err) {
+      console.error("Failed to send voice message:", err);
+      alert("Failed to send voice message. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const togglePreviewPlay = () => {
+    if (!previewAudioRef.current) return;
+    if (isPlayingPreview) {
+      previewAudioRef.current.pause();
+      setIsPlayingPreview(false);
+    } else {
+      previewAudioRef.current.playbackRate = previewSpeed;
+      previewAudioRef.current.play().catch(err => console.error(err));
+      setIsPlayingPreview(true);
+    }
+  };
+
+  const handlePreviewSeek = (e) => {
+    const time = parseFloat(e.target.value);
+    setPreviewCurrentTime(time);
+    if (previewAudioRef.current) {
+      previewAudioRef.current.currentTime = time;
+    }
+  };
+
+  const togglePreviewSpeed = () => {
+    let nextSpeed = 1;
+    if (previewSpeed === 1) nextSpeed = 1.5;
+    else if (previewSpeed === 1.5) nextSpeed = 2;
+    setPreviewSpeed(nextSpeed);
+    if (previewAudioRef.current) {
+      previewAudioRef.current.playbackRate = nextSpeed;
+    }
+  };
+
   // Handle typing triggers
   const handleInputChange = (e) => {
     setInput(e.target.value)
@@ -224,7 +641,7 @@ function Messages() {
 
   // Send message
   const handleSendMessage = async (e) => {
-    e.preventDefault()
+    if (e && e.preventDefault) e.preventDefault()
     if (!input.trim() && !backendFile) return
 
     setSending(true)
@@ -233,6 +650,115 @@ function Messages() {
     if (isTyping) {
       setIsTyping(false)
       socket?.emit("stopTyping", { receiverId: selectedUser._id })
+    }
+
+    if (isAIFriend) {
+      const userText = input.trim()
+      if (!userText) return
+      setInput("")
+
+      const userMsg = {
+        _id: Math.random().toString(36).substring(7),
+        sender: userData._id || 'user',
+        message: userText,
+        createdAt: new Date().toISOString()
+      }
+
+      const updatedMessages = [...messages, userMsg]
+      dispatch(setMessages(updatedMessages))
+      localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(updatedMessages))
+      setLastAIMessage(userText)
+
+      // Temporary assistant message for streaming
+      const assistantMsgId = Math.random().toString(36).substring(7)
+      const newAssistantMsg = {
+        _id: assistantMsgId,
+        sender: 'assistant',
+        message: '',
+        createdAt: new Date().toISOString()
+      }
+
+      dispatch(setMessages([...updatedMessages, newAssistantMsg]))
+      setOtherUserTyping(true)
+
+      try {
+        const payloadMessages = [...updatedMessages].slice(-10).map(msg => ({
+          sender: (msg.sender === userData._id || msg.sender?._id === userData._id || msg.sender === 'user') ? 'user' : 'assistant',
+          text: msg.message
+        }))
+
+        const response = await fetch(`${SERVER_URL}/api/friend/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ messages: payloadMessages })
+        })
+
+        setOtherUserTyping(false)
+
+        if (!response.ok) {
+          throw new Error('Connection failed')
+        }
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let accumulatedResponse = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            const cleanLine = line.trim()
+            if (!cleanLine) continue
+            if (cleanLine === 'data: [DONE]') continue
+
+            if (cleanLine.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(cleanLine.slice(6))
+                if (data.content) {
+                  accumulatedResponse += data.content
+                  dispatch(setMessages(prev => {
+                    const nextMsgs = prev.map(msg => {
+                      if (msg._id === assistantMsgId) {
+                        return { ...msg, message: accumulatedResponse }
+                      }
+                      return msg
+                    })
+                    localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(nextMsgs))
+                    setLastAIMessage(accumulatedResponse)
+                    return nextMsgs
+                  }))
+                }
+              } catch (err) {
+                // Ignore parsing errors
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Groq AI Friend stream error:', err)
+        setOtherUserTyping(false)
+        dispatch(setMessages(prev => {
+          const nextMsgs = prev.map(msg => {
+            if (msg._id === assistantMsgId) {
+              return { ...msg, message: "Sorry, I'm having trouble connecting right now. 💜" }
+            }
+            return msg
+          })
+          localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(nextMsgs))
+          return nextMsgs
+        }))
+      } finally {
+        setSending(false)
+      }
+      return
     }
 
     try {
@@ -302,11 +828,17 @@ function Messages() {
     }
   }
 
-  // Filter conversations list based on search query
+  // Filter conversations list based on search query and exclude Friend AI
   const filteredChats = prevChatUsers?.filter(chat =>
-    chat.user?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    chat.user?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    chat.user?.userName !== "friend_ai" &&
+    !chat.user?.isAI &&
+    (chat.user?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     chat.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
   ) || []
+
+  const showAIFriend = !searchQuery || 
+    AI_USER.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    AI_USER.userName.toLowerCase().includes(searchQuery.toLowerCase());
 
   // Horizontal list of online followed users
   const onlineFollowed = userData?.following?.filter(u => onlineUsers?.includes(u._id)) || []
@@ -364,6 +896,10 @@ function Messages() {
 
             {/* Conversations list */}
             <div className="flex-1 overflow-y-auto bg-[var(--background)]">
+              {/* Friends Header */}
+              <div className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] bg-[var(--background-secondary)]/10 border-b border-[var(--border)]">
+                Friends
+              </div>
               {filteredChats.length > 0 ? (
                 <div className="divide-y divide-[var(--border)]">
                   {filteredChats.map((chat) => {
@@ -412,9 +948,55 @@ function Messages() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-20 px-6 text-[var(--text-secondary)] bg-[var(--background)]">
-                  <p className="text-sm">No chats found</p>
-                  <p className="text-xs mt-1">Select a creator from recommendations or profile to chat!</p>
+                <div className="text-center py-8 px-6 text-[var(--text-secondary)] bg-[var(--background)]">
+                  <p className="text-xs">No chats found</p>
+                </div>
+              )}
+
+              {/* AI Friends Header */}
+              <div className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] border-t border-[var(--border)] bg-[var(--background-secondary)]/10">
+                AI Friends
+              </div>
+              {showAIFriend && (
+                <div
+                  onClick={() => {
+                    if (aiChatFromDb?.user) {
+                      dispatch(setSelectedUser(aiChatFromDb.user))
+                    } else {
+                      dispatch(setSelectedUser(AI_USER))
+                    }
+                  }}
+                  className={`flex items-center gap-3.5 p-4 cursor-pointer transition-all border-l-2 ${isAIFriend ? "bg-[var(--hover)] border-purple-500 font-bold" : "hover:bg-[var(--hover)]/60 border-transparent"
+                    }`}
+                >
+                  <div className="relative flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-tr from-purple-600 to-pink-500 text-xl border border-white/10 select-none shadow">
+                      🤖
+                    </div>
+                    <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full animate-pulse" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold truncate text-[var(--text-primary)]">Friend AI</span>
+                      {aiChatFromDb?.lastMessageTimestamp && (
+                        <span className="text-[10px] text-[var(--text-muted)]">
+                          {formatTime(aiChatFromDb.lastMessageTimestamp)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <p className={`text-xs truncate mr-2 ${aiChatFromDb?.unreadCount > 0 ? "text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)]"}`}>
+                        {aiChatFromDb?.lastMessageSender === userData._id ? "You: " : ""}
+                        {aiChatFromDb?.lastMessage || (aiChatFromDb?.lastMessageMedia ? `Sent a ${aiChatFromDb.lastMessageMedia}` : lastAIMessage)}
+                      </p>
+                      {aiChatFromDb?.unreadCount > 0 && (
+                        <span className="bg-blue-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0">
+                          {aiChatFromDb.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -429,39 +1011,71 @@ function Messages() {
               <div className="flex items-center gap-3">
                 {isMobile && (
                   <button
-                    onClick={() => dispatch(setSelectedUser(null))}
+                    onClick={() => {
+                      dispatch(setSelectedUser(null))
+                      if (window.location.pathname === "/chat") {
+                        navigate("/messages")
+                      }
+                    }}
                     className="flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mr-2 cursor-pointer"
                   >
                     <FiArrowLeft size={20} />
                     <span className="text-xs font-semibold">Back</span>
                   </button>
                 )}
-                <img
-                  src={selectedUser.profileImage || dp}
-                  alt=""
-                  className="w-9 h-9 rounded-full object-cover cursor-pointer"
-                  onClick={() => navigate(`/profile/${selectedUser.userName}`)}
-                />
+                {isAIFriend ? (
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-gradient-to-tr from-purple-600 to-pink-500 text-base border border-white/10 select-none shadow">
+                    🤖
+                  </div>
+                ) : (
+                  <img
+                    src={selectedUser.profileImage || dp}
+                    alt=""
+                    className="w-9 h-9 rounded-full object-cover cursor-pointer"
+                    onClick={() => navigate(`/profile/${selectedUser.userName}`)}
+                  />
+                )}
                 <div>
                   <h2
                     className="text-sm font-bold hover:underline cursor-pointer text-[var(--text-primary)]"
-                    onClick={() => navigate(`/profile/${selectedUser.userName}`)}
+                    onClick={() => {
+                      if (!isAIFriend) {
+                        navigate(`/profile/${selectedUser.userName}`)
+                      }
+                    }}
                   >
-                    {selectedUser.userName}
+                    {selectedUser.name || selectedUser.userName}
                   </h2>
                   <p className="text-[10px] text-[var(--text-secondary)]">
-                    {onlineUsers?.includes(selectedUser._id) ? "Active now" : "Offline"}
+                    {isAIFriend ? (
+                      <span className="text-green-400 flex items-center gap-1 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                        Online Companion
+                      </span>
+                    ) : (
+                      onlineUsers?.includes(selectedUser._id) ? "Active now" : "Offline"
+                    )}
                   </p>
                 </div>
               </div>
 
-              {/* Action: Info Details Trigger */}
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className={`p-2 rounded-full transition-all cursor-pointer ${showDetails ? "bg-[var(--hover)] text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
-              >
-                <FiInfo size={20} />
-              </button>
+              {/* Action: Info Details / Clear Memory Trigger */}
+              {isAIFriend ? (
+                <button
+                  onClick={handleClearAIMemory}
+                  title="Clear Chat Memory"
+                  className="p-2 rounded-full transition-all cursor-pointer text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                >
+                  <FiTrash2 size={20} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className={`p-2 rounded-full transition-all cursor-pointer ${showDetails ? "bg-[var(--hover)] text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
+                >
+                  <FiInfo size={20} />
+                </button>
+              )}
             </div>
 
             {/* Messages Thread Container */}
@@ -490,7 +1104,7 @@ function Messages() {
 
                       <div className={`flex items-center gap-2 max-w-[70%] group`}>
                         {/* Hover menu - Left of own message, Right of received message */}
-                        {isOwn && !isDeleted && (
+                        {isOwn && !isDeleted && !isAIFriend && (
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
                             <button
                               onClick={() => {
@@ -531,7 +1145,7 @@ function Messages() {
 
                         {/* Message Bubble */}
                         <div
-                          onDoubleClick={() => handleToggleReaction(msg._id, "❤️")}
+                          onDoubleClick={() => !isAIFriend && handleToggleReaction(msg._id, "❤️")}
                           className={`rounded-2xl px-4 py-2.5 text-sm select-none relative break-words shadow-md transition-all ${isOwn
                               ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-br-none"
                               : "bg-[var(--bubble-receiver-bg)] text-[var(--bubble-receiver-text)] rounded-bl-none border border-[var(--bubble-receiver-border)]"
@@ -576,8 +1190,14 @@ function Messages() {
                             </div>
                           )}
 
-                          {/* Inline Edit mode */}
-                          {editingMessageId === msg._id ? (
+                          {/* Voice Note rendering */}
+                          {(msg.messageType === "audio" || msg.audioUrl) ? (
+                            <VoicePlayer
+                              audioUrl={msg.audioUrl}
+                              duration={msg.audioDuration}
+                              isOwn={isOwn}
+                            />
+                          ) : editingMessageId === msg._id ? (
                             <div className="flex flex-col gap-2 min-w-[150px] mt-1">
                               <input
                                 type="text"
@@ -603,7 +1223,7 @@ function Messages() {
                             </div>
                           ) : (
                             <p className={isDeleted ? "text-[var(--text-muted)] italic text-xs" : "leading-relaxed text-inherit"}>
-                              {msg.message}
+                              {isAIFriend && !isOwn ? renderMessageText(msg.message) : msg.message}
                             </p>
                           )}
 
@@ -620,7 +1240,7 @@ function Messages() {
                         </div>
 
                         {/* Received message hover triggers */}
-                        {!isOwn && !isDeleted && (
+                        {!isOwn && !isDeleted && !isAIFriend && (
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
                             <button
                               onClick={() => setReactionPopoverId(reactionPopoverId === msg._id ? null : msg._id)}
@@ -733,27 +1353,139 @@ function Messages() {
                   onChange={handleFileChange}
                 />
 
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current.click()}
-                  className="p-2 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                >
-                  <FiImage size={18} />
-                </button>
-
-                <input
-                  type="text"
-                  placeholder="Message..."
-                  value={input}
-                  onChange={handleInputChange}
-                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-full px-5 py-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)] placeholder:text-[var(--text-muted)]"
-                />
-
-                {(input.trim() || backendFile) && (
+                {/* Left image icon */}
+                {recordingState === "idle" && !isAIFriend && (
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={() => fileInputRef.current.click()}
+                    className="p-2 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex-shrink-0"
+                  >
+                    <FiImage size={18} />
+                  </button>
+                )}
+
+                {/* Dynamic Input area / recording wave / preview player */}
+                {recordingState === "recording" ? (
+                  // Recording UI
+                  <div className="flex-1 flex items-center gap-3 bg-red-500/10 border border-red-500/25 px-4 py-2 rounded-full text-xs text-red-400">
+                    <button
+                      type="button"
+                      onClick={discardRecording}
+                      className="p-1 hover:bg-red-500/20 rounded-full text-red-400 cursor-pointer flex-shrink-0"
+                      title="Discard Recording"
+                    >
+                      <FiTrash2 size={16} />
+                    </button>
+                    <span className="flex items-center gap-2 font-bold animate-pulse flex-1 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                      Recording...
+                    </span>
+                    
+                    {/* Live Waveform Visualizer */}
+                    <div className="flex items-end gap-0.5 h-6 px-2">
+                      {amplitudes.map((amp, idx) => (
+                        <div
+                          key={idx}
+                          className="w-0.75 bg-red-400 rounded-full transition-all duration-75"
+                          style={{ height: `${amp}px` }}
+                        />
+                      ))}
+                    </div>
+
+                    <span className="font-mono text-[11px] font-bold text-red-400 whitespace-nowrap bg-red-500/15 px-2.5 py-0.5 rounded-full">
+                      {formatTimeStr(recordingDuration)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={stopRecording}
+                      className="p-1 hover:bg-red-500/20 rounded-full text-red-400 cursor-pointer flex-shrink-0"
+                      title="Stop Recording"
+                    >
+                      <FiCheck size={18} className="stroke-[3]" />
+                    </button>
+                  </div>
+                ) : recordingState === "preview" ? (
+                  // Preview UI
+                  <div className="flex-1 flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] px-4 py-2 rounded-full text-xs text-[var(--text-primary)]">
+                    <button
+                      type="button"
+                      onClick={discardRecording}
+                      className="p-1 hover:bg-[var(--hover)] rounded-full text-red-400 cursor-pointer flex-shrink-0"
+                      title="Discard Voice Note"
+                    >
+                      <FiTrash2 size={16} />
+                    </button>
+                    
+                    {/* Preview Play/Pause */}
+                    <button
+                      type="button"
+                      onClick={togglePreviewPlay}
+                      className="p-1 text-[#8B5CF6] hover:text-[#EC4899] transition-colors cursor-pointer flex-shrink-0"
+                    >
+                      {isPlayingPreview ? <FiPause size={18} /> : <FiPlay size={18} />}
+                    </button>
+                    
+                    {/* Preview Audio Element & Seek Slider */}
+                    <audio
+                      ref={previewAudioRef}
+                      src={audioPreviewUrl}
+                      onTimeUpdate={(e) => setPreviewCurrentTime(e.target.currentTime)}
+                      onEnded={() => setIsPlayingPreview(false)}
+                    />
+                    <input
+                      type="range"
+                      min="0"
+                      max={recordingDuration || 1}
+                      value={previewCurrentTime}
+                      onChange={handlePreviewSeek}
+                      className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#EC4899] outline-none"
+                      style={{
+                        background: `linear-gradient(to right, #8B5CF6 0%, #EC4899 ${(previewCurrentTime / (recordingDuration || 1)) * 100}%, rgba(255,255,255,0.2) ${(previewCurrentTime / (recordingDuration || 1)) * 100}%, rgba(255,255,255,0.2) 100%)`
+                      }}
+                    />
+                    <span className="font-mono text-[10px] text-[var(--text-secondary)] whitespace-nowrap">
+                      {formatTimeStr(previewCurrentTime)} / {formatTimeStr(recordingDuration)}
+                    </span>
+                    
+                    {/* Playback speed toggle */}
+                    <button
+                      type="button"
+                      onClick={togglePreviewSpeed}
+                      className="px-2 py-0.5 rounded-full bg-[var(--background-secondary)] border border-[var(--border)] text-[9px] font-black text-[var(--text-primary)] cursor-pointer flex-shrink-0"
+                    >
+                      {previewSpeed}x
+                    </button>
+                  </div>
+                ) : (
+                  // Idle Text Input
+                  <input
+                    type="text"
+                    placeholder="Message..."
+                    value={input}
+                    onChange={handleInputChange}
+                    className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-full px-5 py-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)] placeholder:text-[var(--text-muted)]"
+                  />
+                )}
+
+                {/* Microphone button (visible in idle state) */}
+                {recordingState === "idle" && !isAIFriend && (
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="p-2 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex-shrink-0"
+                    title="Record Voice Note"
+                  >
+                    <FiMic size={18} />
+                  </button>
+                )}
+
+                {/* Send button (always visible in idle if input or file, or in preview to send audio) */}
+                {(recordingState === "preview" || input.trim() || backendFile) && (
+                  <button
+                    type="button"
+                    onClick={recordingState === "preview" ? handleSendVoiceMessage : handleSendMessage}
                     disabled={sending}
-                    className="p-2.5 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-all flex items-center justify-center disabled:bg-[var(--background-secondary)] disabled:text-[var(--text-muted)] cursor-pointer"
+                    className="p-2.5 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-all flex items-center justify-center disabled:bg-[var(--background-secondary)] disabled:text-[var(--text-muted)] cursor-pointer flex-shrink-0"
                   >
                     <FiSend size={16} />
                   </button>

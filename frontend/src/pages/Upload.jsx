@@ -30,6 +30,12 @@ function Upload() {
   const { loopData } = useSelector(state => state.loop)
   const [loading, setLoading] = useState(false)
 
+  // AI Caption generation states
+  const [vibe, setVibe] = useState("")
+  const [aiCaptions, setAiCaptions] = useState([])
+  const [generating, setGenerating] = useState(false)
+  const [aiError, setAiError] = useState("")
+
   const handleMedia = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -37,6 +43,29 @@ function Upload() {
     setBackendMedia(file)
     setFrontendMedia(URL.createObjectURL(file))
     setError("")
+  }
+
+  const handleGenerateCaption = async () => {
+    if (!backendMedia) return
+    setGenerating(true)
+    setAiError("")
+    try {
+      const formData = new FormData()
+      formData.append("image", backendMedia)
+      formData.append("vibe", vibe)
+
+      const response = await axiosInstance.post("/api/caption/generate", formData)
+      if (response.data?.success && response.data?.captions) {
+        setAiCaptions(response.data.captions)
+      } else {
+        setAiError("Failed to generate captions. Please try again.")
+      }
+    } catch (err) {
+      console.error("Caption generation error:", err)
+      setAiError(err.response?.data?.message || "Error generating captions. Please try again.")
+    } finally {
+      setGenerating(false)
+    }
   }
 
   // HINGLISH: Post upload API
@@ -161,7 +190,7 @@ function Upload() {
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                   uploadType === key ? 'text-white font-bold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
-                onClick={() => { setUploadType(key); setFrontendMedia(null); setBackendMedia(null); setCaption(""); setError("") }}>
+                onClick={() => { setUploadType(key); setFrontendMedia(null); setBackendMedia(null); setCaption(""); setError(""); setVibe(""); setAiCaptions([]); setAiError("") }}>
                 <span>{icon}</span>
                 {label}
               </button>
@@ -213,24 +242,86 @@ function Upload() {
 
               {/* HINGLISH: Caption input — stories mein nahi hota */}
               {uploadType !== "story" && (
-                <div className="relative">
-                  <textarea
-                    rows={3}
-                    placeholder="Write a caption..."
-                    className="w-full rounded-2xl px-4 py-3 text-sm resize-none bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors"
-                    onChange={(e) => setCaption(e.target.value)}
-                    value={caption}
-                  />
-                  <span className="absolute bottom-3 right-3 text-xs text-[var(--text-muted)]">
-                    {caption.length}/2200
-                  </span>
-                </div>
+                <>
+                  <div className="relative">
+                    <textarea
+                      rows={3}
+                      placeholder="Write a caption..."
+                      className="w-full rounded-2xl px-4 py-3 text-sm resize-none bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors"
+                      onChange={(e) => setCaption(e.target.value)}
+                      value={caption}
+                    />
+                    <span className="absolute bottom-3 right-3 text-xs text-[var(--text-muted)]">
+                      {caption.length}/2200
+                    </span>
+                  </div>
+
+                  {mediaType === "image" && (
+                    <div className="flex flex-col gap-2 mt-1">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Optional vibe (e.g. witty, aesthetic, sunset)..."
+                          className="flex-1 rounded-xl px-3 py-2 text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors"
+                          value={vibe}
+                          onChange={(e) => setVibe(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          disabled={generating}
+                          onClick={handleGenerateCaption}
+                          className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 disabled:opacity-50 cursor-pointer flex items-center gap-1 transition-all"
+                          style={{
+                            background: 'linear-gradient(135deg, #8B5CF6, #EC4899)'
+                          }}
+                        >
+                          {generating ? (
+                            <>
+                              <ClipLoader size={12} color="white" />
+                              <span>Generating...</span>
+                            </>
+                          ) : (
+                            <span>✨ Generate Caption</span>
+                          )}
+                        </button>
+                      </div>
+                      {aiError && (
+                        <p className="text-[var(--danger)] text-[11px] text-center bg-[var(--danger)]/10 py-1.5 px-2 rounded-lg border border-[var(--danger)]/20 mt-1">{aiError}</p>
+                      )}
+
+                      {aiCaptions.length > 0 && (
+                        <div className="mt-2 p-3.5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md flex flex-col gap-2.5">
+                          <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center justify-between">
+                            <span>✨ AI Suggestions</span>
+                            <span className="text-[9px] text-[var(--primary)] normal-case font-normal">Click to apply</span>
+                          </h3>
+                          <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-1">
+                            {aiCaptions.map((c, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => setCaption(c.text)}
+                                className="p-2.5 rounded-xl cursor-pointer border border-white/5 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/10 transition-all flex flex-col gap-1 text-left"
+                              >
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--primary)]">
+                                  {c.type}
+                                </span>
+                                <p className="text-[11px] text-[var(--text-primary)] leading-normal">
+                                  {c.text}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
 
               {/* HINGLISH: Change media button */}
               <button
                 className="text-sm font-medium gradient-text self-center cursor-pointer hover:opacity-80"
-                onClick={() => { setFrontendMedia(null); setBackendMedia(null); setError("") }}>
+                onClick={() => { setFrontendMedia(null); setBackendMedia(null); setError(""); setVibe(""); setAiCaptions([]); setAiError("") }}>
                 Change media
               </button>
 

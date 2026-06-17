@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import { FiMessageSquare, FiX, FiSend, FiTrash2 } from 'react-icons/fi'
+import { useLocation } from 'react-router-dom'
 import { SERVER_URL } from '../../lib/axiosInstance'
+import { renderMessageText } from '../ui/MarkdownRenderer'
 
 // Custom Sparkles SVG Icon
 const SparklesIcon = ({ size = 16, className = "" }) => (
@@ -19,85 +21,16 @@ const SparklesIcon = ({ size = 16, className = "" }) => (
   >
     <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" />
     <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z" />
-    <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" />
+    <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-1-2.5-2.5-1 2.5-1Z" />
   </svg>
 )
 
-// Custom CodeBlock Component with Copy Code functionality
-const CodeBlock = ({ code, language }) => {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+function AIFriendWidget() {
+  const location = useLocation()
+  if (location.pathname !== "/messages" && location.pathname !== "/chat") {
+    return null
   }
 
-  return (
-    <div className="my-2.5 rounded-xl overflow-hidden border border-[var(--border)] bg-[#1e1e24] shadow-md max-w-full font-mono text-[11px] text-left">
-      <div className="bg-[#151518] px-3.5 py-1.5 flex items-center justify-between text-gray-400 border-b border-[var(--border)]">
-        <span className="text-[9px] font-bold uppercase tracking-wider">{language || 'code'}</span>
-        <button
-          onClick={handleCopy}
-          className="text-[9px] hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-md font-semibold cursor-pointer"
-        >
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
-      </div>
-      <pre className="p-3.5 overflow-x-auto text-gray-200 leading-relaxed max-w-full whitespace-pre select-text">
-        <code>{code}</code>
-      </pre>
-    </div>
-  )
-}
-
-// Inline Markdown Parser: parses inline backticks `code` and bold **text**
-const renderInlineMarkdown = (text) => {
-  const parts = text.split(/(`[^`\n]+`)/g)
-  return parts.map((part, idx) => {
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return (
-        <code key={idx} className="bg-black/25 dark:bg-white/10 px-1 py-0.5 rounded text-[11px] font-mono text-[var(--primary)] font-semibold">
-          {part.slice(1, -1)}
-        </code>
-      )
-    }
-
-    const subParts = part.split(/(\*\*[^*]+\*\*)/g)
-    return subParts.map((subPart, subIdx) => {
-      if (subPart.startsWith('**') && subPart.endsWith('**')) {
-        return (
-          <strong key={`${idx}-${subIdx}`} className="font-bold text-[var(--text)]">
-            {subPart.slice(2, -2)}
-          </strong>
-        )
-      }
-      return subPart
-    })
-  })
-}
-
-// Full Markdown Parser: splits by code blocks first
-const renderMessageText = (text) => {
-  if (!text) return ''
-  const parts = text.split(/(```[\s\S]*?```)/g)
-
-  return parts.map((part, index) => {
-    if (part.startsWith('```') && part.endsWith('```')) {
-      const match = part.match(/```(\w*)\n([\s\S]*?)```/)
-      const language = match ? match[1] : 'code'
-      const code = match ? match[2] : part.slice(3, -3)
-      return <CodeBlock key={index} code={code.trim()} language={language} />
-    }
-    return (
-      <span key={index} className="whitespace-pre-wrap select-text">
-        {renderInlineMarkdown(part)}
-      </span>
-    )
-  })
-}
-
-function AIFriendWidget() {
   const dragControls = useDragControls()
   const [isOpen, setIsOpen] = useState(false)
   const [position, setPosition] = useState(() => {

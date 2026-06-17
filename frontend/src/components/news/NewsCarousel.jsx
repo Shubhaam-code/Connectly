@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FiChevronRight, FiCompass } from 'react-icons/fi'
 import axiosInstance from '../../lib/axiosInstance'
 import { formatTime } from '../../utils/formatters'
 import NewsModal from './NewsModal'
 
 function NewsCarousel() {
+  const navigate = useNavigate()
   const [trendingNews, setTrendingNews] = useState([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -110,10 +112,7 @@ function NewsCarousel() {
           Trending Insights
         </span>
         <button
-          onClick={() => {
-            setSelectedArticleIndex(0)
-            setIsModalOpen(true)
-          }}
+          onClick={() => navigate('/news')}
           className="text-xs font-semibold text-[var(--primary)] hover:opacity-80 transition-opacity flex items-center gap-0.5 cursor-pointer"
         >
           Explore All

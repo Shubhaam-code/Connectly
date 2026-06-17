@@ -4,16 +4,18 @@ import Message from "../models/message.model.js";
 import Notification from "../models/notification.model.js";
 import Tracking from "../models/tracking.model.js";
 import Post from "../models/post.model.js";
+import User from "../models/user.model.js";
 import { getSocketId, io } from "../socket.js";
 
 export const sendMessage = async (req, res) => {
     try {
         const senderId = req.userId
         const receiverId = req.params.receiverId
-        const { message, replyTo, sharedPost, sharedLoop, sharedStory } = req.body
+        const { message, replyTo, sharedPost, sharedLoop, sharedStory, messageType, audioDuration } = req.body
 
         let image;
         let video;
+        let audioUrl;
 
         if (req.file) {
             const uploadedUrl = await uploadOnCloudinary(req.file.path)
@@ -22,6 +24,8 @@ export const sendMessage = async (req, res) => {
             }
             if (req.file.mimetype.startsWith("video/")) {
                 video = uploadedUrl
+            } else if (req.file.mimetype.startsWith("audio/")) {
+                audioUrl = uploadedUrl
             } else {
                 image = uploadedUrl
             }
@@ -30,11 +34,23 @@ export const sendMessage = async (req, res) => {
         const messageData = {
             sender: senderId,
             receiver: receiverId,
-            message
+            message,
+            messageType: messageType || "text"
         }
 
-        if (image) messageData.image = image
-        if (video) messageData.video = video
+        if (image) {
+            messageData.image = image
+            messageData.messageType = "image"
+        }
+        if (video) {
+            messageData.video = video
+            messageData.messageType = "video"
+        }
+        if (audioUrl) {
+            messageData.audioUrl = audioUrl
+            messageData.messageType = "audio"
+            messageData.audioDuration = audioDuration ? parseFloat(audioDuration) : 0
+        }
         if (replyTo) messageData.replyTo = replyTo
         if (sharedPost) messageData.sharedPost = sharedPost
         if (sharedLoop) messageData.sharedLoop = sharedLoop
@@ -171,6 +187,35 @@ export const getAllMessages = async (req, res) => {
 export const getPrevUserChats = async (req, res) => {
     try {
         const currentUserId = req.userId
+
+        // Ensure Friend AI database record exists
+        let friendAiUser = await User.findOne({ userName: "friend_ai" });
+        if (!friendAiUser) {
+            friendAiUser = await User.create({
+                name: "Friend AI",
+                userName: "friend_ai",
+                email: "friend_ai@connectly.ai",
+                password: "friend_ai_secure_password_groq_123",
+                profileImage: "🤖",
+                bio: "Your supportive AI companion powered by Llama 3.3",
+                profession: "AI Companion",
+                isAI: true
+            });
+            console.log("🤖 Auto-created Friend AI user in database.");
+        }
+
+        // Ensure Conversation record exists with Friend AI
+        let aiConversation = await Conversation.findOne({
+            participants: { $all: [currentUserId, friendAiUser._id] }
+        });
+        if (!aiConversation) {
+            aiConversation = await Conversation.create({
+                participants: [currentUserId, friendAiUser._id],
+                messages: []
+            });
+            console.log(`💬 Auto-created Conversation with Friend AI for user: ${currentUserId}`);
+        }
+
         const conversations = await Conversation.find({
             participants: currentUserId
         }).populate("participants")
@@ -194,7 +239,7 @@ export const getPrevUserChats = async (req, res) => {
             return {
                 user: otherUser,
                 lastMessage: lastMessage ? lastMessage.message : "",
-                lastMessageMedia: lastMessage ? (lastMessage.image ? "image" : lastMessage.video ? "video" : null) : null,
+                lastMessageMedia: lastMessage ? (lastMessage.image ? "image" : lastMessage.video ? "video" : lastMessage.audioUrl ? "audio" : null) : null,
                 lastMessageSender: lastMessage ? lastMessage.sender : null,
                 lastMessageTimestamp: lastMessage ? lastMessage.createdAt : conv.updatedAt,
                 unreadCount

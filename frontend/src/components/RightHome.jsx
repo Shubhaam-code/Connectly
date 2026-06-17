@@ -10,6 +10,7 @@ import { formatTime } from '../utils/formatters'
 import axiosInstance from '../lib/axiosInstance'
 import NewsModal from './news/NewsModal'
 import SuggestionsModal from './layout/SuggestionsModal'
+import CreatorInsights from './profile/CreatorInsights'
 
 function RightHome() {
   const { userData, suggestedUsers, following } = useSelector(state => state.user)
@@ -115,107 +116,14 @@ function RightHome() {
       {/* Social Analytics Dashboard Widget */}
       {userData && (
         <div className="mb-6 border-t border-[var(--border)] pt-4">
-          <div className="px-1 mb-3.5 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-1.5">
-              <FiBarChart2 className="text-[var(--primary)] text-sm" />
-              Creator Insights
-            </span>
-            {analytics?.weeklyGrowth && (
-              <span className="text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/15">
-                {analytics.weeklyGrowth} this wk
-              </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
-            {/* Views */}
-            <div className="p-2.5 rounded-lg bg-[var(--background-secondary)]/30 border border-[var(--border)]/60 hover:border-[var(--primary)]/30 transition-all flex flex-col gap-0.5">
-              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <FiEye className="text-xs text-blue-400" />
-                <span className="text-[10px] font-medium">Views</span>
-              </div>
-              <span className="text-xs font-bold text-[var(--text)] mt-1">
-                {analyticsLoading ? "—" : analytics?.profileViews || 0}
-              </span>
-            </div>
-
-            {/* Impressions */}
-            <div className="p-2.5 rounded-lg bg-[var(--background-secondary)]/30 border border-[var(--border)]/60 hover:border-[var(--primary)]/30 transition-all flex flex-col gap-0.5">
-              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <FiTrendingUp className="text-xs text-green-400" />
-                <span className="text-[10px] font-medium">Impressions</span>
-              </div>
-              <span className="text-xs font-bold text-[var(--text)] mt-1">
-                {analyticsLoading ? "—" : analytics?.profileImpressions || 0}
-              </span>
-            </div>
-
-            {/* Visitors */}
-            <div className="p-2.5 rounded-lg bg-[var(--background-secondary)]/30 border border-[var(--border)]/60 hover:border-[var(--primary)]/30 transition-all flex flex-col gap-0.5">
-              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <FiUsers className="text-xs text-[#EC4899]" />
-                <span className="text-[10px] font-medium">Visitors</span>
-              </div>
-              <span className="text-xs font-bold text-[var(--text)] mt-1">
-                {analyticsLoading ? "—" : analytics?.profileVisitors || 0}
-              </span>
-            </div>
-
-            {/* Likes */}
-            <div className="p-2.5 rounded-lg bg-[var(--background-secondary)]/30 border border-[var(--border)]/60 hover:border-[var(--primary)]/30 transition-all flex flex-col gap-0.5">
-              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <FiHeart className="text-xs text-red-400" />
-                <span className="text-[10px] font-medium">Likes Recd</span>
-              </div>
-              <span className="text-xs font-bold text-[var(--text)] mt-1">
-                {analyticsLoading ? "—" : analytics?.totalLikes || 0}
-              </span>
-            </div>
-
-            {/* Comments */}
-            <div className="p-2.5 rounded-lg bg-[var(--background-secondary)]/30 border border-[var(--border)]/60 hover:border-[var(--primary)]/30 transition-all flex flex-col gap-0.5">
-              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <FiMessageSquare className="text-xs text-cyan-400" />
-                <span className="text-[10px] font-medium">Comments</span>
-              </div>
-              <span className="text-xs font-bold text-[var(--text)] mt-1">
-                {analyticsLoading ? "—" : analytics?.totalComments || 0}
-              </span>
-            </div>
-
-            {/* Saves */}
-            <div className="p-2.5 rounded-lg bg-[var(--background-secondary)]/30 border border-[var(--border)]/60 hover:border-[var(--primary)]/30 transition-all flex flex-col gap-0.5">
-              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <FiBookmark className="text-xs text-yellow-500" />
-                <span className="text-[10px] font-medium">Saves Recd</span>
-              </div>
-              <span className="text-xs font-bold text-[var(--text)] mt-1">
-                {analyticsLoading ? "—" : analytics?.totalSaves || 0}
-              </span>
-            </div>
-
-            {/* Messages */}
-            <div className="p-2.5 rounded-lg bg-[var(--background-secondary)]/30 border border-[var(--border)]/60 hover:border-[var(--primary)]/30 transition-all flex flex-col gap-0.5">
-              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <FiMail className="text-xs text-indigo-400" />
-                <span className="text-[10px] font-medium">Messages</span>
-              </div>
-              <span className="text-xs font-bold text-[var(--text)] mt-1">
-                {analyticsLoading ? "—" : analytics?.totalMessages || 0}
-              </span>
-            </div>
-
-            {/* New Followers */}
-            <div className="p-2.5 rounded-lg bg-[var(--background-secondary)]/30 border border-[var(--border)]/60 hover:border-[var(--primary)]/30 transition-all flex flex-col gap-0.5">
-              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <FiUserPlus className="text-xs text-purple-400" />
-                <span className="text-[10px] font-medium">New Follows</span>
-              </div>
-              <span className="text-xs font-bold text-[var(--text)] mt-1">
-                {analyticsLoading ? "—" : analytics?.newFollowers || 0}
-              </span>
-            </div>
-          </div>
+          <CreatorInsights
+            likes={analytics?.totalLikes || 0}
+            impressions={analytics?.profileImpressions || 0}
+            visitors={analytics?.profileVisitors || 0}
+            saves={analytics?.totalSaves || 0}
+            loading={analyticsLoading}
+            weeklyGrowth={analytics?.weeklyGrowth || "+0"}
+          />
         </div>
       )}
 

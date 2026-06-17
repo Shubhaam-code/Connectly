@@ -13,6 +13,7 @@ import { setSelectedUser } from '../redux/messageSlice'
 import { motion, AnimatePresence } from 'framer-motion'
 import { StoryViewer } from '../components/stories/StoryViewer'
 import { Avatar } from '../components/ui/UIComponents'
+import CreatorInsights from '../components/profile/CreatorInsights'
 
 // HINGLISH: Profile page — user ka premium profile screen with grid + stats, Instagram desktop look.
 function Profile() {
@@ -45,11 +46,11 @@ function Profile() {
     setFollowSearch("")
     setShowFollowModal(true)
   }
-  
+
   const { profileData, userData } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
   const { loopData } = useSelector(state => state.loop)
-  
+
   const isOwnProfile = profileData?._id === userData?._id
 
   // Modal navigation / viewing states
@@ -242,7 +243,7 @@ function Profile() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8 bg-[var(--background)] text-[var(--text)] min-h-screen">
-        
+
         {/* Mobile Sticky / Top header */}
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-4 mb-8 md:hidden">
           <button className="text-[var(--text-secondary)] hover:text-[var(--text)]" onClick={() => navigate('/')}>
@@ -258,11 +259,10 @@ function Profile() {
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-16 mb-12">
           {/* Avatar Section */}
           <div className="relative flex-shrink-0 cursor-pointer animate-fade-in" onClick={() => setShowAvatarOptions(true)}>
-            <div className={`w-24 h-24 md:w-36 md:h-36 rounded-full flex items-center justify-center transition-all duration-300 ${
-              profileStories.length > 0
+            <div className={`w-24 h-24 md:w-36 md:h-36 rounded-full flex items-center justify-center transition-all duration-300 ${profileStories.length > 0
                 ? "p-[3px] bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 animate-pulse hover:scale-105"
                 : "p-[1px] border border-[var(--border)] hover:border-[var(--primary)]"
-            }`}>
+              }`}>
               <div className="w-full h-full rounded-full overflow-hidden border-4 border-[var(--background)] bg-[var(--card)]">
                 <Avatar
                   src={profileData?.profileImage || dp}
@@ -292,7 +292,7 @@ function Profile() {
                 <h1 className="text-xl font-light tracking-wide">{profileData?.userName}</h1>
                 {profileData?.isVerified && (
                   <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 fill-blue-500 inline-block align-middle ml-1" title="Verified Creator">
-                    <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z"/>
+                    <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
                   </svg>
                 )}
               </div>
@@ -364,11 +364,11 @@ function Profile() {
               )}
               {(() => {
                 const mutuals = !isOwnProfile && profileData?.followers && userData?.following
-                  ? profileData.followers.filter(follower => 
-                      userData.following.some(followingUser => 
-                        (followingUser._id || followingUser).toString() === (follower._id || follower).toString()
-                      )
+                  ? profileData.followers.filter(follower =>
+                    userData.following.some(followingUser =>
+                      (followingUser._id || followingUser).toString() === (follower._id || follower).toString()
                     )
+                  )
                   : [];
 
                 if (mutuals.length === 0) return null;
@@ -377,8 +377,8 @@ function Profile() {
                   <p className="text-xs text-[var(--text-secondary)] pt-1">
                     Followed by{" "}
                     {mutuals.slice(0, 2).map((u, i) => (
-                      <span 
-                        key={u._id} 
+                      <span
+                        key={u._id}
                         className="font-semibold text-[var(--text)] hover:underline cursor-pointer"
                         onClick={() => navigate(`/profile/${u.userName}`)}
                       >
@@ -398,22 +398,20 @@ function Profile() {
           <div className="flex gap-8 md:gap-12">
             <button
               onClick={() => setPostType("posts")}
-              className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
-                postType === "posts"
+              className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${postType === "posts"
                   ? "border-[var(--text)] text-[var(--text)]"
                   : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
-              }`}
+                }`}
             >
               <FiGrid size={12} />
               POSTS
             </button>
             <button
               onClick={() => setPostType("loops")}
-              className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
-                postType === "loops"
+              className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${postType === "loops"
                   ? "border-[var(--text)] text-[var(--text)]"
                   : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
-              }`}
+                }`}
             >
               <FiVideo size={12} />
               LOOPS
@@ -422,22 +420,20 @@ function Profile() {
               <>
                 <button
                   onClick={() => setPostType("saved")}
-                  className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
-                    postType === "saved"
+                  className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${postType === "saved"
                       ? "border-[var(--text)] text-[var(--text)]"
                       : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
-                  }`}
+                    }`}
                 >
                   <FiBookmark size={12} />
                   SAVED
                 </button>
                 <button
                   onClick={() => setPostType("analytics")}
-                  className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${
-                    postType === "analytics"
+                  className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${postType === "analytics"
                       ? "border-[var(--text)] text-[var(--text)]"
                       : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
-                  }`}
+                    }`}
                 >
                   <FiBarChart2 size={12} />
                   ANALYTICS
@@ -461,11 +457,10 @@ function Profile() {
                   <button
                     key={p}
                     onClick={() => setAnalyticsPeriod(p)}
-                    className={`px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
-                      analyticsPeriod === p
+                    className={`px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${analyticsPeriod === p
                         ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
                         : "text-[var(--text-secondary)] hover:text-[var(--text)]"
-                    }`}
+                      }`}
                   >
                     {p === "today" ? "Today" : p === "7days" ? "7 Days" : "30 Days"}
                   </button>
@@ -478,25 +473,15 @@ function Profile() {
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {[
-                  { label: "Profile Views", value: analyticsData?.profileViews, desc: "Users who visited your profile" },
-                  { label: "Post Impressions", value: analyticsData?.impressions, desc: "Times your posts were seen" },
-                  { label: "Audience Reach", value: analyticsData?.reach, desc: "Unique users who saw your content" },
-                  { label: "Total Likes", value: analyticsData?.likes, desc: "Likes received on your posts" },
-                  { label: "Total Comments", value: analyticsData?.comments, desc: "Comments left on your posts" },
-                  { label: "Total Shares", value: analyticsData?.shares, desc: "Times your posts were shared" }
-                ].map((card, idx) => (
-                  <div key={idx} className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--primary)]/40 transition-all group flex flex-col justify-between min-h-[140px]">
-                    <div>
-                      <p className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">{card.label}</p>
-                      <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-snug">{card.desc}</p>
-                    </div>
-                    <p className="text-3xl font-bold mt-4 bg-gradient-to-r from-[var(--primary)] to-pink-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform origin-left">
-                      {card.value || 0}
-                    </p>
-                  </div>
-                ))}
+              <div className="max-w-xl mx-auto w-full">
+                <CreatorInsights
+                  likes={analyticsData?.likes || 0}
+                  impressions={analyticsData?.impressions || 0}
+                  visitors={analyticsData?.reach || 0}
+                  saves={analyticsData?.saves || 0}
+                  loading={analyticsLoading}
+                  weeklyGrowth="+0"
+                />
               </div>
             )}
           </div>
@@ -524,7 +509,7 @@ function Profile() {
                       muted
                       loop
                       playsInline
-                      onMouseEnter={(e) => e.target.play().catch(() => {})}
+                      onMouseEnter={(e) => e.target.play().catch(() => { })}
                       onMouseLeave={(e) => e.target.pause()}
                     />
                   ) : (
@@ -618,7 +603,7 @@ function Profile() {
                 <span className="text-sm font-bold capitalize text-[var(--text)]">
                   {followModalType === "followers" ? "Followers" : "Following"}
                 </span>
-                <button 
+                <button
                   onClick={() => setShowFollowModal(false)}
                   className="text-[var(--text-secondary)] hover:text-[var(--text)]"
                 >
@@ -643,8 +628,8 @@ function Profile() {
               {/* List Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {(() => {
-                  const usersList = followModalType === "followers" 
-                    ? (profileData?.followers || []) 
+                  const usersList = followModalType === "followers"
+                    ? (profileData?.followers || [])
                     : (profileData?.following || []);
 
                   const filteredList = usersList.filter(user =>
@@ -661,20 +646,20 @@ function Profile() {
                   }
 
                   return filteredList.map((user) => {
-                    const isMutual = userData?.following?.some(id => (id._id || id).toString() === user._id.toString()) && 
-                                     userData?.followers?.some(id => (id._id || id).toString() === user._id.toString());
+                    const isMutual = userData?.following?.some(id => (id._id || id).toString() === user._id.toString()) &&
+                      userData?.followers?.some(id => (id._id || id).toString() === user._id.toString());
                     return (
                       <div key={user._id} className="flex items-center justify-between gap-3">
-                        <div 
+                        <div
                           className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
                           onClick={() => {
                             setShowFollowModal(false)
                             navigate(`/profile/${user.userName}`)
                           }}
                         >
-                          <Avatar 
-                            src={user.profileImage || dp} 
-                            alt={user.userName} 
+                          <Avatar
+                            src={user.profileImage || dp}
+                            alt={user.userName}
                             size="w-10 h-10"
                             className="bg-[var(--background-secondary)] flex-shrink-0"
                           />
@@ -816,7 +801,7 @@ function Profile() {
             {/* Top Close Button & Zoom Details */}
             <div className="absolute top-4 right-4 flex items-center gap-4 z-[1000]" onClick={(e) => e.stopPropagation()}>
               <span className="text-xs text-gray-400">Scroll to Zoom (Scale: {zoomScale.toFixed(1)}x)</span>
-              <button 
+              <button
                 onClick={() => setShowPhotoPreview(false)}
                 className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
               >

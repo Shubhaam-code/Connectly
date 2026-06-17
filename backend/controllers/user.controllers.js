@@ -519,13 +519,20 @@ export const getUserAnalytics = async (req, res) => {
             else if (r.eventType === "post_share") shares++
         })
 
+        const posts = await Post.find({ author: userId })
+        const postIds = posts.map(p => p._id)
+        const saves = await User.countDocuments({
+            saved: { $in: postIds }
+        })
+
         return res.status(200).json({
             profileViews,
             impressions,
             reach: uniqueVisitors.size,
             likes,
             comments,
-            shares
+            shares,
+            saves
         })
     } catch (error) {
         console.error("getUserAnalytics error:", error)

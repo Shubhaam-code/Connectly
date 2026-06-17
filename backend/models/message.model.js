@@ -18,6 +18,17 @@ image:{
 video:{
     type:String
 },
+messageType:{
+    type:String,
+    enum:["text","image","video","audio"],
+    default:"text"
+},
+audioUrl:{
+    type:String
+},
+audioDuration:{
+    type:Number
+},
 seen:{
     type:Boolean,
     default:false

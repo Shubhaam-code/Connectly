@@ -150,6 +150,10 @@ const userSchema = new mongoose.Schema({
     messageNotifications: {
         type: Boolean,
         default: true
+    },
+    isAI: {
+        type: Boolean,
+        default: false
     }
 
 }, { timestamps: true })

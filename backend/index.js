@@ -17,6 +17,8 @@ import exploreRouter from "./routes/explore.routes.js"
 import newsRouter from "./routes/news.routes.js"
 import friendRouter from "./routes/friend.routes.js"
 import analyticsRouter from "./routes/analytics.routes.js"
+import chatRouter from "./routes/chat.routes.js"
+import captionRouter from "./routes/caption.routes.js"
 
 const port = process.env.PORT || 5000
 
@@ -53,6 +55,8 @@ app.use("/api/explore", exploreRouter)
 app.use("/api/news", newsRouter)
 app.use("/api/friend", friendRouter)
 app.use("/api/analytics", analyticsRouter)
+app.use("/api/chat", chatRouter)
+app.use("/api/caption", captionRouter)
 
 server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {

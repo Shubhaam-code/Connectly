@@ -26,7 +26,8 @@ import { setStoryList, setCurrentUserStory, deleteStoryFromState } from './redux
 import { setNotificationData, setUserData, setProfileData, setFollowing, setSuggestedUsers } from './redux/userSlice'
 import { setMessages, setPrevChatUsers } from './redux/messageSlice'
 import { useSocket } from './context/SocketContext'
-import AIFriend from './pages/AIFriend'
+import FriendChat from './pages/FriendChat'
+import NewsFeed from './pages/NewsFeed'
 import Settings from './pages/Settings'
 import Explore from './pages/Explore'
 import axiosInstance, { SERVER_URL } from './lib/axiosInstance'
@@ -307,9 +308,10 @@ function App() {
       <Route path='/messageArea' element={userData ? <Messages /> : <Navigate to={"/signin"} />} />
       <Route path='/notifications' element={userData ? <Notifications /> : <Navigate to={"/signin"} />} />
       <Route path='/loops' element={userData ? <Loops /> : <Navigate to={"/signin"} />} />
-      <Route path='/ai-friend' element={userData ? <AIFriend /> : <Navigate to={"/signin"} />} />
+      <Route path='/chat' element={userData ? <Messages /> : <Navigate to={"/signin"} />} />
       <Route path='/settings' element={userData ? <Settings /> : <Navigate to={"/signin"} />} />
       <Route path='/explore' element={userData ? <Explore /> : <Navigate to={"/signin"} />} />
+      <Route path='/news' element={userData ? <NewsFeed /> : <Navigate to={"/signin"} />} />
     </Routes>
   )
 }

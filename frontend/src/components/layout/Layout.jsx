@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import Sidebar from "./Sidebar";
 import { useIsMobile } from "../../hooks/useCustom";
 import FloatingMessenger from "../messages/FloatingMessenger";
-import AIFriendWidget from "../friend/AIFriendWidget";
 
 export const Layout = ({ children }) => {
   const isMobile = useIsMobile();
@@ -11,7 +10,7 @@ export const Layout = ({ children }) => {
   return (
     <div className="flex h-screen bg-[var(--background)] text-[var(--text)] overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto h-full relative" style={{ paddingBottom: isMobile ? "64px" : "0px" }}>
+      <main className="flex-1 overflow-y-auto h-full relative" style={{ paddingBottom: isMobile ? "calc(72px + env(safe-area-inset-bottom))" : "0px" }}>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -24,7 +23,6 @@ export const Layout = ({ children }) => {
         {!isMobile && (
           <>
             <FloatingMessenger />
-            <AIFriendWidget />
           </>
         )}
       </main>

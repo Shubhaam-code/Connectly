@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -11,9 +11,8 @@ import {
   FiPlusSquare,
   FiSettings,
   FiLogOut,
-  FiMenu,
-  FiChevronLeft,
-  FiChevronRight
+  FiFileText,
+  FiPlus
 } from "react-icons/fi";
 import { useIsMobile } from "../../hooks/useCustom";
 import { setUserData } from "../../redux/userSlice";
@@ -21,10 +20,13 @@ import axiosInstance from "../../lib/axiosInstance";
 import dp from "../../assets/dp.webp";
 import AccountSwitcherModal from "./AccountSwitcherModal";
 import { Avatar } from "../ui/UIComponents";
+import NewsModal from "../news/NewsModal";
 
 export const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [isNewsOpen, setIsNewsOpen] = useState(false);
   const { userData, notificationData } = useSelector((state) => state.user);
   const { prevChatUsers } = useSelector((state) => state.message);
   const navigate = useNavigate();
@@ -32,14 +34,10 @@ export const Sidebar = () => {
   const dispatch = useDispatch();
   const isMobile = useIsMobile();
 
-  // Auto-collapse on tablet screens
+  // Monitor resize to auto-collapse on tablet viewports
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768 && window.innerWidth <= 1024) {
-        setIsCollapsed(true);
-      } else if (window.innerWidth > 1024) {
-        setIsCollapsed(false);
-      }
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1280);
     };
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -47,8 +45,12 @@ export const Sidebar = () => {
   }, []);
 
   const handleNavigate = useCallback(
-    (path) => {
-      const actualPath = path === "/profile" ? `/profile/${userData?.userName}` : path;
+    (item) => {
+      if (item.id === "news") {
+        setIsNewsOpen(true);
+        return;
+      }
+      const actualPath = item.path === "/profile" ? `/profile/${userData?.userName}` : item.path;
       navigate(actualPath);
     },
     [navigate, userData]
@@ -64,7 +66,11 @@ export const Sidebar = () => {
     navigate("/signin");
   }, [dispatch, navigate]);
 
-  const isActive = (path) => {
+  const isActive = (item) => {
+    if (item.id === "news") {
+      return isNewsOpen;
+    }
+    const path = item.path;
     if (path === "/") {
       return location.pathname === "/";
     }
@@ -82,123 +88,168 @@ export const Sidebar = () => {
     { label: "Home", icon: FiHome, path: "/", id: "home" },
     { label: "Explore", icon: FiCompass, path: "/explore", id: "explore" },
     { label: "Search", icon: FiSearch, path: "/search", id: "search" },
+    { label: "News", icon: FiFileText, path: "/news", id: "news" },
     { label: "Messages", icon: FiMessageCircle, path: "/messages", id: "messages" },
     { label: "Notifications", icon: FiBell, path: "/notifications", id: "notifications" },
     { label: "Create", icon: FiPlusSquare, path: "/upload", id: "create" },
-    { label: "Profile", icon: null, path: "/profile", id: "profile" } // Render avatar instead of icon
+    { label: "Profile", icon: null, path: "/profile", id: "profile" }
   ];
 
   const unreadNotifications = notificationData?.filter(n => !n.isRead).length || 0;
 
+  const isExpanded = !isTablet && isHovered;
+
   // Mobile Bottom Bar Layout
   if (isMobile) {
+    const mobileNavItems = [
+      { icon: FiHome, path: "/", id: "home", label: "Home" },
+      { icon: FiFileText, path: "#news", id: "news", label: "News" },
+      { icon: FiPlus, path: "/upload", id: "create", label: "Create" },
+      { icon: FiCompass, path: "/explore", id: "explore", label: "Explore" },
+      { icon: null, path: "/profile", id: "profile", label: "Profile" }
+    ];
+
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-[var(--background)] border-t border-[var(--border)] flex items-center justify-around z-40 px-2 text-[var(--text)]">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.path);
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleNavigate(item.path)}
-              className="relative p-3 flex items-center justify-center text-[var(--text)]"
-            >
-              {item.id === "profile" ? (
-                <div className={`w-7 h-7 rounded-full overflow-hidden border ${active ? "border-[var(--text)]" : "border-transparent"}`}>
-                  <Avatar
-                    src={userData?.profileImage || dp}
-                    alt="profile"
-                    size="w-full h-full"
-                    className="w-full h-full hover:scale-100"
-                  />
-                </div>
-              ) : (
-                <Icon size={24} className={active ? "stroke-[2.5]" : "opacity-80"} />
-              )}
-
-              {/* Notification count */}
-              {item.id === "notifications" && unreadNotifications > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
-                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
-                </span>
-              )}
-
-              {/* Message count */}
-              {item.id === "messages" && unreadMessagesCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
-                  {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // Desktop Sidebar Layout
-  return (
-    <motion.div
-      animate={{ width: isCollapsed ? 72 : 244 }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="h-screen bg-[var(--background)] border-r border-[var(--border)] z-20 flex flex-col justify-between overflow-hidden flex-shrink-0 text-[var(--text)]"
-    >
-      <div>
-        {/* Logo Section */}
-        <div className="h-20 px-6 flex items-center justify-between border-b border-[var(--border)]">
-          {!isCollapsed ? (
-            <div
-              onClick={() => navigate("/")}
-              className="flex items-center gap-2.5 cursor-pointer"
-            >
-              <img
-                src="/favicon.png"
-                alt="Connectly Icon"
-                className="w-8 h-8 object-contain flex-shrink-0"
-              />
-              <motion.h1
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-xl font-black tracking-wider connectly-gradient-text"
-              >
-                CONNECTLY
-              </motion.h1>
-            </div>
-          ) : (
-            <div
-              onClick={() => navigate("/")}
-              className="cursor-pointer mx-auto flex items-center justify-center"
-            >
-              <img
-                src="/favicon.png"
-                alt="Connectly Icon"
-                className="w-8 h-8 object-contain flex-shrink-0"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Navigation Section */}
-        <nav className="p-3 space-y-2">
-          {navItems.map((item) => {
+      <>
+        <div 
+          className="fixed bottom-0 left-0 right-0 h-[72px] z-40 px-4 pb-[env(safe-area-inset-bottom)] text-[var(--text)] flex items-center justify-around select-none"
+          style={{
+            background: "rgba(10, 10, 10, 0.95)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            borderTop: "1px solid rgba(255, 255, 255, 0.08)"
+          }}
+        >
+          {mobileNavItems.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.path);
+            const active = isActive(item);
+
+            if (item.id === "create") {
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavigate(item)}
+                  className="relative -top-4 flex flex-col items-center justify-center flex-shrink-0 cursor-pointer"
+                >
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white hover:opacity-95 active:scale-95 transition-all duration-300 shadow-[0_4px_20px_rgba(139,92,246,0.45)] border border-white/15">
+                    <motion.div
+                      animate={{ scale: active ? 1.15 : 1 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    >
+                      <Icon size={26} className="stroke-[3]" />
+                    </motion.div>
+                  </div>
+                  <span className="text-[9px] mt-1 text-white/70 font-semibold uppercase tracking-wider">
+                    {item.label}
+                  </span>
+                </button>
+              );
+            }
 
             return (
               <button
                 key={item.id}
-                onClick={() => handleNavigate(item.path)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all relative group text-[var(--text)] hover:bg-[var(--hover)] ${
-                  active ? "bg-[var(--primary)]/10" : ""
+                onClick={() => handleNavigate(item)}
+                className="relative p-2 flex flex-col items-center justify-center cursor-pointer flex-shrink-0"
+              >
+                <motion.div
+                  animate={{ 
+                    scale: active ? 1.15 : 1,
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  className="flex flex-col items-center justify-center"
+                >
+                  {item.id === "profile" ? (
+                    <div className={`w-6.5 h-6.5 rounded-full overflow-hidden border-2 transition-colors duration-300 ${active ? "border-[#8B5CF6]" : "border-white/20"}`}>
+                      <Avatar
+                        src={userData?.profileImage || dp}
+                        alt="profile"
+                        size="w-full h-full"
+                        className="w-full h-full hover:scale-100"
+                      />
+                    </div>
+                  ) : (
+                    <Icon 
+                      size={22} 
+                      className={`transition-colors duration-300 ${active ? "text-[#8B5CF6] stroke-[2.5]" : "text-[#A8A8A8] opacity-80"}`} 
+                    />
+                  )}
+                  <span 
+                    className={`text-[9px] mt-1 transition-all duration-300 font-bold uppercase tracking-wider ${
+                      active 
+                        ? "bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] bg-clip-text text-transparent" 
+                        : "text-white/70"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </motion.div>
+              </button>
+            );
+          })}
+        </div>
+        <NewsModal isOpen={isNewsOpen} onClose={() => setIsNewsOpen(false)} />
+      </>
+    );
+  }
+
+  // Desktop/Tablet Sidebar Layout
+  return (
+    <motion.div
+      onMouseEnter={() => !isTablet && setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      animate={{ width: isExpanded ? 260 : 72 }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="h-screen bg-[var(--background)] border-r border-white/5 z-20 flex flex-col justify-between overflow-hidden flex-shrink-0 text-[var(--text)] relative"
+    >
+      <div>
+        {/* Logo Section */}
+        <div 
+          className="h-20 px-5.5 flex items-center justify-start border-b border-white/5 cursor-pointer"
+          onClick={() => navigate("/")}
+        >
+          <div className="flex items-center gap-3 w-full min-w-0">
+            <img
+              src="/favicon.png"
+              alt="Connectly Icon"
+              className="w-8 h-8 object-contain flex-shrink-0 animate-pulse"
+            />
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.h1
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-lg font-black tracking-wider connectly-gradient-text truncate overflow-hidden whitespace-nowrap"
+                >
+                  CONNECTLY
+                </motion.h1>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Navigation Section */}
+        <nav className="p-3 space-y-1.5">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item);
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavigate(item)}
+                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all relative group cursor-pointer ${
+                  active 
+                    ? "bg-[#8B5CF6]/15 text-white" 
+                    : "text-neutral-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-[#8B5CF6] to-[#EC4899] rounded-r-md shadow-[0_0_10px_rgba(139,92,246,0.8)]" />
-                )}
-
                 {item.id === "profile" ? (
-                  <div className={`w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border ${active ? "border-[var(--text)]" : "border-transparent"}`}>
+                  <div className={`w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border ${active ? "border-[#8B5CF6]" : "border-white/10"}`}>
                     <Avatar
                       src={userData?.profileImage || dp}
                       alt="profile"
@@ -208,7 +259,7 @@ export const Sidebar = () => {
                   </div>
                 ) : (
                   <div className="relative">
-                    <Icon size={22} className={active ? "text-[var(--text)] stroke-[2.5]" : "text-[var(--text-secondary)] group-hover:text-[var(--text)] transition-colors"} />
+                    <Icon size={22} className={active ? "text-[#8B5CF6] stroke-[2.5]" : "text-neutral-400 group-hover:text-white transition-colors"} />
                     {item.id === "notifications" && unreadNotifications > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
                         {unreadNotifications > 9 ? "9+" : unreadNotifications}
@@ -224,19 +275,23 @@ export const Sidebar = () => {
                   </div>
                 )}
 
-                {!isCollapsed && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`text-sm ${active ? "font-bold text-[var(--text)]" : "text-[var(--text)] font-normal"}`}
-                  >
-                    {item.label}
-                  </motion.span>
-                )}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className={`text-sm tracking-wide truncate ${active ? "font-bold text-white" : "text-neutral-400 group-hover:text-white"}`}
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
 
                 {/* Collapsed Tooltip */}
-                {isCollapsed && (
-                  <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                {!isExpanded && (
+                  <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121216]/95 border border-white/10 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl backdrop-blur-md">
                     {item.label}
                   </div>
                 )}
@@ -247,15 +302,27 @@ export const Sidebar = () => {
       </div>
 
       {/* Footer Settings/Logout Section */}
-      <div className="p-3 border-t border-[var(--border)] space-y-1">
+      <div className="p-3 border-t border-white/5 space-y-1.5">
         <button
           onClick={() => navigate("/settings")}
-          className="w-full flex items-center gap-4 px-4 py-3 text-[var(--text)] hover:bg-[var(--hover)] rounded-xl transition-all group relative"
+          className="w-full flex items-center gap-4 px-4 py-3 text-neutral-400 hover:text-white hover:bg-white/5 rounded-xl transition-all group relative cursor-pointer"
         >
-          <FiSettings size={22} className="text-[var(--text-secondary)] group-hover:text-[var(--text)] transition-colors" />
-          {!isCollapsed && <span className="text-sm text-[var(--text)]">Settings</span>}
-          {isCollapsed && (
-            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+          <FiSettings size={22} className="text-neutral-400 group-hover:text-white transition-colors" />
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="text-sm font-semibold truncate"
+              >
+                Settings
+              </motion.span>
+            )}
+          </AnimatePresence>
+          {!isExpanded && (
+            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121216]/95 border border-white/10 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl backdrop-blur-md">
               Settings
             </div>
           )}
@@ -266,50 +333,68 @@ export const Sidebar = () => {
           className="w-full flex items-center gap-4 px-4 py-3 text-[var(--danger)] hover:bg-[var(--danger)]/10 rounded-xl transition-all group relative cursor-pointer"
         >
           <FiLogOut size={22} />
-          {!isCollapsed && <span className="text-sm font-semibold">Logout</span>}
-          {isCollapsed && (
-            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="text-sm font-semibold truncate"
+              >
+                Logout
+              </motion.span>
+            )}
+          </AnimatePresence>
+          {!isExpanded && (
+            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121216]/95 border border-white/10 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl backdrop-blur-md">
               Logout
             </div>
           )}
         </button>
 
-        {/* Collapse Toggle Button */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex items-center gap-4 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--hover)] rounded-xl transition-all hidden lg:flex"
-        >
-          {isCollapsed ? <FiChevronRight size={22} /> : <FiChevronLeft size={22} />}
-          {!isCollapsed && <span className="text-sm">Collapse sidebar</span>}
-        </button>
-
         {/* User Profile Card */}
         {userData && (
           <div
-            className="mt-2 p-2.5 border-t border-[var(--border)] flex items-center justify-between gap-3 cursor-pointer hover:bg-[var(--hover)] rounded-xl transition-all relative group min-w-0"
+            className="mt-2 p-2 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/5 rounded-xl transition-all relative group min-w-0"
             onClick={() => setIsSwitcherOpen(true)}
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-[var(--border)]">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10">
                   <img src={userData.profileImage || dp} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border border-[var(--background)] bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
               </div>
-              {!isCollapsed && (
-                <div className="truncate text-left">
-                  <p className="text-xs font-bold text-[var(--text)] truncate">{userData.name}</p>
-                  <p className="text-[10px] text-[var(--text-secondary)] truncate">@{userData.userName}</p>
-                </div>
-              )}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="truncate text-left"
+                  >
+                    <p className="text-xs font-bold text-white truncate">{userData.name}</p>
+                    <p className="text-[10px] text-neutral-400 truncate">@{userData.userName}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            {!isCollapsed && (
-              <span className="text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors text-xs font-semibold select-none mr-1">
-                •••
-              </span>
-            )}
-            {isCollapsed && (
-              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-neutral-400 hover:text-white transition-colors text-xs font-semibold select-none mr-1"
+                >
+                  •••
+                </motion.span>
+              )}
+            </AnimatePresence>
+            {!isExpanded && (
+              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121216]/95 border border-white/10 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl backdrop-blur-md">
                 Switch Accounts
               </div>
             )}
@@ -318,6 +403,7 @@ export const Sidebar = () => {
       </div>
 
       <AccountSwitcherModal isOpen={isSwitcherOpen} onClose={() => setIsSwitcherOpen(false)} />
+      <NewsModal isOpen={isNewsOpen} onClose={() => setIsNewsOpen(false)} />
     </motion.div>
   );
 };

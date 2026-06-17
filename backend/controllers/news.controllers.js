@@ -1,5 +1,6 @@
 import redis from "../config/redis.js";
 import crypto from "crypto";
+import { generateAIResponse } from "../services/groqService.js";
 
 // Helper to sanitize title to a valid caching key
 const getCacheKey = (title) => {
@@ -41,73 +42,25 @@ const classifyCategory = (title = "", description = "", content = "") => {
     return "Startups";
   }
   if (
-    text.includes("gaming") || 
-    text.includes("nintendo") || 
-    text.includes("playstation") || 
-    text.includes("xbox") || 
-    text.includes("video game") || 
-    text.includes("esports") || 
-    text.includes("console") || 
-    text.includes("gpu")
+    text.includes("social media") || 
+    text.includes("instagram") || 
+    text.includes("snapchat") || 
+    text.includes("tiktok") || 
+    text.includes("twitter") || 
+    text.includes("facebook") || 
+    text.includes("meta") || 
+    text.includes("youtube") || 
+    text.includes("influencer") || 
+    text.includes("tweet") || 
+    text.includes("reddit")
   ) {
-    return "Gaming";
-  }
-  if (
-    text.includes("sports") || 
-    text.includes("football") || 
-    text.includes("basketball") || 
-    text.includes("soccer") || 
-    text.includes("tennis") || 
-    text.includes("olympics") || 
-    text.includes("athlete") || 
-    text.includes("championship") || 
-    text.includes("nba") || 
-    text.includes("nfl") || 
-    text.includes("premier league")
-  ) {
-    return "Sports";
-  }
-  if (
-    text.includes("movie") || 
-    text.includes("film") || 
-    text.includes("celebrity") || 
-    text.includes("hollywood") || 
-    text.includes("music") || 
-    text.includes("album") || 
-    text.includes("concert") || 
-    text.includes("netflix") || 
-    text.includes("oscar") || 
-    text.includes("actor") || 
-    text.includes("actress") || 
-    text.includes("theatre")
-  ) {
-    return "Entertainment";
-  }
-  if (
-    text.includes("business") || 
-    text.includes("stock") || 
-    text.includes("finance") || 
-    text.includes("acquisition") || 
-    text.includes("merger") || 
-    text.includes("inflation") || 
-    text.includes("economy") || 
-    text.includes("wall street") || 
-    text.includes("revenue") || 
-    text.includes("quarterly profit")
-  ) {
-    return "Business";
+    return "Social Media";
   }
   return "Technology"; // Fallback category
 };
 
-// Generative AI Summarization utilizing OpenRouter API key and Gemini-2.5-flash
-const getOpenRouterSummary = async (title, description) => {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    console.warn("⚠️ OPENROUTER_API_KEY is not defined.");
-    return description ? (description.slice(0, 150) + "...") : "No summary available.";
-  }
-
+// Generative AI Summarization utilizing groqService and llama-3.3-70b-versatile
+const getNewsSummary = async (title, description) => {
   const prompt = `You are a professional news summarizer for Connectly.
 Summarize the following news article into a single, objective, factual paragraph.
 Strictly adhere to the following rules:
@@ -120,32 +73,17 @@ Article Title: ${title}
 Article Description: ${description}`;
 
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://connectly.app",
-        "X-Title": "Connectly"
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }]
-      }),
-      signal: AbortSignal.timeout(10000)
+    const chatCompletion = await generateAIResponse(prompt, {
+      systemPrompt: "You are a professional news summarizer for Connectly.",
+      stream: false,
+      rateLimitKey: "news-summarization"
     });
-
-    if (!res.ok) {
-      throw new Error(`OpenRouter API status: ${res.status}`);
-    }
-
-    const json = await res.json();
-    const txt = json.choices?.[0]?.message?.content;
+    const txt = chatCompletion.choices?.[0]?.message?.content;
     if (txt) {
       return txt.trim();
     }
   } catch (err) {
-    console.error("OpenRouter Summarization error:", err.message);
+    console.error("Groq News Summarization error:", err.message);
   }
 
   return description ? (description.slice(0, 150) + "...") : "No summary available.";
@@ -203,7 +141,7 @@ const getCachedOrFetchNews = async () => {
   }
 
   // Fetch from GNews search endpoint to cover all required keywords/categories
-  const query = "technology OR AI OR business OR startups OR gaming OR sports OR entertainment";
+  const query = "technology OR AI OR startups OR \"social media\" OR instagram OR tiktok";
   const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=50&apikey=${gnewsApiKey}`;
 
   let articles = [];
@@ -230,7 +168,7 @@ const getCachedOrFetchNews = async () => {
     const summaryKey = getCacheKey(art.title);
     let summary = await redis.get(summaryKey);
     if (!summary) {
-      summary = await getOpenRouterSummary(art.title, art.description || art.content);
+      summary = await getNewsSummary(art.title, art.description || art.content);
       // Cache summary indefinitely (or matching news:all expiration - let's set it to 1 day to be safe/clean)
       await redis.setex(summaryKey, 86400, summary);
     }
@@ -262,29 +200,40 @@ const getCachedOrFetchNews = async () => {
 // GET /api/news
 export const getNews = async (req, res) => {
   try {
+    const forceRefresh = req.query.refresh === "true";
+    if (forceRefresh) {
+      await redis.del("news:all");
+    }
+
     const list = await getCachedOrFetchNews();
-    if (list.length === 0) {
-      return res.status(200).json({ success: true, data: [] });
+    if (!list || list.length === 0) {
+      return res.status(500).json({ success: false, message: "Could not fetch news articles from GNews API." });
     }
 
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
+    const category = req.query.category || req.query.cat;
+
+    let filtered = [...list];
+    if (category && category.toLowerCase() !== "all") {
+      filtered = filtered.filter(art => art.category.toLowerCase() === category.toLowerCase());
+    }
 
     // Sort by date descending (newest first)
-    const sorted = [...list].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+    filtered.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const paginated = sorted.slice(startIndex, endIndex);
+    const paginated = filtered.slice(startIndex, endIndex);
 
     return res.status(200).json({
       success: true,
       data: paginated,
       pagination: {
-        total: sorted.length,
+        total: filtered.length,
         page,
         limit,
-        pages: Math.ceil(sorted.length / limit)
+        pages: Math.ceil(filtered.length / limit)
       }
     });
   } catch (err) {
@@ -366,41 +315,22 @@ export const summarizeText = async (req, res) => {
       return res.status(400).json({ success: false, message: "text is required" });
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ success: false, message: "OPENROUTER_API_KEY is not defined" });
-    }
-
     let prompt = `Summarize this text in 50-80 words: ${text}`;
     if (mode === "simplify") {
       prompt = `Simplify the language of this text so it's easy to read for anyone. Keep it professional yet direct: ${text}`;
     }
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://connectly.app",
-        "X-Title": "Connectly"
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }]
-      }),
-      signal: AbortSignal.timeout(10000)
+    const chatCompletion = await generateAIResponse(prompt, {
+      systemPrompt: "You are a helpful text summarizer and simplifier.",
+      stream: false,
+      rateLimitKey: "text-summarizer-endpoint"
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenRouter status: ${response.status}`);
-    }
-
-    const json = await response.json();
-    const result = json.choices?.[0]?.message?.content?.trim();
+    const result = chatCompletion.choices?.[0]?.message?.content?.trim();
 
     return res.status(200).json({ success: true, summary: result });
   } catch (err) {
-    console.error("summarizeText controller error:", err);
+    console.error("summarizeText controller error using groqService:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };

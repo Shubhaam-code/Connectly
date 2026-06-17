@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion'
 import Post from './Post'
 import { StoriesContainer, StoryViewer } from './stories/StoryViewer'
 import axiosInstance from '../lib/axiosInstance'
-import { FiImage, FiVideo, FiCode, FiSliders } from 'react-icons/fi'
+import { FiImage, FiVideo, FiBookOpen, FiSliders } from 'react-icons/fi'
 import dp from "../assets/dp.webp"
 import NewsCarousel from './news/NewsCarousel'
 
@@ -122,9 +122,9 @@ function Feed() {
       >
         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
           <img
-            src="/favicon.png"
+            src="/logo.svg"
             alt="Connectly Logo"
-            className="w-10 h-10 object-contain dark:invert transition-transform duration-300 active:scale-95"
+            className="w-10 h-10 object-contain transition-transform duration-300 active:scale-95"
           />
         </div>
         <div className="flex items-center gap-5">
@@ -193,19 +193,19 @@ function Feed() {
               </button>
 
               <button
-                onClick={() => navigate('/upload?type=post&code=true')}
+                onClick={() => navigate('/upload?type=story')}
                 className="flex items-center gap-2 px-4 py-2 hover:bg-[#A855F7]/10 border border-white/5 hover:border-[#A855F7]/20 rounded-xl text-[var(--text-secondary)] hover:text-[#A855F7] transition-all duration-300 cursor-pointer text-xs font-bold"
-                title="Share Code Snippet"
+                title="Share Story"
               >
-                <FiCode size={16} className="text-[#A855F7]" />
-                <span>Code</span>
+                <FiBookOpen size={16} className="text-[#A855F7]" />
+                <span>Story</span>
               </button>
             </div>
           </div>
         )}
 
         {/* Stories */}
-        <div className="mb-5">
+        <div className="mb-6">
           <StoriesContainer
             stories={storyList}
             ownStories={ownStories}
@@ -236,13 +236,18 @@ function Feed() {
           <div className="flex gap-2 p-1 rounded-xl bg-[var(--card)] border border-[var(--border)]">
             {[
               { id: 'all', label: 'All Posts' },
-              { id: 'following', label: 'Following' }
+              { id: 'following', label: 'Following' },
+              { id: 'loops', label: 'Loops' }
             ].map(filter => (
               <button
                 key={filter.id}
                 onClick={() => {
-                  setSelectedFilter(filter.id)
-                  setVisibleCount(5) // Reset pagination
+                  if (filter.id === 'loops') {
+                    navigate('/loops')
+                  } else {
+                    setSelectedFilter(filter.id)
+                    setVisibleCount(5) // Reset pagination
+                  }
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   selectedFilter === filter.id 

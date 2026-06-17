@@ -152,6 +152,14 @@ const VoicePlayer = ({ audioUrl, duration, isOwn }) => {
   );
 };
 
+const AI_USER = {
+  _id: "ai-friend",
+  userName: "friend_ai",
+  name: "Friend AI",
+  profileImage: "/bot.png",
+  isAI: true
+};
+
 export const FloatingMessenger = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -162,6 +170,20 @@ export const FloatingMessenger = () => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [lastAIMessage, setLastAIMessage] = useState(() => {
+    const saved = localStorage.getItem('connectly_ai_friend_messages');
+    if (saved) {
+      try {
+        const msgs = JSON.parse(saved);
+        if (msgs.length > 0) {
+          const lastMsg = msgs[msgs.length - 1];
+          return lastMsg.message || (lastMsg.messageType === "audio" ? "🎤 Voice Note" : "");
+        }
+      } catch (e) {}
+    }
+    return "Online";
+  });
 
   const activeChatDragControls = useDragControls();
   const listDragControls = useDragControls();
@@ -270,6 +292,37 @@ export const FloatingMessenger = () => {
   // Fetch messages when a chat is selected
   useEffect(() => {
     if (!activeChat) return;
+
+    if (activeChat.userName === "friend_ai" || activeChat._id === "ai-friend" || activeChat.isAI) {
+      const saved = localStorage.getItem('connectly_ai_friend_messages');
+      if (saved) {
+        try {
+          setChatMessages(JSON.parse(saved));
+        } catch (e) {
+          setChatMessages([
+            {
+              _id: 'greet',
+              sender: 'assistant',
+              message: 'Hey! 💜 I am your Connectly Companion. I am here to chat, brainstorm, write code, or just listen. Ask me anything! ✨',
+              createdAt: new Date().toISOString()
+            }
+          ]);
+        }
+      } else {
+        const defaultMsgs = [
+          {
+            _id: 'greet',
+            sender: 'assistant',
+            message: 'Hey! 💜 I am your Connectly Companion. I am here to chat, brainstorm, write code, or just listen. Ask me anything! ✨',
+            createdAt: new Date().toISOString()
+          }
+        ];
+        setChatMessages(defaultMsgs);
+        localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(defaultMsgs));
+      }
+      setIsMinimized(false);
+      return;
+    }
 
     const fetchChatMessages = async () => {
       try {
@@ -387,6 +440,38 @@ export const FloatingMessenger = () => {
     if (socket && activeChat) {
       socket.emit("stopTyping", { receiverId: activeChat._id });
       setIsTyping(false);
+    }
+
+    if (activeChat.userName === "friend_ai" || activeChat._id === "ai-friend" || activeChat.isAI) {
+      const userMsg = {
+        _id: Date.now().toString(),
+        sender: userData._id,
+        message: textToSend,
+        createdAt: new Date().toISOString()
+      };
+      const nextMsgs = [...chatMessages, userMsg];
+      setChatMessages(nextMsgs);
+      localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(nextMsgs));
+
+      try {
+        const res = await axiosInstance.post('/api/ai/chat', { message: textToSend });
+        const reply = res.data?.reply || "I am processing that...";
+        const finalMsgs = [
+          ...nextMsgs,
+          {
+            _id: (Date.now() + 1).toString(),
+            sender: 'assistant',
+            message: reply,
+            createdAt: new Date().toISOString()
+          }
+        ];
+        setChatMessages(finalMsgs);
+        localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(finalMsgs));
+        setLastAIMessage(reply);
+      } catch (err) {
+        console.error("AI reply error in floating messenger:", err);
+      }
+      return;
     }
 
     try {
@@ -599,10 +684,21 @@ export const FloatingMessenger = () => {
 
   // Filtered chats based on search
   const filteredChats = prevChatUsers?.filter((chat) => {
-    const nameMatch = chat.user?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const userMatch = chat.user?.userName?.toLowerCase().includes(searchQuery.toLowerCase());
-    return nameMatch || userMatch;
+    return (
+      chat.user?.userName !== "friend_ai" &&
+      !chat.user?.isAI &&
+      (chat.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       chat.user?.userName?.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
   }) || [];
+
+  const showAIFriend = !searchQuery || 
+    AI_USER.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    AI_USER.userName.toLowerCase().includes(searchQuery.toLowerCase());
+
+  const aiChatFromDb = prevChatUsers?.find(
+    (chat) => chat.user?.userName === "friend_ai" || chat.user?.isAI === true
+  );
 
   return (
     <div className="fixed bottom-6 right-6 z-[999] flex items-end gap-4 font-sans select-none pointer-events-none">
@@ -955,52 +1051,122 @@ export const FloatingMessenger = () => {
             </div>
 
             {/* Conversations list */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {filteredChats.map((chat) => {
-                const isOnline = onlineUsers.includes(chat.user?._id);
-                return (
-                  <div
-                    key={chat.user?._id}
-                    onClick={() => {
-                      setActiveChat(chat.user);
-                      setIsOpen(false);
-                    }}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[var(--hover)] transition-colors cursor-pointer"
-                  >
-                    <div className="relative flex-shrink-0">
-                      <img
-                        src={chat.user?.profileImage || dp}
-                        alt=""
-                        className="w-9 h-9 rounded-full object-cover border border-[var(--border)]"
-                      />
-                      {isOnline && (
-                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-[var(--card)] bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
+            <div className="flex-1 overflow-y-auto bg-[var(--background)]">
+              {/* Friends Header */}
+              <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] bg-[var(--background-secondary)]/10 border-b border-[var(--border)] text-left select-none">
+                Friends
+              </div>
+              
+              {filteredChats.length > 0 ? (
+                <div className="divide-y divide-[var(--border)]">
+                  {filteredChats.map((chat) => {
+                    const chatUser = chat.user;
+                    const isOnline = onlineUsers.includes(chatUser?._id);
+                    const isSelected = activeChat?._id === chatUser?._id;
+                    return (
+                      <div
+                        key={chatUser?._id}
+                        onClick={() => {
+                          setActiveChat(chatUser);
+                          setIsOpen(false);
+                        }}
+                        className={`flex items-center gap-3.5 p-3.5 cursor-pointer transition-all border-l-2 ${
+                          isSelected
+                            ? "bg-[var(--hover)] border-purple-500 font-bold"
+                            : "hover:bg-[var(--hover)]/60 border-transparent"
+                        }`}
+                      >
+                        <div className="relative flex-shrink-0">
+                          <img
+                            src={chatUser?.profileImage || dp}
+                            alt=""
+                            className="w-11 h-11 md:w-14 md:h-14 rounded-full object-cover bg-[var(--background-secondary)]"
+                          />
+                          {isOnline && (
+                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-[var(--card)] rounded-full shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold truncate text-[var(--text-primary)]">{chatUser?.userName}</span>
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              {chat.lastMessageTimestamp ? formatTime(chat.lastMessageTimestamp) : ""}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <p className={`text-[10px] truncate mr-2 ${chat.unreadCount > 0 ? "text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)]"}`}>
+                              {chat.lastMessageSender === userData?._id ? "You: " : ""}
+                              {chat.lastMessage || (chat.lastMessageMedia ? `Sent a ${chat.lastMessageMedia}` : (isOnline ? "Online now" : "Offline"))}
+                            </p>
+                            {chat.unreadCount > 0 && (
+                              <span className="bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                                {chat.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 px-6 text-[var(--text-secondary)] bg-[var(--background)]">
+                  <p className="text-xs">No chats found</p>
+                </div>
+              )}
+
+              {/* AI Friends Header */}
+              <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] border-t border-[var(--border)] bg-[var(--background-secondary)]/10 text-left select-none">
+                AI Friends
+              </div>
+              {showAIFriend && (
+                <div
+                  onClick={() => {
+                    if (aiChatFromDb?.user) {
+                      setActiveChat(aiChatFromDb.user);
+                    } else {
+                      setActiveChat(AI_USER);
+                    }
+                    setIsOpen(false);
+                  }}
+                  className={`flex items-center gap-3.5 p-3.5 cursor-pointer transition-all border-l-2 ${
+                    (activeChat?._id === "ai-friend" || activeChat?.userName === "friend_ai" || activeChat?.isAI)
+                      ? "bg-[var(--hover)] border-purple-500 font-bold"
+                      : "hover:bg-[var(--hover)]/60 border-transparent"
+                  }`}
+                >
+                  <div className="relative w-11 h-11 md:w-14 md:h-14 flex-shrink-0">
+                    <img
+                      src="/bot.png"
+                      alt="Friend AI"
+                      className="w-full h-full rounded-full object-cover border border-purple-500/20 shadow-md"
+                    />
+                    <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-[var(--card)] rounded-full animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
+                  </div>
+
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold truncate text-[var(--text-primary)]">Friend AI</span>
+                      {aiChatFromDb?.lastMessageTimestamp && (
+                        <span className="text-[10px] text-[var(--text-muted)]">
+                          {formatTime(aiChatFromDb.lastMessageTimestamp)}
+                        </span>
                       )}
                     </div>
-
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-[var(--text-primary)] truncate">{chat.user?.name}</p>
-                        <span className="text-[9px] text-[var(--text-muted)]">
-                          {formatTime(chat.lastMessageTimestamp)}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-[var(--text-secondary)] truncate mt-0.5">
-                        {chat.lastMessageSender === userData?._id ? "You: " : ""}
-                        {chat.lastMessage}
+                    <div className="flex items-center justify-between mt-0.5">
+                      <p className={`text-[10px] truncate mr-2 ${aiChatFromDb?.unreadCount > 0 ? "text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)]"}`}>
+                        {aiChatFromDb?.lastMessageSender === userData?._id ? "You: " : ""}
+                        {aiChatFromDb?.lastMessage || (aiChatFromDb?.lastMessageMedia ? `Sent a ${aiChatFromDb.lastMessageMedia}` : lastAIMessage)}
                       </p>
+                      {aiChatFromDb?.unreadCount > 0 && (
+                        <span className="bg-blue-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0">
+                          {aiChatFromDb.unreadCount}
+                        </span>
+                      )}
                     </div>
-
-                    {chat.unreadCount > 0 && (
-                      <span className="bg-red-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] flex items-center justify-center font-bold flex-shrink-0 animate-pulse">
-                        {chat.unreadCount}
-                      </span>
-                    )}
                   </div>
-                );
-              })}
-              {filteredChats.length === 0 && (
-                <div className="text-center py-20 text-xs text-[var(--text-muted)]">No conversations found</div>
+                </div>
               )}
             </div>
 
@@ -1024,35 +1190,13 @@ export const FloatingMessenger = () => {
       {!isOpen && !activeChat && (
         <motion.button
           onClick={() => setIsOpen(!isOpen)}
-          className="h-12 px-6 rounded-full bg-[var(--card)] border border-[var(--border)] shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:bg-[var(--hover)] hover:border-[var(--primary)]/40 flex items-center justify-center gap-2.5 pointer-events-auto transition-all duration-200 cursor-pointer select-none text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:ring-offset-2 focus:ring-offset-[var(--background)] active:scale-95"
+          className="h-12 px-6 rounded-full bg-[var(--card)] border border-[var(--border)] shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:border-[var(--primary)]/35 hover:shadow-[0_12px_40px_rgba(139,92,246,0.1)] hover:scale-[1.015] flex items-center justify-center pointer-events-auto transition-all duration-300 cursor-pointer select-none text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:ring-offset-2 focus:ring-offset-[var(--background)] active:scale-[0.98]"
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.96 }}
         >
-          <div className="flex items-center justify-center">
-            <FiMessageCircle size={18} className="text-[var(--primary)] flex-shrink-0" />
-          </div>
-          <span className="text-xs font-semibold tracking-wide text-[var(--text-primary)]">Messages</span>
-          
-          {/* Unread Message Badge */}
-          {unreadCount > 0 && (
-            <span className="bg-red-500 text-white rounded-full min-w-[18px] h-4.5 px-1.5 text-[9px] flex items-center justify-center font-black animate-pulse shadow-md shadow-red-500/25">
-              {unreadCount}
-            </span>
-          )}
-
-          {/* Dynamic active user avatars stack */}
-          {prevChatUsers && prevChatUsers.length > 0 && (
-            <div className="flex -space-x-2 overflow-hidden ml-1.5 items-center justify-center">
-              {prevChatUsers.slice(0, 2).map((chat) => (
-                <img
-                  key={chat.user?._id}
-                  className="inline-block h-6 w-6 rounded-full object-cover ring-2 ring-[var(--card)] flex-shrink-0"
-                  src={chat.user?.profileImage || dp}
-                  alt=""
-                />
-              ))}
-            </div>
-          )}
+          <span className="text-xs font-semibold tracking-wide text-[var(--text-primary)]">
+            Messages {unreadCount > 0 ? `[${unreadCount}]` : ""}
+          </span>
         </motion.button>
       )}
 

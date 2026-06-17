@@ -3,14 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { FiChevronRight, FiCompass } from 'react-icons/fi'
 import axiosInstance from '../../lib/axiosInstance'
 import { formatTime } from '../../utils/formatters'
-import NewsModal from './NewsModal'
 
 function NewsCarousel() {
   const navigate = useNavigate()
   const [trendingNews, setTrendingNews] = useState([])
   const [loading, setLoading] = useState(true)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedArticleIndex, setSelectedArticleIndex] = useState(0)
 
   const carouselRef = useRef(null)
   const [isDown, setIsDown] = useState(false)
@@ -77,9 +74,8 @@ function NewsCarousel() {
   }
 
   const handleCardClick = (idx) => {
-    if (dragMoved) return // Skip modal if user was dragging
-    setSelectedArticleIndex(idx)
-    setIsModalOpen(true)
+    if (dragMoved) return // Skip if user was dragging
+    navigate('/news', { state: { initialArticles: trendingNews, initialIndex: idx } })
   }
 
   if (loading) {
@@ -166,10 +162,6 @@ function NewsCarousel() {
         ))}
       </div>
 
-      <NewsModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
     </div>
   )
 }

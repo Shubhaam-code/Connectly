@@ -20,13 +20,10 @@ import axiosInstance from "../../lib/axiosInstance";
 import dp from "../../assets/dp.webp";
 import AccountSwitcherModal from "./AccountSwitcherModal";
 import { Avatar } from "../ui/UIComponents";
-import NewsModal from "../news/NewsModal";
-
 export const Sidebar = () => {
   const [isTablet, setIsTablet] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
-  const [isNewsOpen, setIsNewsOpen] = useState(false);
   const { userData, notificationData } = useSelector((state) => state.user);
   const { prevChatUsers, selectedUser } = useSelector((state) => state.message);
   const navigate = useNavigate();
@@ -49,10 +46,6 @@ export const Sidebar = () => {
 
   const handleNavigate = useCallback(
     (item) => {
-      if (item.id === "news") {
-        setIsNewsOpen(true);
-        return;
-      }
       const actualPath = item.path === "/profile" ? `/profile/${userData?.userName}` : item.path;
       navigate(actualPath);
     },
@@ -70,9 +63,6 @@ export const Sidebar = () => {
   }, [dispatch, navigate]);
 
   const isActive = (item) => {
-    if (item.id === "news") {
-      return isNewsOpen;
-    }
     const path = item.path;
     if (path === "/") {
       return location.pathname === "/";
@@ -105,12 +95,12 @@ export const Sidebar = () => {
   // Mobile Bottom Bar Layout
   if (isMobile) {
     if (isChatOpenOnMobile) {
-      return <NewsModal isOpen={isNewsOpen} onClose={() => setIsNewsOpen(false)} />;
+      return null;
     }
 
     const mobileNavItems = [
       { icon: FiHome, path: "/", id: "home", label: "Home" },
-      { icon: FiFileText, path: "#news", id: "news", label: "News" },
+      { icon: FiFileText, path: "/news", id: "news", label: "News" },
       { icon: FiPlus, path: "/upload", id: "create", label: "Create" },
       { icon: FiCompass, path: "/explore", id: "explore", label: "Explore" },
       { icon: null, path: "/profile", id: "profile", label: "Profile" }
@@ -119,13 +109,7 @@ export const Sidebar = () => {
     return (
       <>
         <div 
-          className="fixed bottom-0 left-0 right-0 h-[72px] z-40 px-4 pb-[env(safe-area-inset-bottom)] text-[var(--text)] flex items-center justify-around select-none"
-          style={{
-            background: "rgba(10, 10, 10, 0.95)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderTop: "1px solid rgba(255, 255, 255, 0.08)"
-          }}
+          className="fixed bottom-0 left-0 right-0 h-[72px] z-40 px-4 pb-[env(safe-area-inset-bottom)] flex items-center justify-around select-none bg-[var(--card)]/95 backdrop-blur-2xl border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_30px_rgba(0,0,0,0.4)]"
         >
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
@@ -138,7 +122,7 @@ export const Sidebar = () => {
                   onClick={() => handleNavigate(item)}
                   className="relative -top-4 flex flex-col items-center justify-center flex-shrink-0 cursor-pointer"
                 >
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white hover:opacity-95 active:scale-95 transition-all duration-300 shadow-[0_4px_20px_rgba(139,92,246,0.45)] border border-white/15">
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white hover:opacity-95 active:scale-95 transition-all duration-300 shadow-[0_4px_20px_rgba(139,92,246,0.35)] border border-white/10">
                     <motion.div
                       animate={{ scale: active ? 1.15 : 1 }}
                       whileTap={{ scale: 0.95 }}
@@ -147,7 +131,7 @@ export const Sidebar = () => {
                       <Icon size={26} className="stroke-[3]" />
                     </motion.div>
                   </div>
-                  <span className="text-[9px] mt-1 text-white/70 font-semibold uppercase tracking-wider">
+                  <span className="text-[9px] mt-1 text-[var(--text-secondary)]/80 font-bold uppercase tracking-wider">
                     {item.label}
                   </span>
                 </button>
@@ -169,7 +153,7 @@ export const Sidebar = () => {
                   className="flex flex-col items-center justify-center"
                 >
                   {item.id === "profile" ? (
-                    <div className={`w-6.5 h-6.5 rounded-full overflow-hidden border-2 transition-colors duration-300 ${active ? "border-[#8B5CF6]" : "border-white/20"}`}>
+                    <div className={`w-6.5 h-6.5 rounded-full overflow-hidden border-2 transition-colors duration-300 ${active ? "border-[var(--primary)]" : "border-[var(--border)]"}`}>
                       <Avatar
                         src={userData?.profileImage || dp}
                         alt="profile"
@@ -180,14 +164,14 @@ export const Sidebar = () => {
                   ) : (
                     <Icon 
                       size={22} 
-                      className={`transition-colors duration-300 ${active ? "text-[#8B5CF6] stroke-[2.5]" : "text-[#A8A8A8] opacity-80"}`} 
+                      className={`transition-colors duration-300 ${active ? "text-[var(--primary)] stroke-[2.5]" : "text-[var(--text-secondary)] opacity-80"}`} 
                     />
                   )}
                   <span 
                     className={`text-[9px] mt-1 transition-all duration-300 font-bold uppercase tracking-wider ${
                       active 
                         ? "bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] bg-clip-text text-transparent" 
-                        : "text-white/70"
+                        : "text-[var(--text-secondary)]/80"
                     }`}
                   >
                     {item.label}
@@ -210,7 +194,7 @@ export const Sidebar = () => {
       animate={{ width: isExpanded ? 260 : 72 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className={`h-screen bg-[var(--background)]/90 backdrop-blur-xl border-r border-[var(--border)] flex flex-col justify-between overflow-hidden flex-shrink-0 text-[var(--text)] relative ${
-        isNewsOpen || isSwitcherOpen ? 'z-[950]' : 'z-20'
+        isSwitcherOpen ? 'z-[950]' : 'z-20'
       }`}
     >
       <div>
@@ -220,7 +204,7 @@ export const Sidebar = () => {
           onClick={() => navigate("/")}
         >
           <img
-            src="/favicon.png"
+            src="/logo.svg"
             alt="Connectly Icon"
             className="w-9 h-9 object-contain flex-shrink-0 transition-transform duration-300 hover:rotate-12"
           />
@@ -407,7 +391,6 @@ export const Sidebar = () => {
       </div>
 
       <AccountSwitcherModal isOpen={isSwitcherOpen} onClose={() => setIsSwitcherOpen(false)} />
-      <NewsModal isOpen={isNewsOpen} onClose={() => setIsNewsOpen(false)} />
     </motion.div>
   );
 };

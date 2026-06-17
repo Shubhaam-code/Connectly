@@ -164,7 +164,7 @@ const AI_USER = {
   _id: "ai-friend",
   userName: "friend_ai",
   name: "Friend AI",
-  profileImage: "🤖",
+  profileImage: "/bot.png",
   isAI: true
 };
 
@@ -965,10 +965,12 @@ function Messages() {
                   className={`flex items-center gap-3.5 p-4 cursor-pointer transition-all border-l-2 ${isAIFriend ? "bg-[var(--hover)] border-purple-500 font-bold" : "hover:bg-[var(--hover)]/60 border-transparent"
                     }`}
                 >
-                  <div className="relative flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-tr from-purple-600 to-pink-500 text-xl border border-white/10 select-none shadow">
-                      🤖
-                    </div>
+                  <div className="relative w-11 h-11 md:w-14 md:h-14 flex-shrink-0">
+                    <img
+                      src="/bot.png"
+                      alt="Friend AI"
+                      className="w-full h-full rounded-full object-cover border border-purple-500/20 shadow-md"
+                    />
                     <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full animate-pulse" />
                   </div>
 
@@ -1020,8 +1022,13 @@ function Messages() {
                   </button>
                 )}
                 {isAIFriend ? (
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-gradient-to-tr from-purple-600 to-pink-500 text-base border border-white/10 select-none shadow">
-                    🤖
+                  <div className="relative w-11 h-11 md:w-14 md:h-14 flex-shrink-0">
+                    <img
+                      src="/bot.png"
+                      alt="Friend AI"
+                      className="w-full h-full rounded-full object-cover border border-purple-500/20 shadow-md"
+                    />
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full animate-pulse" />
                   </div>
                 ) : (
                   <img

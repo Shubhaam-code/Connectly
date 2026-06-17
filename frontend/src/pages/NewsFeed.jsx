@@ -1,303 +1,318 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useInView } from 'react-intersection-observer';
-import { FiRefreshCw, FiWifiOff, FiCompass, FiLoader, FiExternalLink, FiChevronDown, FiBookOpen } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  FiX, 
+  FiChevronLeft, 
+  FiChevronRight, 
+  FiExternalLink, 
+  FiCompass, 
+  FiBookOpen 
+} from 'react-icons/fi';
 import Layout from '../components/layout/Layout';
 import axiosInstance from '../lib/axiosInstance';
 import { formatTime } from '../utils/formatters';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const CATEGORIES = [
   { name: 'All', icon: '📰', id: 'all' },
   { name: 'Technology', icon: '💻', id: 'Technology' },
   { name: 'AI', icon: '🤖', id: 'AI' },
   { name: 'Startups', icon: '🚀', id: 'Startups' },
-  { name: 'Social Media', icon: '📱', id: 'Social Media' }
+  { name: 'Business', icon: '💼', id: 'Business' }
 ];
 
-const SkeletonCard = () => (
-  <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 mb-4 animate-pulse flex flex-col justify-between h-[280px]">
-    <div>
-      <div className="w-full aspect-video rounded-xl bg-neutral-800 mb-4" />
-      <div className="h-4 bg-neutral-800 rounded-md w-3/4 mb-2" />
-      <div className="h-3 bg-neutral-800/60 rounded-md w-1/2" />
-    </div>
-    <div className="flex justify-between items-center mt-4">
-      <div className="h-3 bg-neutral-800 rounded-md w-1/4" />
-      <div className="h-3 bg-neutral-800 rounded-md w-1/4" />
-    </div>
-  </div>
-);
-
 function NewsFeed() {
-  const [articles, setArticles] = useState([]);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Read router state
+  const initialArticles = location.state?.initialArticles || null;
+  const initialIndex = location.state?.initialIndex || 0;
+
   const [category, setCategory] = useState('all');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [articles, setArticles] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [expandedCardIndex, setExpandedCardIndex] = useState(null);
+  const [direction, setDirection] = useState(0); // -1 for previous, 1 for next
 
-  const { ref, inView } = useInView({
-    threshold: 0.1,
-    rootMargin: '100px'
-  });
-
-  // Fetch articles from /api/news
-  const fetchNews = useCallback(async (pageNum, activeCategory, forceRefresh = false, isAppend = false) => {
-    try {
-      if (pageNum === 1) {
-        if (forceRefresh) setRefreshing(true);
-        else setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-      setError(null);
-
-      const params = {
-        page: pageNum,
-        limit: 6,
-        category: activeCategory === 'all' ? undefined : activeCategory,
-        refresh: forceRefresh ? 'true' : undefined
-      };
-
-      const response = await axiosInstance.get('/api/news', { params });
-      const { data, pagination } = response.data;
-
-      if (isAppend) {
-        setArticles((prev) => {
-          const existingUrls = new Set(prev.map(art => art.url));
-          const filteredNew = data.filter(art => !existingUrls.has(art.url));
-          return [...prev, ...filteredNew];
-        });
-      } else {
-        setArticles(data || []);
-      }
-
-      setHasMore(pageNum < (pagination?.pages || 1));
-    } catch (err) {
-      console.error('Failed to load news:', err);
-      setError(err.response?.data?.message || 'Something went wrong. Please check your connection.');
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-      setRefreshing(false);
-    }
+  // Freeze background scrolling when page is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, []);
 
-  // Reload feed on category change
+  // Handle initial input articles
   useEffect(() => {
-    setPage(1);
-    setExpandedCardIndex(null);
-    fetchNews(1, category, false, false);
-  }, [category, fetchNews]);
-
-  // Load next page on scroll trigger
-  useEffect(() => {
-    if (inView && hasMore && !loading && !loadingMore && !refreshing) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchNews(nextPage, category, false, true);
+    if (initialArticles) {
+      setArticles(initialArticles);
+      setActiveIndex(initialIndex);
     }
-  }, [inView, hasMore, loading, loadingMore, refreshing, page, category, fetchNews]);
+  }, [initialArticles, initialIndex]);
 
-  // Force Refresh Trigger
-  const handleRefresh = () => {
-    setPage(1);
-    setExpandedCardIndex(null);
-    fetchNews(1, category, true, false);
+  // Fetch news from API if no initialArticles or if category is changed
+  useEffect(() => {
+    // If we have initialArticles and we are on 'all' category, don't fetch initially
+    if (initialArticles && category === 'all' && articles.length > 0) return;
+
+    const fetchNews = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        let url = '/api/news?limit=40';
+        if (category !== 'all') {
+          url = `/api/news/category?cat=${category}&limit=40`;
+        }
+        const res = await axiosInstance.get(url);
+        if (res.data && res.data.success) {
+          setArticles(res.data.data || []);
+          setActiveIndex(0);
+        } else {
+          setError('No news available right now');
+        }
+      } catch (err) {
+        console.error('Error fetching news:', err);
+        setError('No news available right now');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, [category, initialArticles]);
+
+  // Key navigation for cards
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight') {
+        handleNext();
+      } else if (e.key === 'ArrowLeft') {
+        handlePrev();
+      } else if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [articles, activeIndex]);
+
+  const handleNext = () => {
+    if (articles.length === 0) return;
+    setDirection(1);
+    setActiveIndex((prev) => (prev + 1) % articles.length);
   };
 
-  const toggleExpand = (idx) => {
-    setExpandedCardIndex(expandedCardIndex === idx ? null : idx);
+  const handlePrev = () => {
+    if (articles.length === 0) return;
+    setDirection(-1);
+    setActiveIndex((prev) => (prev - 1 + articles.length) % articles.length);
   };
+
+  const handleClose = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
+  const slideVariants = {
+    enter: (dir) => ({
+      x: dir > 0 ? 100 : -100,
+      opacity: 0,
+      scale: 0.98
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      scale: 1
+    },
+    exit: (dir) => ({
+      x: dir < 0 ? 100 : -100,
+      opacity: 0,
+      scale: 0.98
+    })
+  };
+
+  const currentArticle = articles[activeIndex];
 
   return (
     <Layout>
-      <div className="flex flex-col h-full bg-[var(--background)] text-[var(--text)] overflow-hidden">
+      {/* Full-screen backdrop overlay */}
+      <div className="fixed inset-0 z-[9999] bg-black/75 dark:bg-[#060B13]/95 backdrop-blur-2xl flex items-center justify-center overflow-hidden w-screen h-screen">
         
-        {/* News Navigation Bar */}
-        <div className="flex-shrink-0 border-b border-[var(--border)] px-4 sm:px-6 py-5 bg-[var(--background)]">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2 bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
-                <FiBookOpen className="text-purple-500 animate-pulse" />
-                CONNECTLY INSIGHTS
-              </h1>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">Premium curated news summarized with Generative AI</p>
-            </div>
-
-            {/* Refresh Button */}
-            <button
-              onClick={handleRefresh}
-              disabled={loading || refreshing || loadingMore}
-              className="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] text-neutral-400 hover:text-white hover:border-purple-500/30 hover:bg-neutral-900 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5 text-xs font-semibold select-none"
-            >
-              <FiRefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-purple-400' : ''}`} />
-              <span className="hidden sm:inline">Sync Fresh News</span>
-            </button>
-          </div>
-
-          {/* Categories Pill Switcher */}
-          <div className="w-full overflow-x-auto scrollbar-none py-1">
-            <div className="flex gap-2.5 pb-1 min-w-max">
-              {CATEGORIES.map((cat) => {
-                const active = category === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setCategory(cat.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
-                      active
-                        ? 'bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white shadow-[0_4px_12px_rgba(139,92,246,0.3)] scale-105'
-                        : 'bg-[var(--card)] hover:bg-[var(--hover)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-white/10'
-                    }`}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Scrollable Container */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 scrollbar-none bg-[var(--background-secondary)]/30">
+        {/* News Card Container */}
+        <div className="w-full h-full md:w-[85vw] md:max-w-[1200px] md:h-[85vh] md:max-h-[800px] bg-[var(--card)] border-0 md:border border-[var(--border)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] relative flex flex-col rounded-none md:rounded-[32px] overflow-hidden text-[var(--text)] select-none">
           
-          {/* Error Boundary */}
-          {error && (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 max-w-md mx-auto">
-              <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
-                <FiWifiOff size={28} />
+          {/* Header */}
+          <div className="p-4 md:p-6 border-b border-[var(--border)] flex flex-col gap-4 bg-[var(--card)]/80 backdrop-blur-md flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-tr from-[#8B5CF6] to-[#EC4899] flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
+                  <FiCompass className="text-base animate-spin-slow" />
+                </div>
+                <div>
+                  <h2 className="text-xs md:text-sm font-extrabold text-white tracking-widest uppercase flex items-center gap-1.5">
+                    🔥 Connectly News
+                  </h2>
+                  <p className="text-[10px] text-[var(--text-secondary)] font-medium">Summarized by Generative AI</p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-white">Connection Error</h3>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{error}</p>
-              </div>
+              
+              {/* Close/Back Button */}
               <button
-                onClick={handleRefresh}
-                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-[#A855F7] hover:opacity-90 text-xs font-bold rounded-2xl transition-all cursor-pointer shadow-lg shadow-purple-500/10 flex items-center gap-1.5"
+                onClick={handleClose}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--background-secondary)] hover:bg-[var(--hover)] text-[var(--text-secondary)] hover:text-white transition-all border border-[var(--border)] active:scale-95 cursor-pointer"
+                title="Go Back"
               >
-                <FiRefreshCw size={13} />
-                Try Refreshing
+                <FiX size={20} />
               </button>
             </div>
-          )}
 
-          {/* Empty News State */}
-          {!loading && !error && articles.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-24 text-center space-y-3">
-              <span className="text-4xl">📰</span>
-              <h3 className="text-base font-bold text-white">No News Found</h3>
-              <p className="text-xs text-[var(--text-secondary)] max-w-xs">
-                We couldn't retrieve any articles for this category. Press the refresh button to trigger an update.
-              </p>
-            </div>
-          )}
-
-          {/* Cards Grid */}
-          {!error && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-              {loading ? (
-                Array.from({ length: 6 }).map((_, idx) => <SkeletonCard key={idx} />)
-              ) : (
-                articles.map((art, idx) => {
-                  const isExpanded = expandedCardIndex === idx;
+            {/* Categories */}
+            <div className="w-full overflow-x-auto scrollbar-none py-1">
+              <div className="flex gap-2 min-w-max">
+                {CATEGORIES.map((cat) => {
+                  const active = category === cat.id;
                   return (
-                    <div
-                      key={art.url || idx}
-                      className="bg-[var(--card)] border border-[var(--border)] hover:border-purple-500/20 hover:shadow-[0_4px_30px_rgba(139,92,246,0.06)] rounded-2xl overflow-hidden flex flex-col justify-between group transition-all duration-300 relative"
+                    <button
+                      key={cat.id}
+                      onClick={() => setCategory(cat.id)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-[11px] font-black tracking-wide whitespace-nowrap transition-all duration-300 cursor-pointer border ${
+                        active
+                          ? 'bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white border-transparent shadow-lg shadow-purple-500/20 scale-105'
+                          : 'bg-[var(--background-secondary)] text-[var(--text-secondary)] border-[var(--border)] hover:text-white hover:bg-[var(--hover)]'
+                      }`}
                     >
-                      {/* Image header */}
-                      <div className="relative w-full aspect-video rounded-t-xl overflow-hidden bg-neutral-900 border-b border-[var(--border)]">
-                        <img
-                          src={art.image}
-                          alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 select-none"
-                          draggable={false}
-                          loading="lazy"
-                        />
-                        <span className="absolute top-3 left-3 bg-black/45 backdrop-blur-md text-[8px] text-white font-bold tracking-widest px-2.5 py-0.5 rounded-full border border-white/10 uppercase select-none">
-                          {art.category}
-                        </span>
-                      </div>
-
-                      {/* Content block */}
-                      <div className="p-4 flex-1 flex flex-col justify-between">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-[9px] text-[var(--text-muted)] font-semibold select-none">
-                            <span className="truncate max-w-[150px]">{art.source}</span>
-                            <span>{formatTime(art.publishedAt)}</span>
-                          </div>
-                          <h4 className="text-xs sm:text-sm font-bold text-white leading-snug line-clamp-2 select-text group-hover:text-purple-400 transition-colors">
-                            {art.title}
-                          </h4>
-                          <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed line-clamp-3 select-text">
-                            {art.description}
-                          </p>
-                        </div>
-
-                        {/* Inline AI Summary Panel (Expanded view) */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.25 }}
-                              className="mt-4 pt-3 border-t border-[var(--border)] bg-neutral-900/40 p-3 rounded-xl border border-white/[0.02] flex flex-col gap-2 overflow-hidden"
-                            >
-                              <div className="flex items-center gap-1.5 text-[8px] font-bold text-purple-400 uppercase tracking-widest select-none">
-                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                                GenAI Summary
-                              </div>
-                              <p className="text-[11px] text-neutral-300 leading-relaxed font-normal select-text">
-                                {art.summary}
-                              </p>
-                              <a
-                                href={art.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mt-1 flex items-center gap-1 text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors self-start select-none"
-                              >
-                                Read Original Article
-                                <FiExternalLink size={10} />
-                              </a>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
-                        {/* Expand/Collapse action */}
-                        <div className="mt-4 flex items-center justify-between select-none">
-                          <button
-                            onClick={() => toggleExpand(idx)}
-                            className="flex items-center gap-1 text-[10px] font-bold text-neutral-400 hover:text-white transition-all cursor-pointer bg-white/5 border border-white/5 hover:border-purple-500/20 px-3 py-1.5 rounded-xl hover:bg-neutral-900"
-                          >
-                            <span>{isExpanded ? 'Collapse' : 'View AI Summary'}</span>
-                            <FiChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-purple-400' : ''}`} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      <span>{cat.icon}</span>
+                      <span>{cat.name}</span>
+                    </button>
                   );
-                })
-              )}
+                })}
+              </div>
             </div>
-          )}
+          </div>
 
-          {/* Infinite Scroll Trigger */}
-          {hasMore && !loading && !error && (
-            <div ref={ref} className="w-full py-8 flex items-center justify-center text-[var(--text-secondary)] select-none">
-              {loadingMore ? (
-                <div className="flex items-center gap-2 text-xs font-semibold">
-                  <FiLoader size={16} className="animate-spin text-purple-500" />
-                  <span>Curating more insights...</span>
-                </div>
-              ) : (
-                <span className="text-[10px] tracking-wider text-neutral-500 uppercase">Scroll to read more</span>
-              )}
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-5 md:p-8 flex flex-col bg-transparent relative scrollbar-none min-h-0">
+            {loading ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20">
+                <div className="w-12 h-12 rounded-full border-[3px] border-[var(--border)] border-t-[#8B5CF6] animate-spin"></div>
+                <p className="text-xs text-[var(--text-secondary)] font-semibold tracking-wider uppercase">Curating summaries...</p>
+              </div>
+            ) : error ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 py-20">
+                <span className="text-4xl mb-4">⚠️</span>
+                <p className="text-sm text-[var(--text-secondary)] font-medium mb-5">{error}</p>
+                <button
+                  onClick={() => setCategory(category)}
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white text-xs font-bold rounded-xl hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-purple-500/10"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : articles.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 py-20">
+                <span className="text-4xl mb-4">📰</span>
+                <p className="text-sm text-[var(--text-secondary)] font-bold tracking-wider uppercase">No news available in this category</p>
+              </div>
+            ) : (
+              <div className="relative flex-1 flex flex-col justify-start">
+                <AnimatePresence initial={false} custom={direction} mode="wait">
+                  <motion.div
+                    key={activeIndex}
+                    custom={direction}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ opacity: { duration: 0.15 }, x: { type: 'spring', stiffness: 380, damping: 35 } }}
+                    className="w-full flex flex-col md:flex-row gap-6 md:gap-8 items-stretch"
+                  >
+                    {/* Left Column: Media */}
+                    <div className="w-full md:w-[45%] h-56 md:h-[400px] rounded-2xl overflow-hidden border border-[var(--border)] bg-[var(--background-secondary)]/30 relative flex-shrink-0">
+                      <img
+                        src={currentArticle.image}
+                        alt={currentArticle.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute top-3.5 left-3.5 bg-black/60 backdrop-blur-md text-[9px] uppercase font-black tracking-widest px-3 py-1 rounded-full border border-white/10 text-purple-300 shadow">
+                        {currentArticle.category}
+                      </span>
+                    </div>
+
+                    {/* Right Column: News Content */}
+                    <div className="flex-1 flex flex-col justify-between md:h-[400px] text-left w-full min-w-0">
+                      <div className="space-y-3.5">
+                        {/* Metadata */}
+                        <div className="flex items-center gap-2 text-[10px] md:text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">
+                          <span className="text-[var(--text-secondary)]">{currentArticle.source}</span>
+                          <span>•</span>
+                          <span>{formatTime(currentArticle.publishedAt)}</span>
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="text-base md:text-lg lg:text-xl font-black text-white leading-snug tracking-tight hover:text-[#8B5CF6] transition-colors select-text">
+                          {currentArticle.title}
+                        </h3>
+
+                        {/* AI Summary card */}
+                        <div className="flex flex-col gap-2.5 bg-[var(--background-secondary)]/40 border border-[var(--border)] p-4 md:p-5 rounded-2xl shadow-inner select-text backdrop-blur-md">
+                          <span className="text-[9px] font-black text-[#8B5CF6] uppercase tracking-widest flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#EC4899] animate-pulse"></span>
+                            AI Companion Summary
+                          </span>
+                          <div className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed font-normal">
+                            {currentArticle.summary}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Read Full Story Button */}
+                      {currentArticle && (
+                        <div className="mt-5 flex-shrink-0">
+                          <a
+                            href={currentArticle.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:opacity-95 text-xs text-white font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/15 cursor-pointer"
+                          >
+                            <span>Read full story at {currentArticle.source}</span>
+                            <FiExternalLink size={14} />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Controls Area */}
+          {!loading && !error && articles.length > 0 && (
+            <div className="px-5 py-4 border-t border-[var(--border)] flex items-center justify-between bg-[var(--card)]/95 backdrop-blur-md z-10 flex-shrink-0">
+              <button
+                onClick={handlePrev}
+                className="w-11 h-11 rounded-full flex items-center justify-center bg-[var(--background-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:bg-[var(--hover)] active:scale-90 transition-all cursor-pointer"
+                title="Previous (Left Arrow)"
+              >
+                <FiChevronLeft size={22} />
+              </button>
+              
+              <span className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-widest">
+                {activeIndex + 1} of {articles.length}
+              </span>
+              
+              <button
+                onClick={handleNext}
+                className="w-11 h-11 rounded-full flex items-center justify-center bg-[var(--background-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:bg-[var(--hover)] active:scale-90 transition-all cursor-pointer"
+                title="Next (Right Arrow)"
+              >
+                <FiChevronRight size={22} />
+              </button>
             </div>
           )}
         </div>

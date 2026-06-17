@@ -99,7 +99,11 @@ export const chatWithGroq = async (req, res) => {
         res.write("data: [DONE]\n\n");
         res.end();
       } catch (err) {
-        console.error("Groq streaming fetch failed:", err.message);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Groq streaming fetch failed detailed:", err);
+        } else {
+          console.error("Groq streaming fetch failed:", err.message);
+        }
         res.write(`data: ${JSON.stringify({ content: " I got a bit dizzy there. Can you repeat that? 💜" })}\n\n`);
         res.write("data: [DONE]\n\n");
         res.end();
@@ -116,7 +120,11 @@ export const chatWithGroq = async (req, res) => {
         const reply = chatCompletion.choices[0]?.message?.content || "";
         return res.status(200).json({ success: true, reply });
       } catch (err) {
-        console.error("Groq non-streaming fetch failed:", err.message);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Groq non-streaming fetch failed detailed:", err);
+        } else {
+          console.error("Groq non-streaming fetch failed:", err.message);
+        }
         return res.status(500).json({
           success: false,
           message: "I am having trouble processing that right now. Please try again in a bit!"
@@ -124,7 +132,11 @@ export const chatWithGroq = async (req, res) => {
       }
     }
   } catch (err) {
-    console.error("Chat controller global error:", err);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Chat controller global error detailed:", err);
+    } else {
+      console.error("Chat controller global error:", err.message);
+    }
     if (!res.headersSent) {
       return res.status(500).json({ success: false, message: "Internal server error in AI chat." });
     } else {

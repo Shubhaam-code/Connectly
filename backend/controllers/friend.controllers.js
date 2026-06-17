@@ -40,7 +40,11 @@ export const chatWithFriend = async (req, res) => {
     return res.end();
 
   } catch (err) {
-    console.error("friend controller error using groqService:", err.message);
+    if (process.env.NODE_ENV === "development") {
+      console.error("friend controller error using groqService detailed:", err);
+    } else {
+      console.error("friend controller error using groqService:", err.message);
+    }
     res.write(`data: ${JSON.stringify({ content: " Sorry about that, I got a bit dizzy there. Can you repeat that? 💜" })}\n\n`);
     res.write("data: [DONE]\n\n");
     return res.end();

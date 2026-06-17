@@ -22,6 +22,11 @@
   -ms-overflow-style: none;
   font-family: 'Poppins', sans-serif;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
 }
 
 ::-webkit-scrollbar {
@@ -98,11 +103,16 @@ html.light {
   --input-text: #0F172A;
 }
 
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'Poppins', sans-serif;
-  overflow-x: hidden;
 }
 
 /* HINGLISH: Glassmorphism utility class — frosted glass effect ke liye */
@@ -439,9 +449,15 @@ body {
   animation: glowPulse 2s ease-in-out infinite;
 }
 
-/* Accessibility: Prevent Safari auto-zoom on input focus on mobile devices */
-@media (max-width: 767px) {
-  input, select, textarea, button.cursor-pointer {
+/* Accessibility: Prevent Chrome/Safari auto-zoom on input focus on mobile & tablet devices */
+@media (max-width: 1024px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  textarea,
+  select {
     font-size: 16px !important;
   }
 }

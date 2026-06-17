@@ -167,13 +167,25 @@ export const editProfile = async (req, res) => {
         // Check if removing profile image
         if (req.body.removeProfileImage === "true" || req.body.removeProfileImage === true || req.body.profileImage === "") {
             user.profileImage = ""
+        } else if (req.files && req.files["profileImage"] && req.files["profileImage"][0]) {
+            const profileImage = await uploadOnCloudinary(req.files["profileImage"][0].path)
+            if (profileImage) {
+                user.profileImage = profileImage
+            }
         } else if (req.file) {
-            // FIX: Only upload image if a file was provided
             const profileImage = await uploadOnCloudinary(req.file.path)
             if (profileImage) {
                 user.profileImage = profileImage
-            } else {
-                console.warn("editProfile: Cloudinary upload returned null, keeping old profile image")
+            }
+        }
+
+        // Check if removing cover image
+        if (req.body.removeCoverImage === "true" || req.body.removeCoverImage === true || req.body.coverImage === "") {
+            user.coverImage = ""
+        } else if (req.files && req.files["coverImage"] && req.files["coverImage"][0]) {
+            const coverImage = await uploadOnCloudinary(req.files["coverImage"][0].path)
+            if (coverImage) {
+                user.coverImage = coverImage
             }
         }
 

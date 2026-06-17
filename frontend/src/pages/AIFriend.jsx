@@ -84,9 +84,13 @@ function AIFriend() {
           </button>
 
           {/* HINGLISH: AI avatar — pulsing orb */}
-          <div className="w-10 h-10 rounded-full flex items-center justify-center ai-orb-pulse"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-            <span className="text-lg">🤖</span>
+          <div className="relative w-11 h-11 md:w-14 md:h-14 flex-shrink-0 ai-orb-pulse">
+            <img
+              src="/bot.png"
+              alt="Connectly AI"
+              className="w-full h-full rounded-full object-cover border-2 border-purple-500/20 shadow-md"
+            />
+            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[var(--bg-primary)] rounded-full animate-pulse" />
           </div>
 
           <div className="flex-1">
@@ -108,9 +112,13 @@ function AIFriend() {
 
           {/* HINGLISH: AI avatar + intro card at top */}
           <div className="flex flex-col items-center gap-3 mb-4">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center ai-orb-pulse"
-              style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-              <span className="text-3xl">🤖</span>
+            <div className="relative w-20 h-20 flex-shrink-0 ai-orb-pulse">
+              <img
+                src="/bot.png"
+                alt="Connectly AI"
+                className="w-full h-full rounded-full object-cover border-2 border-purple-500/30 shadow-lg"
+              />
+              <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-[var(--bg-primary)] rounded-full animate-pulse" />
             </div>
             <div className="text-center">
               <h2 className="text-[var(--text-primary)] font-bold text-lg">ConnectlyAI</h2>
@@ -122,9 +130,13 @@ function AIFriend() {
           {messages.map((msg, index) => (
             <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} gap-3 items-end`}>
               {msg.sender === 'ai' && (
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-                  <span className="text-xs">🤖</span>
+                <div className="relative w-8 h-8 flex-shrink-0">
+                  <img
+                    src="/bot.png"
+                    alt="Connectly AI"
+                    className="w-full h-full rounded-full object-cover border border-purple-500/20 shadow-sm"
+                  />
+                  <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border border-[var(--bg-primary)] rounded-full animate-pulse" />
                 </div>
               )}
               <div className={`max-w-[70%] flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
@@ -150,9 +162,13 @@ function AIFriend() {
           {/* HINGLISH: AI typing indicator */}
           {isTyping && (
             <div className="flex gap-3 items-end">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-                <span className="text-xs">🤖</span>
+              <div className="relative w-8 h-8 flex-shrink-0">
+                <img
+                  src="/bot.png"
+                  alt="Connectly AI"
+                  className="w-full h-full rounded-full object-cover border border-purple-500/20 shadow-sm"
+                />
+                <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border border-[var(--bg-primary)] rounded-full animate-pulse" />
               </div>
               <div className="bubble-receiver px-4 py-3 rounded-2xl flex items-center gap-1.5">
                 {[0, 1, 2].map(i => (

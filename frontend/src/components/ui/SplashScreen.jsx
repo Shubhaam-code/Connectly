@@ -19,7 +19,7 @@ export const SplashScreen = () => {
           {/* Logo with drop-shadow glow */}
           <div className="relative mb-6">
             <img
-              src="/favicon.png"
+              src="/logo.svg"
               alt="Connectly Logo"
               className="w-32 h-32 md:w-40 md:h-40 object-contain filter drop-shadow-[0_0_25px_rgba(139,92,246,0.3)]"
             />

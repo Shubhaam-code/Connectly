@@ -192,8 +192,13 @@ function FriendChat() {
           </button>
 
           {/* AI Avatar */}
-          <div className="w-10 h-10 rounded-full flex items-center justify-center ai-orb-pulse bg-gradient-to-tr from-purple-600 to-pink-500">
-            <span className="text-lg select-none">🤖</span>
+          <div className="relative w-11 h-11 md:w-14 md:h-14 flex-shrink-0 ai-orb-pulse">
+            <img
+              src="/bot.png"
+              alt="Connectly AI"
+              className="w-full h-full rounded-full object-cover border-2 border-purple-500/20 shadow-md"
+            />
+            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full animate-pulse" />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -219,8 +224,13 @@ function FriendChat() {
           
           {/* AI Profile Intro */}
           <div className="flex flex-col items-center gap-3 mb-6 animate-fade-in">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center ai-orb-pulse bg-gradient-to-tr from-purple-600 to-pink-500 shadow-xl shadow-purple-500/10">
-              <span className="text-3xl select-none">🤖</span>
+            <div className="relative w-20 h-20 flex-shrink-0 ai-orb-pulse">
+              <img
+                src="/bot.png"
+                alt="Connectly AI"
+                className="w-full h-full rounded-full object-cover border-2 border-purple-500/30 shadow-lg"
+              />
+              <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-[var(--background)] rounded-full animate-pulse" />
             </div>
             <div className="text-center">
               <h2 className="text-white font-black text-lg tracking-tight">ConnectlyAI</h2>
@@ -237,8 +247,13 @@ function FriendChat() {
                 className={`flex ${isUser ? 'justify-end' : 'justify-start'} gap-3 items-end max-w-full`}
               >
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-purple-600 to-pink-500 text-xs border border-white/10 select-none shadow">
-                    🤖
+                  <div className="relative w-8 h-8 flex-shrink-0">
+                    <img
+                      src="/bot.png"
+                      alt="Connectly AI"
+                      className="w-full h-full rounded-full object-cover border border-purple-500/20 shadow-sm"
+                    />
+                    <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border border-[var(--background)] rounded-full animate-pulse" />
                   </div>
                 )}
                 <div className={`max-w-[80%] md:max-w-[70%] flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
@@ -265,8 +280,13 @@ function FriendChat() {
           {/* Typing Indicator */}
           {isTyping && messages[messages.length - 1]?.text === '' && (
             <div className="flex gap-3 items-end">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-purple-600 to-pink-500 text-xs border border-white/10 select-none">
-                🤖
+              <div className="relative w-8 h-8 flex-shrink-0">
+                <img
+                  src="/bot.png"
+                  alt="Connectly AI"
+                  className="w-full h-full rounded-full object-cover border border-purple-500/20 shadow-sm"
+                />
+                <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border border-[var(--background)] rounded-full animate-pulse" />
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] px-4 py-3 rounded-2xl rounded-tl-none flex items-center gap-1.5 shadow-sm">
                 {[0, 1, 2].map((i) => (

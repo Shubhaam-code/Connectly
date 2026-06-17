@@ -30,7 +30,10 @@ userRouter.get("/search", isAuth, search)
 userRouter.get("/getAllNotifications", isAuth, getAllNotifications)
 userRouter.get("/saved-posts", isAuth, getSavedPosts)
 userRouter.post("/markAsRead", isAuth, markAsRead)
-userRouter.post("/editProfile", isAuth, upload.single("profileImage"), editProfile)
+userRouter.post("/editProfile", isAuth, upload.fields([
+    { name: "profileImage", maxCount: 1 },
+    { name: "coverImage", maxCount: 1 }
+]), editProfile)
 
 // New analytics, sessions, support, and account deletion routes
 userRouter.get("/analytics", isAuth, getUserAnalytics)

@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setProfileData, setUserData } from '../redux/userSlice'
 import { setPostData } from '../redux/postSlice'
-import { FiSettings, FiGrid, FiVideo, FiBookmark, FiHeart, FiMessageCircle, FiLogOut, FiArrowLeft, FiSearch, FiX, FiBarChart2, FiPlus, FiMinus, FiRotateCcw, FiImage, FiTrash2, FiUsers, FiUserCheck, FiPlusSquare, FiSend } from 'react-icons/fi'
+import { FiSettings, FiGrid, FiVideo, FiBookmark, FiHeart, FiMessageCircle, FiLogOut, FiArrowLeft, FiSearch, FiX, FiBarChart2, FiPlus, FiMinus, FiRotateCcw, FiImage, FiTrash2, FiUsers, FiUserCheck, FiPlusSquare, FiSend, FiChevronDown } from 'react-icons/fi'
 import dp from "../assets/dp.webp"
 import Layout from '../components/layout/Layout'
 import FollowButton from '../components/FollowButton'
@@ -30,6 +30,7 @@ function Profile() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [viewMode, setViewMode] = useState(() => localStorage.getItem("profile_viewMode") || "grid")
   const [sortOption, setSortOption] = useState(() => localStorage.getItem("profile_sortOption") || "latest")
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => {
     localStorage.setItem("profile_viewMode", viewMode)
@@ -594,7 +595,9 @@ function Profile() {
             <button
               key={stat.label}
               onClick={stat.onClick}
-              className="bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] hover:border-purple-500/20 hover:shadow-[0_8px_30px_rgba(139,92,246,0.06)] hover:-translate-y-1 rounded-2xl p-4 flex flex-col items-center justify-center gap-1 transition-all duration-300 group cursor-pointer text-center"
+              className={`bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] hover:border-purple-500/20 hover:shadow-[0_8px_30px_rgba(139,92,246,0.06)] hover:-translate-y-1 rounded-2xl p-4 flex flex-col items-center justify-center gap-1 transition-all duration-300 group cursor-pointer text-center ${
+                stat.label === "Saved" ? "hidden sm:flex" : "flex"
+              }`}
             >
               <span className="text-lg sm:text-xl md:text-2xl font-black text-[var(--text)] group-hover:text-purple-400 transition-colors">
                 {stat.val}
@@ -652,16 +655,45 @@ function Profile() {
           {/* Right layout and filter controls */}
           <div className="hidden sm:flex items-center gap-3">
             {/* Sorting Dropdown */}
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-[#0B1220] border border-[var(--border)] text-[10px] font-extrabold text-white outline-none cursor-pointer hover:border-[var(--primary)]/30 transition-all uppercase tracking-wider bg-no-repeat bg-right"
-            >
-              <option value="latest">Latest</option>
-              <option value="oldest">Oldest</option>
-              <option value="likes">Most Liked</option>
-              <option value="comments">Most Commented</option>
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="px-3 h-8 flex items-center justify-between gap-1.5 rounded-xl border border-[var(--border)] text-[10px] font-extrabold text-[var(--text)] bg-[var(--card)] hover:border-[#8B5CF6]/50 focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6]/30 transition-all uppercase tracking-wider outline-none cursor-pointer"
+              >
+                <span>{sortOption === "latest" ? "Latest" : sortOption === "oldest" ? "Oldest" : sortOption === "likes" ? "Most Liked" : "Most Commented"}</span>
+                <FiChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${dropdownOpen ? 'rotate-180 text-purple-400' : ''}`} />
+              </button>
+              {dropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-40 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-[0_10px_25px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_25px_rgba(0,0,0,0.4)] z-50 overflow-hidden py-1">
+                    {[
+                      { value: "latest", label: "Latest" },
+                      { value: "oldest", label: "Oldest" },
+                      { value: "likes", label: "Most Liked" },
+                      { value: "comments", label: "Most Commented" }
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setSortOption(option.value)
+                          setDropdownOpen(false)
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                          sortOption === option.value
+                            ? "bg-purple-500/10 text-purple-500 dark:text-purple-400 font-black"
+                            : "text-[var(--text-secondary)] hover:bg-purple-500/5 hover:text-purple-500 dark:hover:text-purple-400"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Layout Switchers */}
             <button

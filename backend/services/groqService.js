@@ -46,41 +46,73 @@ const checkServiceRateLimit = (contextKey, limit = 30) => {
  * @returns {Promise<Object|AsyncIterable>} - Standard completion or streaming iterable
  */
 export const generateAIResponse = async (messageOrMessages, options = {}) => {
-  // 1. Validation
-  if (!messageOrMessages) {
-    throw new Error("Validation failed: prompt/messages cannot be empty.");
-  }
-
+  // 1. Validation & Filtering
   let formattedMessages = [];
+  const allowedRoles = ["user", "assistant", "system"];
+
   if (typeof messageOrMessages === "string") {
-    if (!messageOrMessages.trim()) {
-      throw new Error("Validation failed: message cannot be an empty string.");
+    let cleanMessage = messageOrMessages.trim();
+    if (!cleanMessage) {
+      cleanMessage = "Hello";
     }
     const systemPrompt = options.systemPrompt || "You are a helpful AI assistant.";
     formattedMessages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: messageOrMessages }
+      { role: "user", content: cleanMessage }
     ];
   } else if (Array.isArray(messageOrMessages)) {
-    if (messageOrMessages.length === 0) {
-      throw new Error("Validation failed: messages array cannot be empty.");
+    // Filter out: null, undefined, empty strings, whitespace-only strings, invalid content types
+    // And prevent image/audio/post-share/etc.
+    formattedMessages = messageOrMessages
+      .map(msg => {
+        if (!msg || typeof msg !== "object") return null;
+
+        // Skip image, audio, video, files, posts, shares, media attachments
+        if (
+          msg.image || 
+          msg.audio || 
+          msg.video || 
+          msg.file || 
+          msg.post || 
+          msg.share || 
+          msg.postShare || 
+          msg.media || 
+          msg.attachments ||
+          (msg.type && msg.type !== "text")
+        ) {
+          return null;
+        }
+
+        const role = msg.role || (msg.sender === "user" ? "user" : "assistant");
+        if (!allowedRoles.includes(role)) {
+          return null;
+        }
+
+        const content = msg.content || msg.text || "";
+        if (typeof content !== "string" || !content.trim()) {
+          return null;
+        }
+
+        return { role, content: content.trim() };
+      })
+      .filter(msg => msg !== null);
+
+    // Fallback if messages array is empty after filtering
+    if (formattedMessages.length === 0) {
+      formattedMessages = [{ role: "user", content: "Hello" }];
     }
-    // Clean and validate message history structure
-    formattedMessages = messageOrMessages.map(msg => {
-      const role = msg.role || (msg.sender === "user" ? "user" : "assistant");
-      const content = msg.content || msg.text || "";
-      if (!content || typeof content !== "string" || !content.trim()) {
-        throw new Error("Validation failed: each message must contain valid text content.");
-      }
-      return { role, content };
-    });
 
     // Add optional system prompt to the beginning of context list if not present
     if (options.systemPrompt && !formattedMessages.some(m => m.role === "system")) {
       formattedMessages.unshift({ role: "system", content: options.systemPrompt });
     }
   } else {
-    throw new Error("Validation failed: message must be a string or an array of message objects.");
+    // Fallback for completely invalid message type
+    const systemPrompt = options.systemPrompt || "You are a helpful AI assistant.";
+    formattedMessages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: "Hello" }
+    ];
   }
 
   // 2. Service Rate Limiting
@@ -125,7 +157,9 @@ export const generateAIResponse = async (messageOrMessages, options = {}) => {
       return response;
 
     } catch (err) {
-      console.error(`groqService: Attempt failed (attempts remaining: ${retries}). Error: ${err.message}`);
+      if (process.env.NODE_ENV === "development") {
+        console.error(`groqService: Attempt failed (attempts remaining: ${retries}). Error: ${err.message}`);
+      }
       retries--;
       
       if (retries < 0) {

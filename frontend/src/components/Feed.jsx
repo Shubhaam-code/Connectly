@@ -150,20 +150,20 @@ function Feed() {
       <div className="w-full max-w-[620px] mx-auto px-4 py-6">
         {/* Create Post Bar */}
         {userData && (
-          <div className="w-full bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] rounded-3xl p-5 mb-6 shadow-2xl flex flex-col gap-4 select-none">
+          <div className="w-full bg-[var(--card)]/75 backdrop-blur-2xl border border-[var(--border)] rounded-[24px] p-5 mb-6 shadow-xl flex flex-col gap-4 select-none">
             {/* Input Row */}
             <div className="flex items-center gap-3.5 w-full">
               <div className="relative flex-shrink-0">
-                <div className="w-11 h-11 rounded-full p-[2px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#A855F7]">
+                <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#3B82F6]">
                   <div className="w-full h-full rounded-full overflow-hidden border border-[var(--card)] bg-[#0B1220]">
                     <img src={userData.profileImage || dp} alt="" className="w-full h-full object-cover" />
                   </div>
                 </div>
-                <div className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-[var(--card)] bg-green-500 shadow-[0_0_10px_#22c55e]" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-[1.5px] border-[var(--card)] bg-green-500 shadow-[0_0_8px_#22c55e]" />
               </div>
               <button 
                 onClick={() => navigate('/upload?type=post')}
-                className="flex-1 bg-[var(--background-secondary)]/50 hover:bg-[var(--hover)]/20 border border-[var(--border)] text-left text-xs md:text-sm text-[var(--text-secondary)] hover:text-[var(--text)] py-3 px-5 rounded-2xl transition-all duration-300 outline-none truncate cursor-pointer shadow-inner"
+                className="flex-1 bg-[var(--background-secondary)]/60 hover:bg-white/5 border border-[var(--border)] text-left text-xs md:text-sm text-[var(--text-secondary)] hover:text-white py-3 px-5 rounded-xl transition-all duration-300 outline-none truncate cursor-pointer shadow-inner"
               >
                 What's on your mind, {userData.name?.split(' ')[0]}?
               </button>
@@ -173,31 +173,31 @@ function Feed() {
             <div className="h-[1px] w-full bg-[var(--border)]" />
 
             {/* Quick Actions Row */}
-            <div className="flex items-center justify-around md:justify-start gap-4 flex-wrap w-full px-1">
+            <div className="flex items-center justify-start gap-3 flex-wrap w-full px-1">
               <button
                 onClick={() => navigate('/upload?type=post')}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-[#3B82F6]/10 border border-transparent hover:border-[#3B82F6]/20 rounded-2xl text-[var(--text-secondary)] hover:text-[#3B82F6] transition-all duration-300 cursor-pointer text-xs font-bold"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-[#3B82F6]/10 border border-white/5 hover:border-[#3B82F6]/20 rounded-xl text-[var(--text-secondary)] hover:text-[#3B82F6] transition-all duration-300 cursor-pointer text-xs font-bold"
                 title="Upload Photo/Media"
               >
-                <FiImage size={16} className="text-[#3B82F6] drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+                <FiImage size={16} className="text-[#3B82F6]" />
                 <span>Image</span>
               </button>
               
               <button
                 onClick={() => navigate('/upload?type=loop')}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-[#EC4899]/10 border border-transparent hover:border-[#EC4899]/20 rounded-2xl text-[var(--text-secondary)] hover:text-[#EC4899] transition-all duration-300 cursor-pointer text-xs font-bold"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-[#EC4899]/10 border border-white/5 hover:border-[#EC4899]/20 rounded-xl text-[var(--text-secondary)] hover:text-[#EC4899] transition-all duration-300 cursor-pointer text-xs font-bold"
                 title="Upload Video"
               >
-                <FiVideo size={16} className="text-[#EC4899] drop-shadow-[0_0_8px_rgba(236,72,153,0.3)]" />
+                <FiVideo size={16} className="text-[#EC4899]" />
                 <span>Video</span>
               </button>
 
               <button
                 onClick={() => navigate('/upload?type=post&code=true')}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-[#A855F7]/10 border border-transparent hover:border-[#A855F7]/20 rounded-2xl text-[var(--text-secondary)] hover:text-[#A855F7] transition-all duration-300 cursor-pointer text-xs font-bold"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-[#A855F7]/10 border border-white/5 hover:border-[#A855F7]/20 rounded-xl text-[var(--text-secondary)] hover:text-[#A855F7] transition-all duration-300 cursor-pointer text-xs font-bold"
                 title="Share Code Snippet"
               >
-                <FiCode size={16} className="text-[#A855F7] drop-shadow-[0_0_8px_rgba(168,85,247,0.3)]" />
+                <FiCode size={16} className="text-[#A855F7]" />
                 <span>Code</span>
               </button>
             </div>

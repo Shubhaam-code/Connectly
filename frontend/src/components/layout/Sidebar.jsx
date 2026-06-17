@@ -209,7 +209,9 @@ export const Sidebar = () => {
       onMouseLeave={() => setIsHovered(false)}
       animate={{ width: isExpanded ? 260 : 72 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="h-screen bg-[var(--background)]/90 backdrop-blur-xl border-r border-[var(--border)] z-20 flex flex-col justify-between overflow-hidden flex-shrink-0 text-[var(--text)] relative"
+      className={`h-screen bg-[var(--background)]/90 backdrop-blur-xl border-r border-[var(--border)] flex flex-col justify-between overflow-hidden flex-shrink-0 text-[var(--text)] relative ${
+        isNewsOpen || isSwitcherOpen ? 'z-[950]' : 'z-20'
+      }`}
     >
       <div>
         {/* Logo Section */}

@@ -403,20 +403,20 @@ export const StoryBubble = ({ group, onClick, isOwn }) => {
   return (
     <motion.div
       onClick={onClick}
-      className="w-24 h-36 md:w-28 md:h-44 rounded-[22px] overflow-hidden relative flex flex-col justify-between p-3 flex-shrink-0 cursor-pointer border border-[var(--border)] shadow-xl group"
-      whileHover={{ scale: 1.04, y: -4 }}
+      className="w-[82px] h-[125px] md:w-[98px] md:h-[150px] rounded-[20px] overflow-hidden relative flex flex-col justify-between p-3 flex-shrink-0 cursor-pointer border border-[var(--border)] shadow-lg group"
+      whileHover={{ scale: 1.03, y: -2 }}
       whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 350, damping: 20 }}
+      transition={{ type: "spring", stiffness: 400, damping: 22 }}
     >
       {/* Zoomable Background Image */}
       <img 
         src={backgroundMedia} 
         alt="" 
-        className="absolute inset-0 w-full h-full object-cover group-hover:scale-108 transition-transform duration-500" 
+        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
         draggable={false}
       />
       {/* Visual Glass Overlay Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-black/85 transition-opacity duration-300 group-hover:from-black/10 group-hover:via-black/35 group-hover:to-black/80" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/40 to-black/80 transition-opacity duration-300 group-hover:from-black/5 group-hover:via-black/30 group-hover:to-black/75" />
 
       {/* Top: Avatar with Ring */}
       <div className="z-10 flex justify-start w-full">
@@ -424,10 +424,10 @@ export const StoryBubble = ({ group, onClick, isOwn }) => {
           <div className="w-0 h-0" />
         ) : (
           <div
-            className={`w-9.5 h-9.5 rounded-full p-[2px] flex items-center justify-center transition-all ${
+            className={`w-8 h-8 md:w-9 md:h-9 rounded-full p-[2px] flex items-center justify-center transition-all ${
               hasStories
                 ? hasUnseen
-                  ? "bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#A855F7] shadow-[0_0_10px_rgba(139,92,246,0.5)] scale-102"
+                  ? "bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#3B82F6] shadow-[0_0_10px_rgba(139,92,246,0.4)] scale-102"
                   : "border-2 border-white/20"
                 : ""
             }`}
@@ -447,12 +447,12 @@ export const StoryBubble = ({ group, onClick, isOwn }) => {
       {isOwn && !hasStories && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 p-2">
           <div className="relative">
-            <div className="w-11 h-11 rounded-full p-[2px] bg-gradient-to-tr from-purple-500 to-pink-500 shadow-md">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full p-[2px] bg-gradient-to-tr from-purple-500 to-pink-500 shadow-md">
               <div className="w-full h-full rounded-full overflow-hidden border border-[#0B1220] bg-[#0B1220]">
                 <Avatar src={userData?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
               </div>
             </div>
-            <div className="absolute bottom-[-2px] right-[-2px] bg-[#8B5CF6] border-2 border-[#0B1220] rounded-full w-5 h-5 flex items-center justify-center text-white text-xs font-bold shadow-[0_0_8px_rgba(139,92,246,0.8)] transition-transform group-hover:scale-110">
+            <div className="absolute bottom-[-2px] right-[-2px] bg-[#8B5CF6] border-[1.5px] border-[#0B1220] rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold shadow-[0_0_8px_rgba(139,92,246,0.8)] transition-transform group-hover:scale-105">
               +
             </div>
           </div>
@@ -460,7 +460,7 @@ export const StoryBubble = ({ group, onClick, isOwn }) => {
       )}
 
       {/* Bottom: Username */}
-      <span className="text-[10px] md:text-xs font-black text-white max-w-full truncate z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-left select-none uppercase tracking-wider">
+      <span className="text-[9px] md:text-[10px] font-black text-white max-w-full truncate z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-left select-none uppercase tracking-wider">
         {isOwn ? "Your Story" : group.username}
       </span>
     </motion.div>

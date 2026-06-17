@@ -374,64 +374,124 @@ function Profile() {
               <FiPlusSquare size={14} className="stroke-[2.5]" /> + Create
             </button>
           </div>
-        </div>        {/* Cover Banner Card (Theme-based image backgrounds) */}
-        <div
-          className="relative w-full rounded-[24px] border border-white/10 dark:border-white/5 overflow-visible min-h-[260px] sm:min-h-[300px] md:min-h-[360px] bg-cover bg-center shadow-lg flex-shrink-0 flex items-end p-6 md:p-8 mb-20 md:mb-24"
-          style={{ backgroundImage: `url(${coverImageSrc})` }}
-        >
-          {/* Transparent Dark Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10 rounded-[24px]" />
+        </div>
 
-          {/* Floating Subtle Icons in Cover Banner Graphic */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[24px]">
-            {/* Heart */}
-            <motion.div
-              animate={{ y: [0, 5, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-[12%] left-[10%] text-white/10 drop-shadow-[0_0_8px_rgba(255,255,255,0.05)] hidden sm:block"
-            >
-              <FiHeart size={28} className="stroke-[1.5]" />
-            </motion.div>
+        {/* ===== PREMIUM PROFILE HERO SECTION ===== */}
+        {/* Cover image is the hero. Avatar + info overlay on top of it. */}
+        <div className="profile-hero-wrapper relative w-full flex-shrink-0">
+          {/* Cover Image Hero */}
+          <div
+            className="profile-hero-cover relative w-full rounded-[24px] overflow-hidden bg-cover bg-center shadow-[0_8px_40px_rgba(0,0,0,0.4)]"
+            style={{ backgroundImage: `url(${coverImageSrc})` }}
+          >
+            {/* Gradient overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10 z-[1]" />
 
-            {/* Chat */}
-            <motion.div
-              animate={{ y: [0, -5, 0] }}
-              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute bottom-[20%] left-[20%] text-white/10 drop-shadow-[0_0_8px_rgba(255,255,255,0.05)]"
-            >
-              <FiMessageCircle size={30} className="stroke-[1.5]" />
-            </motion.div>
+            {/* Desktop: User info positioned ON the cover */}
+            <div className="hidden md:flex relative z-[2] items-end w-full h-full px-8 pb-8 pt-32">
+              {/* Avatar floating on the cover — bottom-aligned */}
+              <div className="relative flex-shrink-0 cursor-pointer" onClick={() => setShowAvatarOptions(true)}>
+                <div className="w-[140px] h-[140px] lg:w-[160px] lg:h-[160px] rounded-full p-[3px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#3B82F6] shadow-[0_0_30px_rgba(139,92,246,0.4)] transition-transform duration-300 hover:scale-[1.03]">
+                  <div className="w-full h-full rounded-full overflow-hidden border-[4px] border-[var(--background)] bg-[#0B1220] shadow-xl">
+                    <Avatar
+                      src={profileData?.profileImage || dp}
+                      alt={profileData?.userName}
+                      size="w-full h-full"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+                {profileData?.isOnline && (
+                  <span className="absolute bottom-2 right-2 w-5 h-5 bg-green-500 border-[3px] border-[var(--background)] rounded-full shadow-[0_0_12px_#22c55e] z-10" />
+                )}
+              </div>
 
-            {/* User */}
-            <motion.div
-              animate={{ y: [0, 6, 0] }}
-              transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-[18%] right-[12%] text-white/10 drop-shadow-[0_0_8px_rgba(255,255,255,0.05)] hidden sm:block"
-            >
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </motion.div>
+              {/* Info Column — beside avatar, on the cover */}
+              <div className="flex-1 flex flex-col items-start text-left ml-6 select-none pb-1">
+                {/* Name + Verification */}
+                <div className="flex flex-wrap items-center gap-2.5 mb-1">
+                  <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-white flex items-center gap-2 leading-none drop-shadow-lg">
+                    {profileData?.name}
+                    {profileData?.isVerified && (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 lg:w-7 lg:h-7 fill-blue-400 flex-shrink-0 drop-shadow-md" title="Verified Creator">
+                        <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
+                      </svg>
+                    )}
+                  </h1>
+                  <span className="px-2.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-white/15 text-white/90 border border-white/20 backdrop-blur-md shadow-sm">
+                    {profileData?.profession || "CONNECTLY Creator"}
+                  </span>
+                </div>
 
-            {/* Bell */}
-            <motion.div
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute bottom-[22%] right-[22%] text-white/10 drop-shadow-[0_0_8px_rgba(255,255,255,0.05)]"
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </motion.div>
+                {/* Username */}
+                <p className="text-sm font-semibold text-white/70 mb-2">@{profileData?.userName}</p>
+
+                {/* Bio */}
+                <p className="text-sm text-white/75 line-clamp-2 max-w-xl font-normal leading-relaxed mb-2">
+                  {profileData?.bio || "Connecting, expressing, and building digital things."}
+                </p>
+
+                {/* Location */}
+                <p className="text-xs text-white/60 flex items-center gap-1.5 font-semibold mb-4">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                  {profileData?.location || "India"}
+                </p>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {isOwnProfile ? (
+                    <>
+                      <button
+                        onClick={() => navigate('/editprofile')}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] hover:shadow-[0_4px_16px_rgba(139,92,246,0.45)] transition-all cursor-pointer flex-shrink-0"
+                      >
+                        Edit Profile
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(window.location.href)
+                          alert("Profile link copied to clipboard! 🔗")
+                        }}
+                        className="px-4.5 py-2.5 rounded-xl text-xs font-bold text-white/90 bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-sm transition-all cursor-pointer flex-shrink-0"
+                      >
+                        Share Profile
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <FollowButton
+                        targetUserId={profileData?._id}
+                        onFollowChange={handleProfile}
+                        tailwind="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] transition-all flex-shrink-0"
+                      />
+                      <button
+                        onClick={() => {
+                          dispatch(setSelectedUser(profileData))
+                          navigate('/messages')
+                        }}
+                        className="px-4.5 py-2.5 rounded-xl text-xs font-bold text-white/90 bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-sm transition-all cursor-pointer flex-shrink-0"
+                      >
+                        Message
+                      </button>
+                    </>
+                  )}
+                  <button className="p-2.5 rounded-xl bg-white/10 border border-white/20 text-white/70 hover:text-white hover:bg-white/20 backdrop-blur-sm transition-all cursor-pointer flex-shrink-0">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile: Only the cover image content area (avatar placed outside via absolute) */}
+            <div className="md:hidden h-[180px] sm:h-[220px] relative z-[2]" />
           </div>
 
-          {/* Profile Header Elements inside Banner overlay */}
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-end gap-6 w-full select-none text-white text-left">
-            {/* Avatar Section */}
-            <div className="relative flex-shrink-0 cursor-pointer -mb-16 md:-mb-20 self-start md:self-end animate-fade-in" onClick={() => setShowAvatarOptions(true)}>
-              <div className="w-[90px] h-[90px] sm:w-[120px] sm:h-[120px] md:w-[140px] md:h-[140px] rounded-full p-[3px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-yellow-500 shadow-[0_0_15px_rgba(139,92,246,0.35)] transition-transform duration-300 hover:scale-102">
-                <div className="w-full h-full rounded-full overflow-hidden border-[4px] border-white bg-[#0B1220] shadow-md">
+          {/* Mobile: Avatar overlapping bottom of cover */}
+          <div className="md:hidden relative z-10 -mt-16 sm:-mt-20 px-4">
+            {/* Avatar */}
+            <div className="relative flex-shrink-0 cursor-pointer w-fit" onClick={() => setShowAvatarOptions(true)}>
+              <div className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] rounded-full p-[3px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#3B82F6] shadow-[0_0_20px_rgba(139,92,246,0.35)] transition-transform duration-300 hover:scale-[1.03]">
+                <div className="w-full h-full rounded-full overflow-hidden border-[4px] border-[var(--background)] bg-[#0B1220] shadow-lg">
                   <Avatar
                     src={profileData?.profileImage || dp}
                     alt={profileData?.userName}
@@ -441,48 +501,48 @@ function Profile() {
                 </div>
               </div>
               {profileData?.isOnline && (
-                <span className="absolute bottom-1 right-1 md:bottom-2.5 md:right-2.5 w-4.5 h-4.5 bg-green-500 border-2 border-[var(--background)] rounded-full shadow-[0_0_10px_#22c55e]" />
+                <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-[3px] border-[var(--background)] rounded-full shadow-[0_0_10px_#22c55e] z-10" />
               )}
             </div>
 
-            {/* Profile User Info aligned next to Avatar */}
-            <div className="flex-1 flex flex-col items-start text-left w-full select-none text-white">
-              {/* Name */}
-              <h1 className="text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-sm flex items-center gap-1.5 leading-none mb-2">
-                {profileData?.name}
-                {profileData?.isVerified && (
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-6 md:h-6 fill-blue-500 flex-shrink-0" title="Verified Creator">
-                    <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
-                  </svg>
-                )}
-              </h1>
-
-              {/* Username & Profession Badge */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs md:text-sm font-semibold text-white/90">@{profileData?.userName}</span>
-                <span className="px-2 py-0.5 rounded text-[8px] md:text-[9px] font-extrabold uppercase tracking-wider bg-[#8B5CF6]/35 text-purple-200 border border-[#8B5CF6]/40 backdrop-blur-md">
+            {/* Mobile User Info */}
+            <div className="flex flex-col items-start text-left w-full select-none text-[var(--text)] mt-3">
+              {/* Name & Badge */}
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h1 className="text-xl font-black tracking-tight text-[var(--text)] flex items-center gap-1.5 leading-none">
+                  {profileData?.name}
+                  {profileData?.isVerified && (
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-blue-500 flex-shrink-0" title="Verified Creator">
+                      <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
+                    </svg>
+                  )}
+                </h1>
+                <span className="px-2.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider bg-[#8B5CF6]/15 text-[#8B5CF6] border border-[#8B5CF6]/20 dark:bg-[#8B5CF6]/30 dark:text-purple-200 dark:border-[#8B5CF6]/30 backdrop-blur-md">
                   {profileData?.profession || "CONNECTLY Creator"}
                 </span>
               </div>
 
+              {/* Username */}
+              <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">@{profileData?.userName}</p>
+
               {/* Bio */}
-              <p className="text-xs md:text-sm text-white/85 line-clamp-2 max-w-2xl font-normal leading-relaxed mb-3">
+              <p className="text-xs text-[var(--text-secondary)] line-clamp-3 max-w-sm font-normal leading-relaxed mb-2">
                 {profileData?.bio || "Connecting, expressing, and building digital things."}
               </p>
 
               {/* Location */}
-              <p className="text-[10px] md:text-xs text-white/75 flex items-center gap-1 font-semibold mb-5">
+              <p className="text-[10px] text-[var(--text-secondary)] flex items-center gap-1 font-semibold mb-4">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                 {profileData?.location || "India"}
               </p>
 
-              {/* Action Buttons Row */}
-              <div className="flex flex-wrap items-center gap-2.5 mb-5">
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
                 {isOwnProfile ? (
                   <>
                     <button
                       onClick={() => navigate('/editprofile')}
-                      className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] hover:shadow-[0_4px_12px_rgba(139,92,246,0.3)] transition-all cursor-pointer flex-shrink-0"
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] hover:shadow-[0_4px_12px_rgba(139,92,246,0.3)] transition-all cursor-pointer flex-shrink-0"
                     >
                       Edit Profile
                     </button>
@@ -491,7 +551,7 @@ function Profile() {
                         navigator.clipboard.writeText(window.location.href)
                         alert("Profile link copied to clipboard! 🔗")
                       }}
-                      className="px-4.5 py-2 rounded-xl text-xs font-bold text-white bg-white/10 dark:bg-white/10 border border-white/20 hover:bg-white/20 transition-all cursor-pointer flex-shrink-0"
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold text-[var(--text)] bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] transition-all cursor-pointer flex-shrink-0"
                     >
                       Share Profile
                     </button>
@@ -501,46 +561,49 @@ function Profile() {
                     <FollowButton
                       targetUserId={profileData?._id}
                       onFollowChange={handleProfile}
-                      tailwind="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] transition-all flex-shrink-0"
+                      tailwind="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] transition-all flex-shrink-0"
                     />
                     <button
                       onClick={() => {
                         dispatch(setSelectedUser(profileData))
                         navigate('/messages')
                       }}
-                      className="px-4.5 py-2 rounded-xl text-xs font-bold text-white bg-white/10 border border-white/20 hover:bg-white/20 transition-all cursor-pointer flex-shrink-0"
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold text-[var(--text)] bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] transition-all cursor-pointer flex-shrink-0"
                     >
                       Message
                     </button>
                   </>
                 )}
-                {/* 3-dots actions trigger */}
-                <button className="p-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all cursor-pointer flex-shrink-0">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
+                <button className="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text)] transition-all cursor-pointer flex-shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
                 </button>
-              </div>
-
-              {/* Stats Row */}
-              <div className="flex flex-wrap items-center gap-4 md:gap-6 pt-1 select-none">
-                {[
-                  { label: "posts", val: profileData?.posts?.length || 0, onClick: () => setPostType("posts") },
-                  { label: "loops", val: profileData?.loops?.length || 0, onClick: () => setPostType("loops") },
-                  ...(isOwnProfile ? [{ label: "saved", val: userData?.saved?.length || 0, onClick: () => setPostType("saved") }] : []),
-                  { label: "followers", val: profileData?.followers?.length || 0, onClick: () => openFollowModal("followers") },
-                  { label: "following", val: profileData?.following?.length || 0, onClick: () => openFollowModal("following") }
-                ].map((stat) => (
-                  <button
-                    key={stat.label}
-                    onClick={stat.onClick}
-                    className="flex items-baseline gap-1 hover:opacity-85 transition-opacity"
-                  >
-                    <span className="text-sm md:text-base font-extrabold text-white">{stat.val}</span>
-                    <span className="text-[10px] md:text-xs font-semibold text-white/75 lowercase">{stat.label}</span>
-                  </button>
-                ))}
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Creator Stats Cards Grid */}
+        <div className={`grid grid-cols-2 ${isOwnProfile ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-3 sm:gap-4 w-full pt-4`}>
+          {[
+            { label: "Posts", val: profileData?.posts?.length || 0, onClick: () => setPostType("posts") },
+            { label: "Loops", val: profileData?.loops?.length || 0, onClick: () => setPostType("loops") },
+            ...(isOwnProfile ? [{ label: "Saved", val: userData?.saved?.length || 0, onClick: () => setPostType("saved") }] : []),
+            { label: "Followers", val: profileData?.followers?.length || 0, onClick: () => openFollowModal("followers") },
+            { label: "Following", val: profileData?.following?.length || 0, onClick: () => openFollowModal("following") }
+          ].map((stat) => (
+            <button
+              key={stat.label}
+              onClick={stat.onClick}
+              className="bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] hover:border-purple-500/20 hover:shadow-[0_8px_30px_rgba(139,92,246,0.06)] hover:-translate-y-1 rounded-2xl p-4 flex flex-col items-center justify-center gap-1 transition-all duration-300 group cursor-pointer text-center"
+            >
+              <span className="text-lg sm:text-xl md:text-2xl font-black text-[var(--text)] group-hover:text-purple-400 transition-colors">
+                {stat.val}
+              </span>
+              <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                {stat.label}
+              </span>
+            </button>
+          ))}
         </div>
 
         <input
@@ -550,6 +613,8 @@ function Profile() {
           accept="image/*"
           className="hidden"
         />
+
+        <div className="h-[1px] w-full bg-[var(--border)] my-2" />
 
         {/* Tab Row (Instagram Style sticky row with dropdown controls) */}
         <div className="sticky top-0 z-30 bg-[var(--background)]/90 backdrop-blur-md border-b border-[var(--border)] py-1 mb-2 flex items-center justify-between">
@@ -668,37 +733,10 @@ function Profile() {
           <>
             {/* Media Cards Grid or List Feed */}
             {viewMode === "grid" ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-4 animate-fade-in">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4 animate-fade-in">
                 {displayPosts.map((post, index) => {
                   const isVideo = post.mediaType === "video" || postType === "loops"
-
                   const caption = post.caption || ""
-                  let title = caption
-                  let code = null
-                  let lang = "code"
-
-                  const codeRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/
-                  const match = caption.match(codeRegex)
-                  if (match) {
-                    lang = match[1] || "code"
-                    code = match[2].trim()
-                    title = caption.replace(codeRegex, "").trim()
-                  }
-
-                  const titleLines = title.split("\n").map(l => l.trim()).filter(Boolean)
-                  const cleanTitle = titleLines[0] || "Snippet"
-
-                  let tag = "CODE"
-                  const upperTitle = cleanTitle.toUpperCase()
-                  if (lang.toUpperCase() === "PYTHON" || upperTitle.includes("PYTHON")) {
-                    tag = "PYTHON"
-                  } else if (upperTitle.includes("UI") || upperTitle.includes("UX") || upperTitle.includes("DESIGN") || upperTitle.includes("MAINTENANCE") || upperTitle.includes("BUILDING")) {
-                    tag = "UI/UX"
-                  } else if (upperTitle.includes("LOGO") || upperTitle.includes("REVEAL") || upperTitle.includes("UPDATE")) {
-                    tag = "UPDATE"
-                  }
-
-                  const hasCode = code !== null || post.category === "code" || tag === "PYTHON" || tag === "CODE"
 
                   return (
                     <div
@@ -707,12 +745,12 @@ function Profile() {
                         setSelectedPostIndex(index)
                         setIsModalOpen(true)
                       }}
-                      className="bg-[var(--card)] border border-[var(--border)] rounded-[24px] shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col p-4 space-y-3.5 cursor-pointer group select-none relative overflow-hidden"
+                      className="aspect-square w-full rounded-[14px] sm:rounded-2xl overflow-hidden bg-[var(--card)] border border-[var(--border)] relative group cursor-pointer shadow-sm hover:shadow-md transition-all duration-300"
                     >
-                      {/* Media Section */}
-                      <div className="aspect-[16/10] w-full rounded-xl overflow-hidden relative bg-[var(--background-secondary)] flex-shrink-0">
-                        {post.media && !post.media.includes("placeholder") ? (
-                          isVideo ? (
+                      {/* Thumbnail Media */}
+                      {post.media && !post.media.includes("placeholder") ? (
+                        isVideo ? (
+                          <div className="w-full h-full relative">
                             <video
                               src={post.media}
                               className="w-full h-full object-cover"
@@ -720,101 +758,41 @@ function Profile() {
                               loop
                               playsInline
                             />
-                          ) : (
-                            <img
-                              src={post.media}
-                              alt=""
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              loading="lazy"
-                            />
-                          )
+                            <div className="absolute top-2.5 right-2.5 z-10 text-white bg-black/40 p-1.5 rounded-lg backdrop-blur-sm">
+                              <FiVideo size={12} />
+                            </div>
+                          </div>
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-[#8B5CF6]/20 via-[#A855F7]/10 to-[#EC4899]/20 flex items-center justify-center relative">
-                            <div className="absolute w-24 h-24 rounded-full bg-purple-500/10 blur-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-                            <FiImage size={24} className="text-[var(--text-secondary)] opacity-45" />
-                          </div>
-                        )}
-
-                        {/* STORY Badge Overlay */}
-                        {(post.type === "story" || post.category === "story") && (
-                          <div className="absolute top-2.5 left-2.5 z-10">
-                            <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-red-500/90 text-white shadow-md">
-                              STORY
-                            </span>
-                          </div>
-                        )}
-
-                        {isVideo && (
-                          <div className="absolute top-2.5 right-2.5 text-white/80 z-10 bg-black/40 p-1.5 rounded-lg">
-                            <FiVideo size={13} />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Caption */}
-                      <div className="flex-1 min-h-[40px] text-left">
-                        <p className="text-xs font-semibold text-[var(--text)] line-clamp-2 leading-relaxed">
-                          {caption || "No caption"}
-                        </p>
-                      </div>
-
-                      {/* Footer Row */}
-                      <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] text-[var(--text-secondary)] mt-auto">
-                        <div className="flex items-center gap-4">
-                          {/* Like Button */}
-                          <button
-                            onClick={(e) => handleProfileLike(e, post)}
-                            className={`flex items-center gap-1 text-[11px] font-black transition-colors ${post.likes.some(id => id.toString() === userData._id.toString())
-                                ? "text-pink-500"
-                                : "hover:text-pink-500"
-                              }`}
-                          >
-                            <FiHeart
-                              size={14}
-                              className={post.likes.some(id => id.toString() === userData._id.toString()) ? "fill-pink-500 stroke-pink-500" : ""}
-                            />
-                            {post.likes?.length || 0}
-                          </button>
-
-                          {/* Comment Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPostIndex(index);
-                              setIsModalOpen(true);
-                            }}
-                            className="flex items-center gap-1 text-[11px] font-black hover:text-purple-500 transition-colors"
-                          >
-                            <FiMessageCircle size={14} />
-                            {post.comments?.length || 0}
-                          </button>
-
-                          {/* Share/Send Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPostIndex(index);
-                              setIsModalOpen(true);
-                            }}
-                            className="text-[11px] hover:text-green-500 transition-colors p-0.5 rounded-full"
-                          >
-                            <FiSend size={14} />
-                          </button>
-                        </div>
-
-                        {/* Save Button */}
-                        <button
-                          onClick={(e) => handleProfileSave(e, post)}
-                          className={`transition-colors ${userData?.saved?.some(id => (id?._id || id)?.toString() === post?._id?.toString())
-                              ? "text-amber-500"
-                              : "hover:text-amber-500"
-                            }`}
-                        >
-                          <FiBookmark
-                            size={14}
-                            className={userData?.saved?.some(id => (id?._id || id)?.toString() === post?._id?.toString()) ? "fill-amber-500 stroke-amber-500" : ""}
+                          <img
+                            src={post.media}
+                            alt=""
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
                           />
-                        </button>
+                        )
+                      ) : (
+                        /* Beautiful text/gradient style for text-only or code-only posts */
+                        <div className="w-full h-full bg-gradient-to-br from-[#8B5CF6]/10 via-[#A855F7]/5 to-[#EC4899]/10 flex flex-col justify-between p-3.5 sm:p-5 relative select-none">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
+                            {post.category === "code" ? <FiGrid className="text-purple-400 text-xs sm:text-sm" /> : <FiGrid className="text-pink-400 text-xs sm:text-sm" />}
+                          </div>
+                          <p className="text-[9px] sm:text-xs text-[var(--text-secondary)] font-medium line-clamp-3 sm:line-clamp-4 leading-relaxed text-left">
+                            {caption || "No content"}
+                          </p>
+                          <span className="text-[7px] sm:text-[8px] font-bold text-white/30 tracking-widest uppercase">CONNECTLY</span>
+                        </div>
+                      )}
+
+                      {/* Premium Desktop Hover Overlay showing Likes & Comments */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4 sm:gap-6 text-white text-xs sm:text-sm font-extrabold select-none z-10">
+                        <div className="flex items-center gap-1.5">
+                          <FiHeart size={15} className="fill-white stroke-white" />
+                          <span>{post.likes?.length || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <FiMessageCircle size={15} className="fill-white stroke-white" />
+                          <span>{post.comments?.length || 0}</span>
+                        </div>
                       </div>
                     </div>
                   )

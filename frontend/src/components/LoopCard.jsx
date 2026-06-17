@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { FiVolume2, FiVolumeX } from "react-icons/fi"
+import { FiVolume2, FiVolumeX, FiSend } from "react-icons/fi"
 import dp from "../assets/dp.webp"
 import FollowButton from './FollowButton'
 import { useDispatch, useSelector } from 'react-redux'
 import { setLoopData } from '../redux/loopSlice'
 import axiosInstance from '../lib/axiosInstance'
-import { IoSendSharp } from "react-icons/io5"
 import { useNavigate } from 'react-router-dom'
 import { useSocket } from '../context/SocketContext'
 import ShareModal from './share/ShareModal'
@@ -135,8 +134,7 @@ function LoopCard({ loop }) {
   }, [socket, dispatch])
 
   return (
-    <div className="w-full h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ background: '#000' }}>
+    <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-black">
 
       {/* HINGLISH: Heart animation — double tap pe dikhta hai */}
       {showHeart && (
@@ -200,8 +198,8 @@ function LoopCard({ loop }) {
                 onKeyDown={(e) => e.key === 'Enter' && handleComment()}
               />
               {message && (
-                <button onClick={handleComment}>
-                  <IoSendSharp className="text-purple-500 w-4 h-4" />
+                <button onClick={handleComment} className="cursor-pointer">
+                  <FiSend className="text-purple-500 w-4 h-4" />
                 </button>
               )}
             </div>
@@ -224,7 +222,7 @@ function LoopCard({ loop }) {
 
       {/* HINGLISH: Gradient overlay — bottom ke liye */}
       <div className="absolute inset-0 pointer-events-none"
-        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%, transparent 70%, rgba(0,0,0,0.3) 100%)' }} />
+        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 45%, transparent 70%, rgba(0,0,0,0.4) 100%)' }} />
 
       {/* HINGLISH: Pause indicator */}
       {!isPlaying && (
@@ -239,29 +237,39 @@ function LoopCard({ loop }) {
       )}
 
       {/* HINGLISH: Mute toggle — top right */}
-      <button className="absolute top-16 right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center"
-        style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)' }}
+      <button className="absolute top-16 right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center bg-black/40 border border-white/10 backdrop-blur-md text-white hover:bg-black/60 transition-all"
         onClick={() => setIsMute(prev => !prev)}>
         {isMute ? <FiVolumeX className="text-white" size={16} /> : <FiVolume2 className="text-white" size={16} />}
       </button>
 
       {/* HINGLISH: Author info + caption — bottom left */}
-      <div className="absolute bottom-10 left-4 right-16 z-10">
-        <div className="flex items-center gap-2 mb-2 cursor-pointer"
+      <div className="absolute bottom-8 left-4 right-20 z-10 text-left">
+        <div className="flex items-center gap-2.5 mb-2.5 cursor-pointer"
           onClick={() => navigate(`/profile/${loop.author?.userName}`)}>
-          <div className="w-10 h-10 rounded-full overflow-hidden story-ring-active flex-shrink-0">
-            <img src={loop.author?.profileImage || dp} alt="" className="w-full h-full object-cover" />
+          <div className="w-10 h-10 rounded-full overflow-hidden p-[2px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#3B82F6] flex-shrink-0">
+            <div className="w-full h-full rounded-full overflow-hidden bg-black p-[1px]">
+              <img src={loop.author?.profileImage || dp} alt="" className="w-full h-full object-cover rounded-full" />
+            </div>
           </div>
-          <span className="text-white font-semibold text-sm">{loop.author?.userName}</span>
+          <div className="flex flex-col">
+            <span className="text-white font-extrabold text-sm tracking-wide flex items-center gap-1">
+              {loop.author?.userName}
+              {loop.author?.isVerified && (
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-blue-500 flex-shrink-0">
+                  <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
+                </svg>
+              )}
+            </span>
+          </div>
           {userData._id !== loop.author?._id && (
             <FollowButton
               targetUserId={loop.author?._id}
-              tailwind="px-3 py-1 text-white text-xs border border-white rounded-full font-semibold"
+              tailwind="px-3.5 py-1.5 rounded-full text-[10.5px] font-extrabold uppercase tracking-wider btn-gradient cursor-pointer border-none shadow-[0_4px_12px_rgba(139,92,246,0.3)]"
             />
           )}
         </div>
         {loop.caption && (
-          <p className="text-white text-sm leading-relaxed" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+          <p className="text-white text-xs sm:text-sm font-medium leading-relaxed max-w-sm line-clamp-3" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
             {loop.caption}
           </p>
         )}
@@ -270,45 +278,51 @@ function LoopCard({ loop }) {
       {/* HINGLISH: Action buttons — right side vertical stack */}
       <div className="absolute right-4 bottom-20 z-10 flex flex-col items-center gap-5">
         {/* Like */}
-        <button className="flex flex-col items-center gap-1 like-btn" onClick={handleLike}>
-          {isLiked ? (
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="#EC4899"
-              style={{ filter: 'drop-shadow(0 0 8px rgba(236,72,153,0.6))' }}>
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          ) : (
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          )}
-          <span className="text-white text-xs font-semibold" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+        <div className="flex flex-col items-center gap-1.5">
+          <button className="flex items-center justify-center w-12 h-12 rounded-full bg-black/45 border border-white/10 backdrop-blur-md text-white hover:text-[#EC4899] hover:border-[#EC4899]/30 active:scale-90 transition-all duration-200 shadow-lg cursor-pointer" onClick={handleLike}>
+            {isLiked ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#EC4899"
+                style={{ filter: 'drop-shadow(0 0 8px rgba(236,72,153,0.6))' }}>
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            )}
+          </button>
+          <span className="text-white text-[10px] font-black uppercase tracking-wider select-none" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>
             {loop.likes?.length || 0}
           </span>
-        </button>
+        </div>
 
         {/* Comment */}
-        <button className="flex flex-col items-center gap-1 hover-scale" onClick={() => setShowComment(true)}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span className="text-white text-xs font-semibold" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+        <div className="flex flex-col items-center gap-1.5">
+          <button className="flex items-center justify-center w-12 h-12 rounded-full bg-black/45 border border-white/10 backdrop-blur-md text-white hover:text-[#8B5CF6] hover:border-[#8B5CF6]/30 active:scale-90 transition-all duration-200 shadow-lg cursor-pointer" onClick={() => setShowComment(true)}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
+          <span className="text-white text-[10px] font-black uppercase tracking-wider select-none" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>
             {loop.comments?.length || 0}
           </span>
-        </button>
+        </div>
 
         {/* Share */}
-        <button className="flex flex-col items-center gap-1 hover-scale" onClick={() => setIsShareOpen(true)}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-            <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
-          <span className="text-white text-xs" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>Share</span>
-        </button>
+        <div className="flex flex-col items-center gap-1.5">
+          <button className="flex items-center justify-center w-12 h-12 rounded-full bg-black/45 border border-white/10 backdrop-blur-md text-white hover:text-green-500 hover:border-green-500/30 active:scale-90 transition-all duration-200 shadow-lg cursor-pointer" onClick={() => setIsShareOpen(true)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+          <span className="text-white text-[10px] font-black uppercase tracking-wider select-none" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>Share</span>
+        </div>
       </div>
 
       {/* HINGLISH: Progress bar at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 z-10" style={{ background: 'rgba(255,255,255,0.2)' }}>
+      <div className="absolute bottom-0 left-0 right-0 h-1.5 z-10 bg-white/20">
         <div className="h-full transition-all duration-200 ease-linear"
-          style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #7C3AED, #EC4899)' }} />
+          style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #7C3AED, #EC4899, #3B82F6)' }} />
       </div>
       {isShareOpen && (
         <ShareModal

@@ -28,11 +28,14 @@ export const Sidebar = () => {
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const { userData, notificationData } = useSelector((state) => state.user);
-  const { prevChatUsers } = useSelector((state) => state.message);
+  const { prevChatUsers, selectedUser } = useSelector((state) => state.message);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
   const isMobile = useIsMobile();
+
+  const isChatOpenOnMobile = isMobile && selectedUser && 
+    (location.pathname === "/messages" || location.pathname === "/chat" || location.pathname === "/messageArea");
 
   // Monitor resize to auto-collapse on tablet viewports
   useEffect(() => {
@@ -101,6 +104,10 @@ export const Sidebar = () => {
 
   // Mobile Bottom Bar Layout
   if (isMobile) {
+    if (isChatOpenOnMobile) {
+      return <NewsModal isOpen={isNewsOpen} onClose={() => setIsNewsOpen(false)} />;
+    }
+
     const mobileNavItems = [
       { icon: FiHome, path: "/", id: "home", label: "Home" },
       { icon: FiFileText, path: "#news", id: "news", label: "News" },
@@ -202,34 +209,24 @@ export const Sidebar = () => {
       onMouseLeave={() => setIsHovered(false)}
       animate={{ width: isExpanded ? 260 : 72 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="h-screen bg-[var(--background)] border-r border-white/5 z-20 flex flex-col justify-between overflow-hidden flex-shrink-0 text-[var(--text)] relative"
+      className="h-screen bg-[var(--background)]/90 backdrop-blur-xl border-r border-[var(--border)] z-20 flex flex-col justify-between overflow-hidden flex-shrink-0 text-[var(--text)] relative"
     >
       <div>
         {/* Logo Section */}
         <div 
-          className="h-20 px-5.5 flex items-center justify-start border-b border-white/5 cursor-pointer"
+          className={`h-20 flex items-center border-b border-[var(--border)] cursor-pointer transition-all duration-300 gap-3.5 ${isExpanded ? "justify-start px-6" : "justify-center"}`}
           onClick={() => navigate("/")}
         >
-          <div className="flex items-center gap-3 w-full min-w-0">
-            <img
-              src="/favicon.png"
-              alt="Connectly Icon"
-              className="w-8 h-8 object-contain flex-shrink-0 animate-pulse"
-            />
-            <AnimatePresence>
-              {isExpanded && (
-                <motion.h1
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-lg font-black tracking-wider connectly-gradient-text truncate overflow-hidden whitespace-nowrap"
-                >
-                  CONNECTLY
-                </motion.h1>
-              )}
-            </AnimatePresence>
-          </div>
+          <img
+            src="/favicon.png"
+            alt="Connectly Icon"
+            className="w-9 h-9 object-contain flex-shrink-0 transition-transform duration-300 hover:rotate-12"
+          />
+          {isExpanded && (
+            <span className="text-lg font-black tracking-tight font-sans bg-gradient-to-r from-[var(--text)] to-[var(--primary)] bg-clip-text text-transparent">
+              Connectly
+            </span>
+          )}
         </div>
 
         {/* Navigation Section */}
@@ -244,12 +241,17 @@ export const Sidebar = () => {
                 onClick={() => handleNavigate(item)}
                 className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all relative group cursor-pointer ${
                   active 
-                    ? "bg-[#8B5CF6]/15 text-white" 
-                    : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                    ? "bg-gradient-to-r from-purple-500/10 to-pink-500/5 text-[var(--primary)] dark:text-[#A855F7] border border-purple-500/20 shadow-[0_4px_20px_rgba(139,92,246,0.08)]" 
+                    : "text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text)] transition-all duration-300"
                 }`}
               >
+                {/* Neon highlight bar on the left */}
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full bg-gradient-to-b from-[#8B5CF6] to-[#EC4899] shadow-[0_0_12px_rgba(139,92,246,0.8)]" />
+                )}
+
                 {item.id === "profile" ? (
-                  <div className={`w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border ${active ? "border-[#8B5CF6]" : "border-white/10"}`}>
+                  <div className={`w-6.5 h-6.5 rounded-full overflow-hidden flex-shrink-0 border-2 transition-colors duration-300 ${active ? "border-[#8B5CF6]" : "border-white/10"}`}>
                     <Avatar
                       src={userData?.profileImage || dp}
                       alt="profile"
@@ -259,16 +261,16 @@ export const Sidebar = () => {
                   </div>
                 ) : (
                   <div className="relative">
-                    <Icon size={22} className={active ? "text-[#8B5CF6] stroke-[2.5]" : "text-neutral-400 group-hover:text-white transition-colors"} />
+                    <Icon size={21} className={active ? "text-[#8B5CF6] stroke-[2.5]" : "text-[var(--text-secondary)] group-hover:text-[var(--text)] transition-colors duration-300"} />
                     {item.id === "notifications" && unreadNotifications > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
+                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shadow-[0_0_8px_rgba(239,68,68,0.5)]">
                         {unreadNotifications > 9 ? "9+" : unreadNotifications}
                       </span>
                     )}
 
                     {/* Message count */}
                     {item.id === "messages" && unreadMessagesCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
+                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shadow-[0_0_8px_rgba(239,68,68,0.5)]">
                         {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
                       </span>
                     )}
@@ -282,7 +284,7 @@ export const Sidebar = () => {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
                       transition={{ duration: 0.2 }}
-                      className={`text-sm tracking-wide truncate ${active ? "font-bold text-white" : "text-neutral-400 group-hover:text-white"}`}
+                      className={`text-sm tracking-wide truncate ${active ? "font-bold text-[#8B5CF6] dark:text-[#A855F7]" : "text-[var(--text-secondary)] group-hover:text-[var(--text)] transition-colors duration-300"}`}
                     >
                       {item.label}
                     </motion.span>
@@ -291,7 +293,7 @@ export const Sidebar = () => {
 
                 {/* Collapsed Tooltip */}
                 {!isExpanded && (
-                  <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121216]/95 border border-white/10 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl backdrop-blur-md">
+                  <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0B1220]/95 border border-white/10 text-white text-xs px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl backdrop-blur-md">
                     {item.label}
                   </div>
                 )}
@@ -302,12 +304,12 @@ export const Sidebar = () => {
       </div>
 
       {/* Footer Settings/Logout Section */}
-      <div className="p-3 border-t border-white/5 space-y-1.5">
+      <div className="p-3 border-t border-[var(--border)] space-y-1.5">
         <button
           onClick={() => navigate("/settings")}
-          className="w-full flex items-center gap-4 px-4 py-3 text-neutral-400 hover:text-white hover:bg-white/5 rounded-xl transition-all group relative cursor-pointer"
+          className="w-full flex items-center gap-4 px-4 py-3 text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-white/5 rounded-xl transition-all group relative cursor-pointer"
         >
-          <FiSettings size={22} className="text-neutral-400 group-hover:text-white transition-colors" />
+          <FiSettings size={21} className="text-[var(--text-secondary)] group-hover:text-[var(--text)] transition-colors" />
           <AnimatePresence>
             {isExpanded && (
               <motion.span
@@ -322,7 +324,7 @@ export const Sidebar = () => {
             )}
           </AnimatePresence>
           {!isExpanded && (
-            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121216]/95 border border-white/10 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl backdrop-blur-md">
+            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0B1220]/95 border border-white/10 text-white text-xs px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl backdrop-blur-md">
               Settings
             </div>
           )}
@@ -332,7 +334,7 @@ export const Sidebar = () => {
           onClick={handleLogout}
           className="w-full flex items-center gap-4 px-4 py-3 text-[var(--danger)] hover:bg-[var(--danger)]/10 rounded-xl transition-all group relative cursor-pointer"
         >
-          <FiLogOut size={22} />
+          <FiLogOut size={21} />
           <AnimatePresence>
             {isExpanded && (
               <motion.span
@@ -347,7 +349,7 @@ export const Sidebar = () => {
             )}
           </AnimatePresence>
           {!isExpanded && (
-            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121216]/95 border border-white/10 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl backdrop-blur-md">
+            <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0B1220]/95 border border-white/10 text-white text-xs px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl backdrop-blur-md">
               Logout
             </div>
           )}
@@ -356,7 +358,7 @@ export const Sidebar = () => {
         {/* User Profile Card */}
         {userData && (
           <div
-            className="mt-2 p-2 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/5 rounded-xl transition-all relative group min-w-0"
+            className="mt-2 p-2 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/5 rounded-xl transition-all relative group min-w-0 border border-transparent hover:border-purple-500/10"
             onClick={() => setIsSwitcherOpen(true)}
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -364,7 +366,7 @@ export const Sidebar = () => {
                 <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10">
                   <img src={userData.profileImage || dp} alt="" className="w-full h-full object-cover" />
                 </div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border border-[var(--background)] bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0B1220] bg-green-500 shadow-[0_0_10px_#22c55e]" />
               </div>
               <AnimatePresence>
                 {isExpanded && (
@@ -375,8 +377,8 @@ export const Sidebar = () => {
                     transition={{ duration: 0.2 }}
                     className="truncate text-left"
                   >
-                    <p className="text-xs font-bold text-white truncate">{userData.name}</p>
-                    <p className="text-[10px] text-neutral-400 truncate">@{userData.userName}</p>
+                    <p className="text-xs font-bold text-[var(--text)] truncate">{userData.name}</p>
+                    <p className="text-[10px] text-[var(--text-secondary)] truncate">@{userData.userName}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -387,14 +389,14 @@ export const Sidebar = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-neutral-400 hover:text-white transition-colors text-xs font-semibold select-none mr-1"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors text-xs font-semibold select-none mr-1"
                 >
                   •••
                 </motion.span>
               )}
             </AnimatePresence>
             {!isExpanded && (
-              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121216]/95 border border-white/10 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl backdrop-blur-md">
+              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0B1220]/95 border border-white/10 text-white text-xs px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl backdrop-blur-md">
                 Switch Accounts
               </div>
             )}

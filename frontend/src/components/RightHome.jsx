@@ -4,13 +4,10 @@ import { useSelector } from 'react-redux'
 import dp from "../assets/dp.webp"
 import FollowButton from './FollowButton'
 import AccountSwitcherModal from './layout/AccountSwitcherModal'
-import { FiFileText, FiMessageSquare, FiHeart, FiBookmark, FiChevronRight, FiEye, FiTrendingUp, FiUsers, FiMail, FiBarChart2, FiUserPlus } from 'react-icons/fi'
+import { FiHeart, FiBookmark, FiChevronRight, FiEye, FiUsers, FiUserPlus, FiUser, FiActivity } from 'react-icons/fi'
 import { Avatar } from './ui/UIComponents'
-import { formatTime } from '../utils/formatters'
 import axiosInstance from '../lib/axiosInstance'
-import NewsModal from './news/NewsModal'
 import SuggestionsModal from './layout/SuggestionsModal'
-import CreatorInsights from './profile/CreatorInsights'
 
 function RightHome() {
   const { userData, suggestedUsers, following } = useSelector(state => state.user)
@@ -38,7 +35,7 @@ function RightHome() {
     return () => {
       active = false
     }
-  }, [following]) // Re-fetch on follow change to update growth metrics
+  }, [following])
 
   const suggestions = suggestedUsers
     ?.filter(u => u._id !== userData?._id && !following?.some(id => id?.toString() === u._id?.toString()))
@@ -50,94 +47,158 @@ function RightHome() {
     <aside
       className="hidden xl:block w-[320px] pt-8 pl-6 h-fit sticky top-0 bg-[var(--background)] flex-shrink-0"
     >
-      {/* Current User Card */}
+      {/* Premium Current Creator Card */}
       <div
-        className="flex items-center justify-between p-3 rounded-xl mb-6 bg-[var(--card)] border border-[var(--border)]"
+        className="bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] rounded-3xl p-5 mb-5 shadow-xl flex flex-col gap-4 text-left select-none relative overflow-hidden group"
       >
-        <div
-          className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
-          onClick={() => navigate(`/profile/${userData?.userName}`)}
-        >
-          <div className="connectly-story-ring flex-shrink-0">
-            <div className="w-11 h-11 rounded-full overflow-hidden bg-[var(--background)]">
-              <Avatar src={userData?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
+        <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-purple-500/10 blur-xl group-hover:bg-purple-500/15 transition-all duration-300" />
+        
+        <div className="flex items-center justify-between">
+          <div
+            className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+            onClick={() => navigate(`/profile/${userData?.userName}`)}
+          >
+            <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#A855F7] flex-shrink-0">
+              <div className="w-full h-full rounded-full overflow-hidden bg-[var(--card)] p-[1px]">
+                <Avatar src={userData?.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full object-cover rounded-full" />
+              </div>
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="text-sm font-black text-[var(--text)] hover:text-[var(--primary)] transition-colors truncate flex items-center gap-1">
+                {userData?.userName}
+                {userData?.isVerified && (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-blue-500 flex-shrink-0" title="Verified Creator">
+                    <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
+                  </svg>
+                )}
+              </p>
+              <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-secondary)] truncate">
+                {userData?.profession || 'CONNECTLY Creator'}
+              </p>
             </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-[var(--text)] truncate">{userData?.userName}</p>
-            <p className="text-xs truncate text-[var(--text-secondary)]">{userData?.name}</p>
+          <button
+            onClick={() => setIsSwitcherOpen(true)}
+            className="text-[10px] font-black uppercase tracking-wider bg-white/5 border border-[var(--border)] px-3 py-1.5 rounded-xl hover:bg-white/10 hover:text-[var(--text)] transition-all cursor-pointer flex-shrink-0 text-[var(--text-secondary)]"
+          >
+            Switch
+          </button>
+        </div>
+
+        {/* Creator Mini Stats Grid */}
+        <div className="grid grid-cols-3 gap-2 py-2 border-y border-[var(--border)] text-center text-xs">
+          <div>
+            <p className="font-extrabold text-[var(--text)]">{userData?.posts?.length || 0}</p>
+            <p className="text-[9px] uppercase tracking-wider font-bold text-[var(--text-secondary)]">Posts</p>
+          </div>
+          <div>
+            <p className="font-extrabold text-[var(--text)]">{userData?.followers?.length || 0}</p>
+            <p className="text-[9px] uppercase tracking-wider font-bold text-[var(--text-secondary)]">Followers</p>
+          </div>
+          <div>
+            <p className="font-extrabold text-[var(--text)]">{userData?.following?.length || 0}</p>
+            <p className="text-[9px] uppercase tracking-wider font-bold text-[var(--text-secondary)]">Following</p>
           </div>
         </div>
+
         <button
-          onClick={() => setIsSwitcherOpen(true)}
-          className="text-xs font-semibold connectly-gradient-text hover:opacity-80 transition-opacity flex-shrink-0"
+          onClick={() => navigate(`/profile/${userData?.userName}`)}
+          className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-[#8B5CF6] via-[#A855F7] to-[#EC4899] text-white text-xs font-black uppercase tracking-wider transition-all hover:opacity-95 hover:shadow-[0_4px_15px_rgba(139,92,246,0.35)] cursor-pointer"
         >
-          Switch
+          View Profile
         </button>
       </div>
 
       {/* Suggested Users */}
-      <div className="mb-6">
+      <div className="mb-5 bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] rounded-3xl p-5 shadow-xl select-none">
         <div className="flex items-center justify-between mb-4 px-1">
-          <span className="text-sm font-semibold text-[var(--text-secondary)]">Suggested for you</span>
+          <span className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)]">Suggested for you</span>
           <button
             onClick={() => setIsSuggestionsOpen(true)}
-            className="text-xs font-semibold text-[var(--primary)] hover:opacity-85 transition-opacity"
+            className="text-[10px] font-black uppercase tracking-wider text-[var(--primary)] hover:text-[var(--hover)] transition-colors"
           >
-            View More →
+            View More
           </button>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {suggestions.length > 0 ? suggestions.map(user => (
             <div key={user._id} className="flex items-center justify-between px-1">
               <div
-                className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                className="flex items-center gap-3 cursor-pointer flex-1 min-w-0 text-left"
                 onClick={() => navigate(`/profile/${user.userName}`)}
               >
-                <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-[var(--border)]">
-                  <Avatar src={user.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full hover:scale-100" />
+                <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/5 shadow-md">
+                  <Avatar src={user.profileImage || dp} alt="" size="w-full h-full" className="w-full h-full object-cover rounded-full" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[var(--text)] truncate">{user.userName}</p>
-                  <p className="text-xs truncate text-[var(--text-secondary)]">
-                    {user.profession || 'Suggested for you'}
+                  <p className="text-xs font-bold text-[var(--text)] truncate flex items-center gap-0.5 hover:text-[var(--primary)] transition-colors">
+                    {user.userName}
+                    {user.isVerified && (
+                      <svg viewBox="0 0 24 24" className="w-3 h-3 fill-blue-500 flex-shrink-0">
+                        <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
+                      </svg>
+                    )}
+                  </p>
+                  <p className="text-[9px] uppercase tracking-wider font-semibold text-[var(--text-secondary)] truncate">
+                    {user.profession || 'Suggested Creator'}
                   </p>
                 </div>
               </div>
-              <FollowButton targetUserId={user._id} />
+              <FollowButton 
+                targetUserId={user._id} 
+                tailwind="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider btn-gradient"
+              />
             </div>
           )) : (
-            <p className="text-xs px-1 text-[var(--text-secondary)]">No suggestions right now</p>
+            <p className="text-[10px] font-bold px-1 text-[var(--text-secondary)] uppercase tracking-wider py-2">No suggestions right now</p>
           )}
         </div>
       </div>
 
-      {/* Social Analytics Dashboard Widget */}
+      {/* Creator Stats Section */}
       {userData && (
-        <div className="mb-6 border-t border-[var(--border)] pt-4">
-          <CreatorInsights
-            likes={analytics?.totalLikes || 0}
-            impressions={analytics?.profileImpressions || 0}
-            visitors={analytics?.profileVisitors || 0}
-            saves={analytics?.totalSaves || 0}
-            loading={analyticsLoading}
-            weeklyGrowth={analytics?.weeklyGrowth || "+0"}
-          />
+        <div className="mb-5 bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] rounded-3xl p-5 shadow-xl select-none text-left">
+          <div className="flex items-center justify-between mb-4 px-1">
+            <span className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)]">Creator Stats</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'Views', value: analytics?.profileImpressions || 0, icon: FiEye, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+              { label: 'Likes', value: analytics?.totalLikes || 0, icon: FiHeart, color: 'text-pink-500', bg: 'bg-pink-500/10' },
+              { label: 'Saves', value: analytics?.totalSaves || 0, icon: FiBookmark, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+              { label: 'Visitors', value: analytics?.profileVisitors || 0, icon: FiUsers, color: 'text-green-500', bg: 'bg-green-500/10' },
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex flex-col justify-between min-h-[85px] hover:border-purple-500/10 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-[var(--text-secondary)]">{stat.label}</span>
+                    <div className={`w-6 h-6 rounded-lg ${stat.bg} flex items-center justify-center`}>
+                      <Icon size={12} className={stat.color} />
+                    </div>
+                  </div>
+                  <p className="text-lg font-black text-[var(--text)] mt-2">
+                    {analyticsLoading ? '...' : (stat.value).toLocaleString()}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
       {/* Footer */}
-      <footer className="px-1 pb-8">
-        <div className="flex flex-wrap gap-x-2 gap-y-1 mb-3">
+      <footer className="px-2 pb-8">
+        <div className="flex flex-wrap gap-x-2 gap-y-1 mb-3 justify-start">
           {footerLinks.map((link, i) => (
             <React.Fragment key={link}>
-              <button className="text-[11px] hover:underline text-[var(--text-secondary)]">{link}</button>
-              {i < footerLinks.length - 1 && <span className="text-[var(--border)]">·</span>}
+              <button className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors">{link}</button>
+              {i < footerLinks.length - 1 && <span className="text-[var(--border)] select-none">·</span>}
             </React.Fragment>
           ))}
         </div>
-        <p className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+        <p className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] font-black text-left">
           © 2026 CONNECTLY
         </p>
       </footer>

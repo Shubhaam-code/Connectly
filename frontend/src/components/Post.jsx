@@ -124,30 +124,35 @@ function Post({ post }) {
   };
 
   return (
-    <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.03)] overflow-hidden fade-in mb-6">
+    <div className="w-full bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] rounded-[28px] shadow-[0_12px_40px_rgba(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.2)] overflow-hidden fade-in mb-6 hover:shadow-2xl hover:border-purple-500/10 transition-all duration-300 select-none">
       
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
         <div 
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex items-center gap-3.5 cursor-pointer"
           onClick={() => navigate(`/profile/${post.author?.userName}`)}
         >
           {/* Avatar with ring */}
-          <div className="story-ring-active flex-shrink-0">
-            <div className="w-9 h-9 rounded-full overflow-hidden p-0.5 bg-[var(--card)]">
+          <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#A855F7] flex-shrink-0 animate-pulse-slow">
+            <div className="w-full h-full rounded-full overflow-hidden bg-[#0B1220] p-[1px]">
               <Avatar 
                 src={post.author?.profileImage || dp} 
                 alt="" 
                 size="w-full h-full"
-                className="w-full h-full hover:scale-100" 
+                className="w-full h-full object-cover rounded-full" 
               />
             </div>
           </div>
-          <div>
-            <div className="text-sm font-bold text-[var(--text)] hover:underline leading-tight">
+          <div className="text-left">
+            <div className="text-xs md:text-sm font-black text-[var(--text)] hover:text-[var(--primary)] transition-colors leading-tight flex items-center gap-1">
               {post.author?.userName}
+              {post.author?.isVerified && (
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-blue-500 flex-shrink-0">
+                  <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
+                </svg>
+              )}
             </div>
-            <div className="text-[10px] text-[var(--text-secondary)] font-medium">
+            <div className="text-[9px] text-[var(--text-secondary)] font-semibold uppercase tracking-wider mt-0.5">
               {post.author?.profession || "CONNECTLY Creator"}
             </div>
           </div>
@@ -155,14 +160,14 @@ function Post({ post }) {
 
         {userData._id?.toString() !== post.author._id?.toString() && (
           <FollowButton
-            tailwind="px-4 py-1.5 rounded-full text-xs font-semibold btn-gradient cursor-pointer"
+            tailwind="px-4 py-1.5 rounded-xl text-xs font-bold btn-gradient cursor-pointer"
             targetUserId={post.author._id}
           />
         )}
       </div>
 
       {/* Media container */}
-      <div className="relative w-full aspect-auto overflow-hidden bg-black flex items-center justify-center max-h-[550px]" onDoubleClick={handleDoubleClick}>
+      <div className="relative w-full aspect-auto overflow-hidden bg-black flex items-center justify-center max-h-[550px] cursor-pointer" onDoubleClick={handleDoubleClick}>
         {post.mediaType === "image" && (
           <img src={post.media} alt="" className="w-full h-full object-contain max-h-[550px]" />
         )}
@@ -174,9 +179,9 @@ function Post({ post }) {
 
         {/* Double-tap heart animation overlay */}
         {showHeartAnim && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 bg-black/10">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 bg-black/30 backdrop-blur-[2px]">
             <div className="heart-animation">
-              <svg width="80" height="80" viewBox="0 0 24 24" fill="#EC4899" filter="drop-shadow(0 0 20px rgba(236,72,153,0.8))">
+              <svg width="100" height="100" viewBox="0 0 24 24" fill="#EC4899" filter="drop-shadow(0 0 25px rgba(236,72,153,0.95))">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
             </div>
@@ -185,45 +190,45 @@ function Post({ post }) {
       </div>
 
       {/* Action buttons row */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[var(--card)]">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-5 py-3.5 bg-[var(--card)]/95 border-b border-[var(--border)]">
+        <div className="flex items-center gap-5">
           
           {/* Like button */}
           <button 
-            className="flex items-center gap-1.5 cursor-pointer text-[var(--text-secondary)] hover:text-rose-500 transition-colors" 
+            className="flex items-center gap-1.5 cursor-pointer text-[var(--text-secondary)] hover:text-[#EC4899] transition-all duration-300 relative group/btn p-1 rounded-full hover:bg-[#EC4899]/5" 
             onClick={handleLike}
           >
             {isLiked ? (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="#EC4899">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="#EC4899" className="filter drop-shadow-[0_0_6px_rgba(236,72,153,0.45)]">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
             ) : (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stroke-[2]">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stroke-[2] transition-transform duration-300 group-hover/btn:scale-110">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
             )}
-            <span className="text-xs font-bold" style={{ color: isLiked ? '#EC4899' : 'inherit' }}>
+            <span className="text-xs font-black select-none" style={{ color: isLiked ? '#EC4899' : 'inherit' }}>
               {post.likes.length}
             </span>
           </button>
 
           {/* Comment button */}
           <button 
-            className="flex items-center gap-1.5 cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors" 
+            className="flex items-center gap-1.5 cursor-pointer text-[var(--text-secondary)] hover:text-[#8B5CF6] transition-all duration-300 relative group/btn p-1 rounded-full hover:bg-[#8B5CF6]/5" 
             onClick={() => setShowComment(prev => !prev)}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stroke-[2]">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stroke-[2] transition-transform duration-300 group-hover/btn:scale-110">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            <span className="text-xs font-bold">{post.comments.length}</span>
+            <span className="text-xs font-black select-none">{post.comments.length}</span>
           </button>
 
           {/* Share button */}
           <button 
-            className="cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors" 
+            className="cursor-pointer text-[var(--text-secondary)] hover:text-[#10B981] transition-all duration-300 p-1 rounded-full hover:bg-[#10B981]/5" 
             onClick={() => setIsShareOpen(true)}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stroke-[2]">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stroke-[2] hover:scale-110 transition-transform">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
@@ -232,15 +237,15 @@ function Post({ post }) {
 
         {/* Save button */}
         <button 
-          className="cursor-pointer text-[var(--text-secondary)] hover:text-amber-500 transition-colors" 
+          className="cursor-pointer text-[var(--text-secondary)] hover:text-amber-500 transition-all duration-300 p-1.5 rounded-full hover:bg-amber-500/5" 
           onClick={handleSaved}
         >
           {isSaved ? (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="#7C3AED">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="#EAB308" className="filter drop-shadow-[0_0_6px_rgba(234,179,8,0.45)]">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
           ) : (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stroke-[2]">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stroke-[2] hover:scale-110 transition-transform">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
           )}

@@ -1024,31 +1024,35 @@ export const FloatingMessenger = () => {
       {!isOpen && !activeChat && (
         <motion.button
           onClick={() => setIsOpen(!isOpen)}
-          className="h-12 px-5 rounded-full bg-[var(--card)] border border-[var(--border)] shadow-xl hover:bg-[var(--hover)] flex items-center gap-2.5 pointer-events-auto transition-all cursor-pointer select-none"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
+          className="h-12 px-6 rounded-full bg-[var(--card)] border border-[var(--border)] shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:bg-[var(--hover)] hover:border-[var(--primary)]/40 flex items-center justify-center gap-2.5 pointer-events-auto transition-all duration-200 cursor-pointer select-none text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:ring-offset-2 focus:ring-offset-[var(--background)] active:scale-95"
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.96 }}
         >
-          <FiMessageCircle size={20} className="text-[var(--primary)]" />
-          <span className="text-xs font-bold text-[var(--text-primary)]">Messages</span>
+          <div className="flex items-center justify-center">
+            <FiMessageCircle size={18} className="text-[var(--primary)] flex-shrink-0" />
+          </div>
+          <span className="text-xs font-semibold tracking-wide text-[var(--text-primary)]">Messages</span>
           
           {/* Unread Message Badge */}
           {unreadCount > 0 && (
-            <span className="bg-red-500 text-white rounded-full min-w-[18px] h-4 px-1.5 text-[9px] flex items-center justify-center font-black animate-pulse">
+            <span className="bg-red-500 text-white rounded-full min-w-[18px] h-4.5 px-1.5 text-[9px] flex items-center justify-center font-black animate-pulse shadow-md shadow-red-500/25">
               {unreadCount}
             </span>
           )}
 
           {/* Dynamic active user avatars stack */}
-          <div className="flex -space-x-2.5 overflow-hidden ml-1">
-            {prevChatUsers?.slice(0, 2).map((chat) => (
-              <img
-                key={chat.user?._id}
-                className="inline-block h-6.5 w-6.5 rounded-full object-cover ring-2 ring-[var(--card)]"
-                src={chat.user?.profileImage || dp}
-                alt=""
-              />
-            ))}
-          </div>
+          {prevChatUsers && prevChatUsers.length > 0 && (
+            <div className="flex -space-x-2 overflow-hidden ml-1.5 items-center justify-center">
+              {prevChatUsers.slice(0, 2).map((chat) => (
+                <img
+                  key={chat.user?._id}
+                  className="inline-block h-6 w-6 rounded-full object-cover ring-2 ring-[var(--card)] flex-shrink-0"
+                  src={chat.user?.profileImage || dp}
+                  alt=""
+                />
+              ))}
+            </div>
+          )}
         </motion.button>
       )}
 

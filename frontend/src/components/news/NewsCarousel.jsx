@@ -105,15 +105,15 @@ function NewsCarousel() {
   }
 
   return (
-    <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 mb-5 shadow-xl select-none">
-      <div className="flex items-center justify-between mb-3 px-1">
-        <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5">
+    <div className="w-full bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] rounded-3xl p-5 mb-6 shadow-2xl select-none animate-fade-in">
+      <div className="flex items-center justify-between mb-4 px-1">
+        <span className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5">
           <FiCompass className="text-[var(--primary)] text-sm animate-spin-slow" />
           Trending Insights
         </span>
         <button
           onClick={() => navigate('/news')}
-          className="text-xs font-semibold text-[var(--primary)] hover:opacity-80 transition-opacity flex items-center gap-0.5 cursor-pointer"
+          className="text-xs font-bold text-[var(--primary)] hover:text-[var(--hover)] transition-colors flex items-center gap-0.5 cursor-pointer bg-[var(--background-secondary)]/60 px-3 py-1.5 rounded-xl border border-[var(--border)]"
         >
           Explore All
           <FiChevronRight size={13} />
@@ -128,7 +128,7 @@ function NewsCarousel() {
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
         onWheel={handleWheel}
-        className={`flex gap-3.5 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory ${
+        className={`flex gap-4 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory ${
           isDown ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={{ scrollBehavior: isDown ? 'auto' : 'smooth' }}
@@ -137,28 +137,28 @@ function NewsCarousel() {
           <div
             key={idx}
             onClick={() => handleCardClick(idx)}
-            className="min-w-[260px] max-w-[260px] bg-[var(--background-secondary)]/40 border border-[var(--border)] rounded-xl overflow-hidden flex flex-col justify-between p-3 flex-shrink-0 snap-start hover:border-[var(--primary)]/30 group transition-all duration-300 relative cursor-pointer"
+            className="min-w-[260px] max-w-[260px] bg-[var(--background-secondary)]/30 border border-[var(--border)] rounded-2xl overflow-hidden flex flex-col justify-between p-3.5 flex-shrink-0 snap-start hover:border-[var(--primary)]/30 hover:shadow-[0_8px_25px_rgba(0,0,0,0.2)] hover:-translate-y-1 group transition-all duration-300 relative cursor-pointer"
           >
             {/* Aspect card top: Thumbnail + tag */}
-            <div className="relative w-full h-24 rounded-lg overflow-hidden border border-[var(--border)]/40 bg-[var(--card)] mb-2.5">
+            <div className="relative w-full h-28 rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--card)] mb-3 flex-shrink-0">
               <img
                 src={news.image}
                 alt=""
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
                 draggable={false}
               />
-              <span className="absolute top-2 left-2 bg-black/45 backdrop-blur-md text-[8px] text-white font-bold tracking-widest px-2 py-0.5 rounded-full border border-white/10 uppercase">
+              <span className="absolute top-2.5 left-2.5 bg-black/60 backdrop-blur-md text-[7px] text-white font-black tracking-widest px-2.5 py-1 rounded-full border border-white/10 uppercase">
                 {news.category}
               </span>
             </div>
 
             {/* Title & Metadata details */}
-            <div className="flex-1 flex flex-col justify-between">
-              <h4 className="text-xs font-bold text-[var(--text-primary)] leading-normal line-clamp-2 mb-2 group-hover:text-[var(--primary)] transition-colors select-none">
+            <div className="flex-1 flex flex-col justify-between text-left">
+              <h4 className="text-xs font-bold text-[var(--text-primary)] leading-snug line-clamp-2 mb-3 group-hover:text-[var(--primary)] transition-colors select-none">
                 {news.title}
               </h4>
-              <div className="flex items-center justify-between text-[9px] text-[var(--text-muted)] mt-auto font-medium">
-                <span className="truncate max-w-[120px]">{news.source}</span>
+              <div className="flex items-center justify-between text-[9px] text-[var(--text-muted)] mt-auto font-bold uppercase tracking-wider">
+                <span className="truncate max-w-[120px] text-[var(--text-secondary)]">{news.source}</span>
                 <span>{formatTime(news.publishedAt)}</span>
               </div>
             </div>

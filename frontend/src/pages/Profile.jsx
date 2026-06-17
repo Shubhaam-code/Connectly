@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setProfileData, setUserData } from '../redux/userSlice'
 import { setPostData } from '../redux/postSlice'
-import { FiSettings, FiGrid, FiVideo, FiBookmark, FiHeart, FiMessageCircle, FiLogOut, FiArrowLeft, FiSearch, FiX, FiBarChart2, FiPlus, FiMinus, FiRotateCcw } from 'react-icons/fi'
+import { FiSettings, FiGrid, FiVideo, FiBookmark, FiHeart, FiMessageCircle, FiLogOut, FiArrowLeft, FiSearch, FiX, FiBarChart2, FiPlus, FiMinus, FiRotateCcw, FiImage, FiTrash2, FiUsers, FiUserCheck, FiPlusSquare, FiSend } from 'react-icons/fi'
 import dp from "../assets/dp.webp"
 import Layout from '../components/layout/Layout'
 import FollowButton from '../components/FollowButton'
@@ -27,6 +27,29 @@ function Profile() {
   const [followSearch, setFollowSearch] = useState("")
   const [savedPosts, setSavedPosts] = useState([])
   const [savedLoading, setSavedLoading] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem("profile_viewMode") || "grid")
+  const [sortOption, setSortOption] = useState(() => localStorage.getItem("profile_sortOption") || "latest")
+
+  useEffect(() => {
+    localStorage.setItem("profile_viewMode", viewMode)
+  }, [viewMode])
+
+  useEffect(() => {
+    localStorage.setItem("profile_sortOption", sortOption)
+  }, [sortOption])
+
+  useEffect(() => {
+    const checkDark = () => {
+      setIsDarkMode(document.documentElement.classList.contains("dark"))
+    }
+    checkDark()
+    const observer = new MutationObserver(checkDark)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
+
+  const coverImageSrc = isDarkMode ? "/bgdark.jpg" : "/bglight.jpg"
 
   // New states for Avatar options & Zoom preview & Stories
   const [profileStories, setProfileStories] = useState([])
@@ -50,6 +73,7 @@ function Profile() {
   const { profileData, userData } = useSelector(state => state.user)
   const { postData } = useSelector(state => state.post)
   const { loopData } = useSelector(state => state.loop)
+  const notificationData = useSelector(state => state.user.notificationData) || []
 
   const isOwnProfile = profileData?._id === userData?._id
 
@@ -144,6 +168,8 @@ function Profile() {
     }
   }
 
+
+
   useEffect(() => {
     if (postType === "saved" && isOwnProfile) {
       const fetchSavedPosts = async () => {
@@ -179,12 +205,25 @@ function Profile() {
   // Determine which list to display
   let displayPosts = []
   if (postType === "posts") {
-    displayPosts = userPosts
+    displayPosts = [...userPosts]
   } else if (postType === "loops") {
-    displayPosts = userLoops
+    displayPosts = [...userLoops]
   } else if (postType === "saved") {
-    displayPosts = filteredSavedPosts
+    displayPosts = [...filteredSavedPosts]
   }
+
+  // Sort displayPosts dynamically based on sortOption
+  if (sortOption === "latest") {
+    displayPosts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+  } else if (sortOption === "oldest") {
+    displayPosts.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+  } else if (sortOption === "likes") {
+    displayPosts.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0))
+  } else if (sortOption === "comments") {
+    displayPosts.sort((a, b) => (b.comments?.length || 0) - (a.comments?.length || 0))
+  }
+
+  const currentModalPost = selectedPostIndex !== null ? displayPosts[selectedPostIndex] : null
 
   // Keyboard controls for modal navigation
   useEffect(() => {
@@ -228,6 +267,41 @@ function Profile() {
     dispatch(setPostData(updatedPosts))
   }
 
+  const handleProfileLike = async (e, post) => {
+    e.stopPropagation()
+    const isLiked = post.likes.some(id => id.toString() === userData._id.toString())
+    const optimisticLikes = isLiked
+      ? post.likes.filter(id => id.toString() !== userData._id.toString())
+      : [...post.likes, userData._id]
+
+    const optimisticPosts = postData.map(p =>
+      p._id === post._id ? { ...p, likes: optimisticLikes } : p
+    )
+    dispatch(setPostData(optimisticPosts))
+
+    try {
+      const result = await axiosInstance.get(`/api/post/like/${post._id}`)
+      const updatedPosts = postData.map(p => p._id === post._id ? result.data : p)
+      dispatch(setPostData(updatedPosts))
+    } catch (error) {
+      dispatch(setPostData(postData))
+      console.error("handleProfileLike error:", error.message)
+    }
+  }
+
+  const handleProfileSave = async (e, post) => {
+    e.stopPropagation()
+    try {
+      const result = await axiosInstance.get(`/api/post/saved/${post._id}`)
+      dispatch(setUserData(result.data))
+      if (postType === "saved") {
+        setSavedPosts(prev => prev.filter(p => p._id !== post._id))
+      }
+    } catch (error) {
+      console.error("handleProfileSave error:", error.message)
+    }
+  }
+
   if (profileLoading && (!profileData || profileData.userName?.toLowerCase() !== userName?.toLowerCase())) {
     return (
       <Layout>
@@ -238,80 +312,188 @@ function Profile() {
     )
   }
 
-  const currentModalPost = selectedPostIndex !== null ? displayPosts[selectedPostIndex] : null
+  const unreadNotifications = notificationData.filter(n => !n.isRead).length
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-8 bg-[var(--background)] text-[var(--text)] min-h-screen">
+      <div className="w-full max-w-5xl mx-auto px-4 py-4 space-y-6 bg-[var(--background)] text-[var(--text)] min-h-screen flex flex-col select-none">
 
         {/* Mobile Sticky / Top header */}
-        <div className="flex items-center justify-between border-b border-[var(--border)] pb-4 mb-8 md:hidden">
-          <button className="text-[var(--text-secondary)] hover:text-[var(--text)]" onClick={() => navigate('/')}>
-            <FiArrowLeft size={22} />
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-3 md:hidden">
+          <button className="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors cursor-pointer" onClick={() => navigate('/')}>
+            <FiArrowLeft size={18} />
           </button>
-          <span className="font-bold text-sm tracking-wide">{profileData?.userName}</span>
-          <button className="text-[var(--text-secondary)] hover:text-[var(--text)]" onClick={() => isOwnProfile ? navigate('/settings') : null}>
-            <FiSettings size={20} />
+          <span className="font-bold text-sm tracking-wide text-[var(--text)]">{profileData?.userName}</span>
+          <button className="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors cursor-pointer" onClick={() => isOwnProfile ? navigate('/settings') : null}>
+            <FiSettings size={18} />
           </button>
         </div>
 
-        {/* Profile Info Row */}
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-16 mb-12">
-          {/* Avatar Section */}
-          <div className="relative flex-shrink-0 cursor-pointer animate-fade-in" onClick={() => setShowAvatarOptions(true)}>
-            <div className={`w-24 h-24 md:w-36 md:h-36 rounded-full flex items-center justify-center transition-all duration-300 ${profileStories.length > 0
-                ? "p-[3px] bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 animate-pulse hover:scale-105"
-                : "p-[1px] border border-[var(--border)] hover:border-[var(--primary)]"
-              }`}>
-              <div className="w-full h-full rounded-full overflow-hidden border-4 border-[var(--background)] bg-[var(--card)]">
-                <Avatar
-                  src={profileData?.profileImage || dp}
-                  alt={profileData?.userName}
-                  size="w-full h-full"
-                  className="w-full h-full hover:scale-100"
-                />
-              </div>
-            </div>
-            {profileData?.isOnline && (
-              <span className="absolute bottom-1 right-1 md:bottom-3 md:right-3 w-4.5 h-4.5 bg-green-500 border-4 border-[var(--background)] rounded-full" />
-            )}
-          </div>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            className="hidden"
-          />
+        {/* Desktop Topbar matching reference design */}
+        <div className="hidden md:flex items-center justify-end w-full pb-2">
+          {/* Actions */}
+          <div className="flex items-center gap-4">
+            {/* Theme Toggle */}
+            <button
+              onClick={() => {
+                const newTheme = isDarkMode ? "light" : "dark"
+                document.documentElement.classList.add(newTheme)
+                document.documentElement.classList.remove(isDarkMode ? "dark" : "light")
+                localStorage.setItem("theme", newTheme)
+                setIsDarkMode(!isDarkMode)
+              }}
+              className="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors cursor-pointer"
+            >
+              {isDarkMode ? (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
+              ) : (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
+              )}
+            </button>
 
-          {/* User Details Section */}
-          <div className="flex-1 text-center md:text-left space-y-4 md:space-y-6">
-            {/* Username & Buttons */}
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex items-center justify-center md:justify-start gap-2">
-                <h1 className="text-xl font-light tracking-wide">{profileData?.userName}</h1>
+            {/* Notifications Bell */}
+            <button
+              onClick={() => navigate('/notifications')}
+              className="relative p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors cursor-pointer"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center shadow-md shadow-red-500/10">
+                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                </span>
+              )}
+            </button>
+
+            {/* Create Button */}
+            <button
+              onClick={() => navigate('/upload')}
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all hover:shadow-[0_8px_20px_rgba(139,92,246,0.35)] cursor-pointer flex items-center gap-1.5"
+            >
+              <FiPlusSquare size={14} className="stroke-[2.5]" /> + Create
+            </button>
+          </div>
+        </div>        {/* Cover Banner Card (Theme-based image backgrounds) */}
+        <div
+          className="relative w-full rounded-[24px] border border-white/10 dark:border-white/5 overflow-visible min-h-[260px] sm:min-h-[300px] md:min-h-[360px] bg-cover bg-center shadow-lg flex-shrink-0 flex items-end p-6 md:p-8 mb-20 md:mb-24"
+          style={{ backgroundImage: `url(${coverImageSrc})` }}
+        >
+          {/* Transparent Dark Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10 rounded-[24px]" />
+
+          {/* Floating Subtle Icons in Cover Banner Graphic */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[24px]">
+            {/* Heart */}
+            <motion.div
+              animate={{ y: [0, 5, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-[12%] left-[10%] text-white/10 drop-shadow-[0_0_8px_rgba(255,255,255,0.05)] hidden sm:block"
+            >
+              <FiHeart size={28} className="stroke-[1.5]" />
+            </motion.div>
+
+            {/* Chat */}
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute bottom-[20%] left-[20%] text-white/10 drop-shadow-[0_0_8px_rgba(255,255,255,0.05)]"
+            >
+              <FiMessageCircle size={30} className="stroke-[1.5]" />
+            </motion.div>
+
+            {/* User */}
+            <motion.div
+              animate={{ y: [0, 6, 0] }}
+              transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-[18%] right-[12%] text-white/10 drop-shadow-[0_0_8px_rgba(255,255,255,0.05)] hidden sm:block"
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </motion.div>
+
+            {/* Bell */}
+            <motion.div
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute bottom-[22%] right-[22%] text-white/10 drop-shadow-[0_0_8px_rgba(255,255,255,0.05)]"
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </motion.div>
+          </div>
+
+          {/* Profile Header Elements inside Banner overlay */}
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-end gap-6 w-full select-none text-white text-left">
+            {/* Avatar Section */}
+            <div className="relative flex-shrink-0 cursor-pointer -mb-16 md:-mb-20 self-start md:self-end animate-fade-in" onClick={() => setShowAvatarOptions(true)}>
+              <div className="w-[90px] h-[90px] sm:w-[120px] sm:h-[120px] md:w-[140px] md:h-[140px] rounded-full p-[3px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-yellow-500 shadow-[0_0_15px_rgba(139,92,246,0.35)] transition-transform duration-300 hover:scale-102">
+                <div className="w-full h-full rounded-full overflow-hidden border-[4px] border-white bg-[#0B1220] shadow-md">
+                  <Avatar
+                    src={profileData?.profileImage || dp}
+                    alt={profileData?.userName}
+                    size="w-full h-full"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              {profileData?.isOnline && (
+                <span className="absolute bottom-1 right-1 md:bottom-2.5 md:right-2.5 w-4.5 h-4.5 bg-green-500 border-2 border-[var(--background)] rounded-full shadow-[0_0_10px_#22c55e]" />
+              )}
+            </div>
+
+            {/* Profile User Info aligned next to Avatar */}
+            <div className="flex-1 flex flex-col items-start text-left w-full select-none text-white">
+              {/* Name */}
+              <h1 className="text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-sm flex items-center gap-1.5 leading-none mb-2">
+                {profileData?.name}
                 {profileData?.isVerified && (
-                  <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 fill-blue-500 inline-block align-middle ml-1" title="Verified Creator">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-6 md:h-6 fill-blue-500 flex-shrink-0" title="Verified Creator">
                     <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
                   </svg>
                 )}
+              </h1>
+
+              {/* Username & Profession Badge */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs md:text-sm font-semibold text-white/90">@{profileData?.userName}</span>
+                <span className="px-2 py-0.5 rounded text-[8px] md:text-[9px] font-extrabold uppercase tracking-wider bg-[#8B5CF6]/35 text-purple-200 border border-[#8B5CF6]/40 backdrop-blur-md">
+                  {profileData?.profession || "CONNECTLY Creator"}
+                </span>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-center md:justify-start gap-2">
+              {/* Bio */}
+              <p className="text-xs md:text-sm text-white/85 line-clamp-2 max-w-2xl font-normal leading-relaxed mb-3">
+                {profileData?.bio || "Connecting, expressing, and building digital things."}
+              </p>
+
+              {/* Location */}
+              <p className="text-[10px] md:text-xs text-white/75 flex items-center gap-1 font-semibold mb-5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                {profileData?.location || "India"}
+              </p>
+
+              {/* Action Buttons Row */}
+              <div className="flex flex-wrap items-center gap-2.5 mb-5">
                 {isOwnProfile ? (
                   <>
                     <button
                       onClick={() => navigate('/editprofile')}
-                      className="px-4 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-sm font-semibold text-[var(--text)] hover:bg-[var(--hover)] transition-all"
+                      className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] hover:shadow-[0_4px_12px_rgba(139,92,246,0.3)] transition-all cursor-pointer flex-shrink-0"
                     >
                       Edit Profile
                     </button>
                     <button
-                      onClick={handleLogOut}
-                      className="px-3 py-1.5 bg-[var(--card)] border border-[var(--danger)]/30 rounded-lg text-sm font-semibold text-[var(--danger)] hover:bg-[var(--danger)]/5 transition-all flex items-center gap-1"
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.href)
+                        alert("Profile link copied to clipboard! 🔗")
+                      }}
+                      className="px-4.5 py-2 rounded-xl text-xs font-bold text-white bg-white/10 dark:bg-white/10 border border-white/20 hover:bg-white/20 transition-all cursor-pointer flex-shrink-0"
                     >
-                      <FiLogOut size={14} /> Log Out
+                      Share Profile
                     </button>
                   </>
                 ) : (
@@ -319,127 +501,124 @@ function Profile() {
                     <FollowButton
                       targetUserId={profileData?._id}
                       onFollowChange={handleProfile}
-                      tailwind="px-6 py-1.5 rounded-lg text-sm font-semibold btn-gradient hover-scale"
+                      tailwind="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] transition-all flex-shrink-0"
                     />
                     <button
                       onClick={() => {
                         dispatch(setSelectedUser(profileData))
                         navigate('/messages')
                       }}
-                      className="px-4 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-sm font-semibold text-[var(--text)] hover:bg-[var(--hover)] transition-all"
+                      className="px-4.5 py-2 rounded-xl text-xs font-bold text-white bg-white/10 border border-white/20 hover:bg-white/20 transition-all cursor-pointer flex-shrink-0"
                     >
                       Message
                     </button>
                   </>
                 )}
+                {/* 3-dots actions trigger */}
+                <button className="p-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all cursor-pointer flex-shrink-0">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
+                </button>
               </div>
-            </div>
 
-            {/* Stats Row */}
-            <div className="flex justify-center md:justify-start gap-10 text-sm border-t border-b border-[var(--border)] py-3 md:border-0 md:py-0">
-              <div onClick={() => setPostType("posts")} className="cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="font-bold text-[var(--text)] mr-1">{profileData?.posts?.length || 0}</span>
-                <span className="text-[var(--text-secondary)]">posts</span>
+              {/* Stats Row */}
+              <div className="flex flex-wrap items-center gap-4 md:gap-6 pt-1 select-none">
+                {[
+                  { label: "posts", val: profileData?.posts?.length || 0, onClick: () => setPostType("posts") },
+                  { label: "loops", val: profileData?.loops?.length || 0, onClick: () => setPostType("loops") },
+                  ...(isOwnProfile ? [{ label: "saved", val: userData?.saved?.length || 0, onClick: () => setPostType("saved") }] : []),
+                  { label: "followers", val: profileData?.followers?.length || 0, onClick: () => openFollowModal("followers") },
+                  { label: "following", val: profileData?.following?.length || 0, onClick: () => openFollowModal("following") }
+                ].map((stat) => (
+                  <button
+                    key={stat.label}
+                    onClick={stat.onClick}
+                    className="flex items-baseline gap-1 hover:opacity-85 transition-opacity"
+                  >
+                    <span className="text-sm md:text-base font-extrabold text-white">{stat.val}</span>
+                    <span className="text-[10px] md:text-xs font-semibold text-white/75 lowercase">{stat.label}</span>
+                  </button>
+                ))}
               </div>
-              <div onClick={() => openFollowModal("followers")} className="cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="font-bold text-[var(--text)] mr-1">{profileData?.followers?.length || 0}</span>
-                <span className="text-[var(--text-secondary)]">followers</span>
-              </div>
-              <div onClick={() => openFollowModal("following")} className="cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="font-bold text-[var(--text)] mr-1">{profileData?.following?.length || 0}</span>
-                <span className="text-[var(--text-secondary)]">following</span>
-              </div>
-            </div>
-
-            {/* Name & Bio */}
-            <div className="space-y-1">
-              <h2 className="font-semibold text-sm text-[var(--text)]">{profileData?.name}</h2>
-              <span className="text-xs font-semibold text-[var(--primary)] block">
-                {profileData?.profession || "CONNECTLY Creator"}
-              </span>
-              {profileData?.bio && (
-                <p className="text-sm text-[var(--text-secondary)] font-normal leading-relaxed whitespace-pre-wrap max-w-lg mx-auto md:mx-0">
-                  {profileData?.bio}
-                </p>
-              )}
-              {(() => {
-                const mutuals = !isOwnProfile && profileData?.followers && userData?.following
-                  ? profileData.followers.filter(follower =>
-                    userData.following.some(followingUser =>
-                      (followingUser._id || followingUser).toString() === (follower._id || follower).toString()
-                    )
-                  )
-                  : [];
-
-                if (mutuals.length === 0) return null;
-
-                return (
-                  <p className="text-xs text-[var(--text-secondary)] pt-1">
-                    Followed by{" "}
-                    {mutuals.slice(0, 2).map((u, i) => (
-                      <span
-                        key={u._id}
-                        className="font-semibold text-[var(--text)] hover:underline cursor-pointer"
-                        onClick={() => navigate(`/profile/${u.userName}`)}
-                      >
-                        {u.userName}{i < Math.min(mutuals.length, 2) - 1 ? ", " : ""}
-                      </span>
-                    ))}
-                    {mutuals.length > 2 && ` + ${mutuals.length - 2} more mutuals`}
-                  </p>
-                );
-              })()}
             </div>
           </div>
         </div>
 
-        {/* Tab Row (Instagram Style top border) */}
-        <div className="flex justify-center border-t border-[var(--border)]">
-          <div className="flex gap-8 md:gap-12">
-            <button
-              onClick={() => setPostType("posts")}
-              className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${postType === "posts"
-                  ? "border-[var(--text)] text-[var(--text)]"
-                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
-                }`}
-            >
-              <FiGrid size={12} />
-              POSTS
-            </button>
-            <button
-              onClick={() => setPostType("loops")}
-              className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${postType === "loops"
-                  ? "border-[var(--text)] text-[var(--text)]"
-                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
-                }`}
-            >
-              <FiVideo size={12} />
-              LOOPS
-            </button>
-            {isOwnProfile && (
-              <>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*"
+          className="hidden"
+        />
+
+        {/* Tab Row (Instagram Style sticky row with dropdown controls) */}
+        <div className="sticky top-0 z-30 bg-[var(--background)]/90 backdrop-blur-md border-b border-[var(--border)] py-1 mb-2 flex items-center justify-between">
+          <div className="flex justify-center gap-6 sm:gap-10">
+            {[
+              { id: "posts", label: "POSTS", icon: <FiGrid size={13} /> },
+              { id: "loops", label: "LOOPS", icon: <FiVideo size={13} /> },
+              ...(isOwnProfile ? [
+                { id: "saved", label: "SAVED", icon: <FiBookmark size={13} /> },
+                { id: "analytics", label: "ANALYTICS", icon: <FiBarChart2 size={13} /> }
+              ] : [])
+            ].map((tab) => {
+              const active = postType === tab.id;
+              return (
                 <button
-                  onClick={() => setPostType("saved")}
-                  className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${postType === "saved"
-                      ? "border-[var(--text)] text-[var(--text)]"
-                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
+                  key={tab.id}
+                  onClick={() => setPostType(tab.id)}
+                  className={`flex items-center gap-2 py-3.5 text-xs font-bold tracking-widest relative transition-colors cursor-pointer ${active ? "text-purple-500 font-extrabold" : "text-[var(--text-secondary)] hover:text-[var(--text)]"
                     }`}
                 >
-                  <FiBookmark size={12} />
-                  SAVED
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  {active && (
+                    <motion.div
+                      layoutId="activeTabLine"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500 rounded-full"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
                 </button>
-                <button
-                  onClick={() => setPostType("analytics")}
-                  className={`flex items-center gap-1.5 py-4 text-xs tracking-widest font-semibold border-t-2 transition-all ${postType === "analytics"
-                      ? "border-[var(--text)] text-[var(--text)]"
-                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
-                    }`}
-                >
-                  <FiBarChart2 size={12} />
-                  ANALYTICS
-                </button>
-              </>
-            )}
+              );
+            })}
+          </div>
+
+          {/* Right layout and filter controls */}
+          <div className="hidden sm:flex items-center gap-3">
+            {/* Sorting Dropdown */}
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="px-3 py-1.5 rounded-xl bg-[#0B1220] border border-[var(--border)] text-[10px] font-extrabold text-white outline-none cursor-pointer hover:border-[var(--primary)]/30 transition-all uppercase tracking-wider bg-no-repeat bg-right"
+            >
+              <option value="latest">Latest</option>
+              <option value="oldest">Oldest</option>
+              <option value="likes">Most Liked</option>
+              <option value="comments">Most Commented</option>
+            </select>
+
+            {/* Layout Switchers */}
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${viewMode === "grid"
+                  ? "text-purple-400 bg-purple-500/10 border-purple-500/20"
+                  : "text-[var(--text-secondary)] hover:text-white border-transparent hover:bg-white/5"
+                }`}
+              title="Grid view"
+            >
+              <FiGrid size={13} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${viewMode === "list"
+                  ? "text-purple-400 bg-purple-500/10 border-purple-500/20"
+                  : "text-[var(--text-secondary)] hover:text-white border-transparent hover:bg-white/5"
+                }`}
+              title="List view"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+            </button>
           </div>
         </div>
 
@@ -458,8 +637,8 @@ function Profile() {
                     key={p}
                     onClick={() => setAnalyticsPeriod(p)}
                     className={`px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${analyticsPeriod === p
-                        ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text)]"
+                      ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text)]"
                       }`}
                   >
                     {p === "today" ? "Today" : p === "7days" ? "7 Days" : "30 Days"}
@@ -473,78 +652,350 @@ function Profile() {
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
               </div>
             ) : (
-              <div className="max-w-xl mx-auto w-full">
+              <div className="w-full">
                 <CreatorInsights
                   likes={analyticsData?.likes || 0}
                   impressions={analyticsData?.impressions || 0}
                   visitors={analyticsData?.reach || 0}
                   saves={analyticsData?.saves || 0}
                   loading={analyticsLoading}
-                  weeklyGrowth="+0"
+                  posts={userPosts}
                 />
               </div>
             )}
           </div>
-        ) : savedLoading && postType === "saved" ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-          </div>
         ) : displayPosts.length > 0 ? (
-          <div className="grid grid-cols-3 gap-1 md:gap-2 mt-4 animate-fade-in">
-            {displayPosts.map((post, index) => {
-              const isVideo = post.mediaType === "video" || postType === "loops"
-              return (
-                <div
-                  key={post._id || index}
-                  onClick={() => {
-                    setSelectedPostIndex(index)
-                    setIsModalOpen(true)
-                  }}
-                  className="aspect-square bg-[var(--card)] overflow-hidden relative group cursor-pointer border border-[var(--border)] rounded-sm"
-                >
-                  {isVideo ? (
-                    <video
-                      src={post.media}
-                      className="w-full h-full object-cover"
-                      muted
-                      loop
-                      playsInline
-                      onMouseEnter={(e) => e.target.play().catch(() => { })}
-                      onMouseLeave={(e) => e.target.pause()}
-                    />
-                  ) : (
-                    <img
-                      src={post.media}
-                      alt="post"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  )}
+          <>
+            {/* Media Cards Grid or List Feed */}
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-4 animate-fade-in">
+                {displayPosts.map((post, index) => {
+                  const isVideo = post.mediaType === "video" || postType === "loops"
 
-                  {/* Play icon overlay for videos */}
-                  {isVideo && (
-                    <div className="absolute top-2 right-2 text-white/80 group-hover:opacity-0 transition-opacity z-10">
-                      <FiVideo size={14} className="drop-shadow-md" />
+                  const caption = post.caption || ""
+                  let title = caption
+                  let code = null
+                  let lang = "code"
+
+                  const codeRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/
+                  const match = caption.match(codeRegex)
+                  if (match) {
+                    lang = match[1] || "code"
+                    code = match[2].trim()
+                    title = caption.replace(codeRegex, "").trim()
+                  }
+
+                  const titleLines = title.split("\n").map(l => l.trim()).filter(Boolean)
+                  const cleanTitle = titleLines[0] || "Snippet"
+
+                  let tag = "CODE"
+                  const upperTitle = cleanTitle.toUpperCase()
+                  if (lang.toUpperCase() === "PYTHON" || upperTitle.includes("PYTHON")) {
+                    tag = "PYTHON"
+                  } else if (upperTitle.includes("UI") || upperTitle.includes("UX") || upperTitle.includes("DESIGN") || upperTitle.includes("MAINTENANCE") || upperTitle.includes("BUILDING")) {
+                    tag = "UI/UX"
+                  } else if (upperTitle.includes("LOGO") || upperTitle.includes("REVEAL") || upperTitle.includes("UPDATE")) {
+                    tag = "UPDATE"
+                  }
+
+                  const hasCode = code !== null || post.category === "code" || tag === "PYTHON" || tag === "CODE"
+
+                  return (
+                    <div
+                      key={post._id || index}
+                      onClick={() => {
+                        setSelectedPostIndex(index)
+                        setIsModalOpen(true)
+                      }}
+                      className="bg-[var(--card)] border border-[var(--border)] rounded-[24px] shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col p-4 space-y-3.5 cursor-pointer group select-none relative overflow-hidden"
+                    >
+                      {/* Media Section */}
+                      <div className="aspect-[16/10] w-full rounded-xl overflow-hidden relative bg-[var(--background-secondary)] flex-shrink-0">
+                        {post.media && !post.media.includes("placeholder") ? (
+                          isVideo ? (
+                            <video
+                              src={post.media}
+                              className="w-full h-full object-cover"
+                              muted
+                              loop
+                              playsInline
+                            />
+                          ) : (
+                            <img
+                              src={post.media}
+                              alt=""
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                          )
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-[#8B5CF6]/20 via-[#A855F7]/10 to-[#EC4899]/20 flex items-center justify-center relative">
+                            <div className="absolute w-24 h-24 rounded-full bg-purple-500/10 blur-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                            <FiImage size={24} className="text-[var(--text-secondary)] opacity-45" />
+                          </div>
+                        )}
+
+                        {/* STORY Badge Overlay */}
+                        {(post.type === "story" || post.category === "story") && (
+                          <div className="absolute top-2.5 left-2.5 z-10">
+                            <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-red-500/90 text-white shadow-md">
+                              STORY
+                            </span>
+                          </div>
+                        )}
+
+                        {isVideo && (
+                          <div className="absolute top-2.5 right-2.5 text-white/80 z-10 bg-black/40 p-1.5 rounded-lg">
+                            <FiVideo size={13} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Caption */}
+                      <div className="flex-1 min-h-[40px] text-left">
+                        <p className="text-xs font-semibold text-[var(--text)] line-clamp-2 leading-relaxed">
+                          {caption || "No caption"}
+                        </p>
+                      </div>
+
+                      {/* Footer Row */}
+                      <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] text-[var(--text-secondary)] mt-auto">
+                        <div className="flex items-center gap-4">
+                          {/* Like Button */}
+                          <button
+                            onClick={(e) => handleProfileLike(e, post)}
+                            className={`flex items-center gap-1 text-[11px] font-black transition-colors ${post.likes.some(id => id.toString() === userData._id.toString())
+                                ? "text-pink-500"
+                                : "hover:text-pink-500"
+                              }`}
+                          >
+                            <FiHeart
+                              size={14}
+                              className={post.likes.some(id => id.toString() === userData._id.toString()) ? "fill-pink-500 stroke-pink-500" : ""}
+                            />
+                            {post.likes?.length || 0}
+                          </button>
+
+                          {/* Comment Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPostIndex(index);
+                              setIsModalOpen(true);
+                            }}
+                            className="flex items-center gap-1 text-[11px] font-black hover:text-purple-500 transition-colors"
+                          >
+                            <FiMessageCircle size={14} />
+                            {post.comments?.length || 0}
+                          </button>
+
+                          {/* Share/Send Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPostIndex(index);
+                              setIsModalOpen(true);
+                            }}
+                            className="text-[11px] hover:text-green-500 transition-colors p-0.5 rounded-full"
+                          >
+                            <FiSend size={14} />
+                          </button>
+                        </div>
+
+                        {/* Save Button */}
+                        <button
+                          onClick={(e) => handleProfileSave(e, post)}
+                          className={`transition-colors ${userData?.saved?.some(id => (id?._id || id)?.toString() === post?._id?.toString())
+                              ? "text-amber-500"
+                              : "hover:text-amber-500"
+                            }`}
+                        >
+                          <FiBookmark
+                            size={14}
+                            className={userData?.saved?.some(id => (id?._id || id)?.toString() === post?._id?.toString()) ? "fill-amber-500 stroke-amber-500" : ""}
+                          />
+                        </button>
+                      </div>
                     </div>
-                  )}
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-6 mt-4 max-w-xl mx-auto w-full animate-fade-in">
+                {displayPosts.map((post, index) => {
+                  const isVideo = post.mediaType === "video" || postType === "loops"
 
-                  {/* Hover Overlay with Likes & Comments Count */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-6 text-white font-bold z-20">
-                    <span className="flex items-center gap-1.5">
-                      <FiHeart className="fill-white stroke-none" size={18} />
-                      {post.likes?.length || 0}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <FiMessageCircle className="fill-white stroke-none" size={18} />
-                      {post.comments?.length || 0}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                  const caption = post.caption || ""
+                  let title = caption
+                  let code = null
+                  let lang = "code"
+
+                  const codeRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/
+                  const match = caption.match(codeRegex)
+                  if (match) {
+                    lang = match[1] || "code"
+                    code = match[2].trim()
+                    title = caption.replace(codeRegex, "").trim()
+                  }
+
+                  const titleLines = title.split("\n").map(l => l.trim()).filter(Boolean)
+                  const cleanTitle = titleLines[0] || "Snippet"
+
+                  let tag = "CODE"
+                  const upperTitle = cleanTitle.toUpperCase()
+                  if (lang.toUpperCase() === "PYTHON" || upperTitle.includes("PYTHON")) {
+                    tag = "PYTHON"
+                  } else if (upperTitle.includes("UI") || upperTitle.includes("UX") || upperTitle.includes("DESIGN") || upperTitle.includes("MAINTENANCE") || upperTitle.includes("BUILDING")) {
+                    tag = "UI/UX"
+                  } else if (upperTitle.includes("LOGO") || upperTitle.includes("REVEAL") || upperTitle.includes("UPDATE")) {
+                    tag = "UPDATE"
+                  }
+
+                  const hasCode = code !== null || post.category === "code" || tag === "PYTHON" || tag === "CODE"
+
+                  return (
+                    <div
+                      key={post._id || index}
+                      onClick={() => {
+                        setSelectedPostIndex(index)
+                        setIsModalOpen(true)
+                      }}
+                      className="w-full bg-[var(--card)] border border-[var(--border)] rounded-[24px] p-5 flex flex-col space-y-4 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer text-left"
+                    >
+                      {/* Feed Item Header */}
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          src={profileData?.profileImage || dp}
+                          alt={profileData?.userName}
+                          size="w-9 h-9"
+                          className="border border-[var(--border)]"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-[var(--text)]">{profileData?.userName}</span>
+                            {profileData?.isVerified && (
+                              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-blue-500 flex-shrink-0">
+                                <path d="M12.003 21.602c-5.305 0-9.602-4.298-9.602-9.602s4.298-9.602 9.602-9.602c5.305 0 9.602 4.298 9.602 9.602s-4.298 9.602-9.602 9.602zm-1.802-5.402l6.602-6.601-1.401-1.401-5.201 5.2-2.201-2.201-1.4 1.401 3.601 3.602z" />
+                              </svg>
+                            )}
+                          </div>
+                          <p className="text-[9px] text-[var(--text-secondary)]">@{profileData?.name}</p>
+                        </div>
+                      </div>
+
+                      {/* Media Section */}
+                      <div className="aspect-[16/10] w-full rounded-xl overflow-hidden relative bg-[var(--background-secondary)]">
+                        {post.media && !post.media.includes("placeholder") ? (
+                          isVideo ? (
+                            <video
+                              src={post.media}
+                              className="w-full h-full object-cover"
+                              muted
+                              loop
+                              playsInline
+                            />
+                          ) : (
+                            <img
+                              src={post.media}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          )
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-[#8B5CF6]/20 via-[#A855F7]/10 to-[#EC4899]/20 flex items-center justify-center relative">
+                            <div className="absolute w-24 h-24 rounded-full bg-purple-500/10 blur-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                            <FiImage size={24} className="text-[var(--text-secondary)] opacity-45" />
+                          </div>
+                        )}
+
+                        {/* STORY Badge Overlay */}
+                        {(post.type === "story" || post.category === "story") && (
+                          <div className="absolute top-2.5 left-2.5 z-10">
+                            <span className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-red-500/90 text-white shadow-md">
+                              STORY
+                            </span>
+                          </div>
+                        )}
+
+                        {isVideo && (
+                          <div className="absolute top-2.5 right-2.5 text-white/80 z-10 bg-black/40 p-1.5 rounded-lg">
+                            <FiVideo size={13} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Caption */}
+                      <p className="text-xs text-[var(--text)] leading-relaxed text-left">
+                        {caption || "No caption"}
+                      </p>
+
+                      {/* Footer Engagement */}
+                      <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] text-[var(--text-secondary)]">
+                        <div className="flex items-center gap-4">
+                          {/* Like Button */}
+                          <button
+                            onClick={(e) => handleProfileLike(e, post)}
+                            className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${post.likes.some(id => id.toString() === userData._id.toString())
+                                ? "text-pink-500"
+                                : "hover:text-pink-500"
+                              }`}
+                          >
+                            <FiHeart
+                              size={15}
+                              className={post.likes.some(id => id.toString() === userData._id.toString()) ? "fill-pink-500 stroke-pink-500" : ""}
+                            />
+                            {post.likes?.length || 0}
+                          </button>
+
+                          {/* Comment Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPostIndex(index);
+                              setIsModalOpen(true);
+                            }}
+                            className="flex items-center gap-1.5 text-xs font-bold hover:text-purple-500 transition-colors"
+                          >
+                            <FiMessageCircle size={15} />
+                            {post.comments?.length || 0}
+                          </button>
+
+                          {/* Share Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPostIndex(index);
+                              setIsModalOpen(true);
+                            }}
+                            className="hover:text-green-500 transition-colors p-0.5 rounded-full"
+                          >
+                            <FiSend size={15} />
+                          </button>
+                        </div>
+
+                        {/* Save Button */}
+                        <button
+                          onClick={(e) => handleProfileSave(e, post)}
+                          className={`transition-colors ${userData?.saved?.some(id => (id?._id || id)?.toString() === post?._id?.toString())
+                              ? "text-amber-500"
+                              : "hover:text-amber-500"
+                            }`}
+                        >
+                          <FiBookmark
+                            size={15}
+                            className={userData?.saved?.some(id => (id?._id || id)?.toString() === post?._id?.toString()) ? "fill-amber-500 stroke-amber-500" : ""}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-[var(--card)] border border-[var(--border)] rounded-[20px] p-6 shadow-[var(--shadow-premium)]">
             <div className="w-16 h-16 rounded-full border border-[var(--border)] flex items-center justify-center text-gray-500">
               {postType === "posts" ? <FiGrid size={24} /> : postType === "loops" ? <FiVideo size={24} /> : <FiBookmark size={24} />}
             </div>
@@ -554,7 +1005,7 @@ function Profile() {
             {isOwnProfile && postType === "posts" && (
               <button
                 onClick={() => navigate('/upload')}
-                className="px-6 py-2 bg-blue-500 rounded-lg text-sm font-semibold text-white hover:bg-blue-600 transition-all"
+                className="px-6 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#8B5CF6] to-[#A855F7] hover:shadow-[0_8px_20px_rgba(139,92,246,0.3)] transition-all cursor-pointer"
               >
                 Share your first post
               </button>
@@ -605,7 +1056,7 @@ function Profile() {
                 </span>
                 <button
                   onClick={() => setShowFollowModal(false)}
-                  className="text-[var(--text-secondary)] hover:text-[var(--text)]"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text)] cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
@@ -649,7 +1100,7 @@ function Profile() {
                     const isMutual = userData?.following?.some(id => (id._id || id).toString() === user._id.toString()) &&
                       userData?.followers?.some(id => (id._id || id).toString() === user._id.toString());
                     return (
-                      <div key={user._id} className="flex items-center justify-between gap-3">
+                      <div key={user._id} className="flex items-center justify-between gap-3 animate-fade-in">
                         <div
                           className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
                           onClick={() => {
@@ -736,7 +1187,7 @@ function Profile() {
                         stories: profileStories
                       }])
                     }}
-                    className="py-3.5 border-b border-[var(--border)] text-[var(--primary)] font-bold hover:bg-[var(--hover)] transition-all"
+                    className="py-3.5 border-b border-[var(--border)] text-[var(--primary)] font-bold hover:bg-[var(--hover)] transition-all cursor-pointer"
                   >
                     View Story
                   </button>
@@ -747,7 +1198,7 @@ function Profile() {
                     setShowPhotoPreview(true)
                     setZoomScale(1)
                   }}
-                  className="py-3.5 border-b border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-all"
+                  className="py-3.5 border-b border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-all cursor-pointer"
                 >
                   View Profile Photo
                 </button>
@@ -758,7 +1209,7 @@ function Profile() {
                         setShowAvatarOptions(false)
                         fileInputRef.current?.click()
                       }}
-                      className="py-3.5 border-b border-[var(--border)] text-blue-500 dark:text-blue-400 hover:bg-[var(--hover)] transition-all font-semibold"
+                      className="py-3.5 border-b border-[var(--border)] text-blue-500 dark:text-blue-400 hover:bg-[var(--hover)] transition-all font-semibold cursor-pointer"
                     >
                       Change Profile Photo
                     </button>
@@ -768,7 +1219,7 @@ function Profile() {
                           setShowAvatarOptions(false)
                           handleRemovePhoto()
                         }}
-                        className="py-3.5 text-red-500 hover:bg-[var(--hover)] transition-all font-semibold"
+                        className="py-3.5 text-red-500 hover:bg-[var(--hover)] transition-all font-semibold cursor-pointer"
                       >
                         Remove Profile Photo
                       </button>
@@ -803,7 +1254,7 @@ function Profile() {
               <span className="text-xs text-gray-400">Scroll to Zoom (Scale: {zoomScale.toFixed(1)}x)</span>
               <button
                 onClick={() => setShowPhotoPreview(false)}
-                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer"
               >
                 <FiX size={20} />
               </button>
@@ -813,21 +1264,21 @@ function Profile() {
             <div className="absolute bottom-6 flex gap-4 z-[1000]" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => setZoomScale(prev => Math.min(prev + 0.2, 4))}
-                className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors flex items-center justify-center"
+                className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors flex items-center justify-center cursor-pointer"
                 title="Zoom In"
               >
                 <FiPlus size={20} />
               </button>
               <button
                 onClick={() => setZoomScale(1)}
-                className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors flex items-center justify-center"
+                className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors flex items-center justify-center cursor-pointer"
                 title="Reset Zoom"
               >
                 <FiRotateCcw size={20} />
               </button>
               <button
                 onClick={() => setZoomScale(prev => Math.max(prev - 0.2, 1))}
-                className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors flex items-center justify-center"
+                className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors flex items-center justify-center cursor-pointer"
                 title="Zoom Out"
               >
                 <FiMinus size={20} />

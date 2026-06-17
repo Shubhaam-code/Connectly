@@ -28,17 +28,16 @@
   display: none;
 }
 
-/* CONNECTLY Design Tokens */
 :root {
-  --background: #000000;
-  --background-secondary: #0a0a0a;
-  --card: #121212;
-  --border: #262626;
+  --background: #050816;
+  --background-secondary: #0A0F1F;
+  --card: #0B1220;
+  --border: rgba(255, 255, 255, 0.08);
   --text: #FFFFFF;
-  --text-secondary: #A8A8A8;
-  --text-muted: #737373;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
   --primary: #8B5CF6;
-  --hover: rgba(139, 92, 246, 0.15);
+  --hover: #A855F7;
   --muted: #4b5563;
   --success: #22C55E;
   --danger: #EF4444;
@@ -55,28 +54,29 @@
   --gradient-connectly: linear-gradient(135deg, #8B5CF6, #EC4899, #3B82F6);
   --gradient-primary: linear-gradient(135deg, #8B5CF6, #EC4899);
   --gradient-story: linear-gradient(45deg, #8B5CF6, #EC4899, #3B82F6);
-  --bg-glass: rgba(18, 18, 18, 0.7);
-  --border-glass: rgba(255, 255, 255, 0.08);
-  --bubble-receiver-bg: #1C2333;
-  --bubble-receiver-border: rgba(255, 255, 255, 0.08);
+  --bg-glass: rgba(16, 23, 41, 0.7);
+  --border-glass: rgba(255, 255, 255, 0.06);
+  --shadow-premium: 0 10px 40px rgba(0, 0, 0, 0.5);
+  --bubble-receiver-bg: #1e293b;
+  --bubble-receiver-border: rgba(255, 255, 255, 0.06);
   --bubble-receiver-text: #FFFFFF;
-  --bg-card-dark: #1C2333;
-  --input-bg: rgba(255, 255, 255, 0.05);
-  --input-border: rgba(255, 255, 255, 0.1);
+  --bg-card-dark: #1e293b;
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --input-border: rgba(255, 255, 255, 0.06);
   --input-text: #FFFFFF;
 }
 
 html.light {
-  --background: #FFFFFF;
-  --background-secondary: #F5F6F8;
+  --background: #F8FAFC;
+  --background-secondary: #F1F5F9;
   --card: #FFFFFF;
-  --border: #E4E6EB;
-  --text: #050505;
-  --text-secondary: #65676B;
-  --text-muted: #8A8D91;
-  --primary: #8B5CF6;
-  --hover: #F0F2F5;
-  --muted: #8A8D91;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --primary: #7C3AED;
+  --hover: rgba(124, 58, 237, 0.08);
+  --muted: #94A3B8;
   --success: #22C55E;
   --danger: #EF4444;
 
@@ -87,14 +87,15 @@ html.light {
   --text-primary: var(--text);
   --text-secondary: var(--text-secondary);
   --bg-glass: rgba(255, 255, 255, 0.7);
-  --border-glass: rgba(0, 0, 0, 0.08);
-  --bubble-receiver-bg: #F0F2F5;
-  --bubble-receiver-border: #E4E6EB;
-  --bubble-receiver-text: #050505;
+  --border-glass: rgba(0, 0, 0, 0.06);
+  --shadow-premium: 0 10px 40px rgba(124, 58, 237, 0.08);
+  --bubble-receiver-bg: #F1F5F9;
+  --bubble-receiver-border: #E2E8F0;
+  --bubble-receiver-text: #0F172A;
   --bg-card-dark: var(--card);
-  --input-bg: #F0F2F5;
-  --input-border: #E4E6EB;
-  --input-text: #050505;
+  --input-bg: #F1F5F9;
+  --input-border: #E2E8F0;
+  --input-text: #0F172A;
 }
 
 body {

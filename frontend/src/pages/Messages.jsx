@@ -724,17 +724,15 @@ function Messages() {
                 const data = JSON.parse(cleanLine.slice(6))
                 if (data.content) {
                   accumulatedResponse += data.content
-                  dispatch(setMessages(prev => {
-                    const nextMsgs = prev.map(msg => {
-                      if (msg._id === assistantMsgId) {
-                        return { ...msg, message: accumulatedResponse }
-                      }
-                      return msg
-                    })
-                    localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(nextMsgs))
-                    setLastAIMessage(accumulatedResponse)
-                    return nextMsgs
-                  }))
+                  const nextMsgs = messagesRef.current.map(msg => {
+                    if (msg._id === assistantMsgId) {
+                      return { ...msg, message: accumulatedResponse }
+                    }
+                    return msg
+                  })
+                  localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(nextMsgs))
+                  setLastAIMessage(accumulatedResponse)
+                  dispatch(setMessages(nextMsgs))
                 }
               } catch (err) {
                 // Ignore parsing errors
@@ -745,16 +743,14 @@ function Messages() {
       } catch (err) {
         console.error('Groq AI Friend stream error:', err)
         setOtherUserTyping(false)
-        dispatch(setMessages(prev => {
-          const nextMsgs = prev.map(msg => {
-            if (msg._id === assistantMsgId) {
-              return { ...msg, message: "Sorry, I'm having trouble connecting right now. 💜" }
-            }
-            return msg
-          })
-          localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(nextMsgs))
-          return nextMsgs
-        }))
+        const nextMsgs = messagesRef.current.map(msg => {
+          if (msg._id === assistantMsgId) {
+            return { ...msg, message: "Sorry, I'm having trouble connecting right now. 💜" }
+          }
+          return msg
+        })
+        localStorage.setItem('connectly_ai_friend_messages', JSON.stringify(nextMsgs))
+        dispatch(setMessages(nextMsgs))
       } finally {
         setSending(false)
       }

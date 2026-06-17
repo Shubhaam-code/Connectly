@@ -11,20 +11,18 @@ export const SplashScreen = () => {
       {/* Main logo and branding in center */}
       <div className="flex-1 flex flex-col items-center justify-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className="flex flex-col items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.2, ease: "easeInOut" }}
+          className="flex flex-col items-center justify-center"
         >
-          {/* Logo container */}
-          <div className="w-24 h-24 md:w-32 md:h-32 mb-6 p-[2px] bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 rounded-3xl animate-pulse">
-            <div className="w-full h-full rounded-3xl bg-black overflow-hidden flex items-center justify-center p-3">
-              <img
-                src="/favicon.png"
-                alt="Connectly Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
+          {/* Logo with drop-shadow glow */}
+          <div className="relative mb-6">
+            <img
+              src="/favicon.png"
+              alt="Connectly Logo"
+              className="w-32 h-32 md:w-40 md:h-40 object-contain filter drop-shadow-[0_0_25px_rgba(139,92,246,0.3)]"
+            />
           </div>
 
           {/* Connectly title */}

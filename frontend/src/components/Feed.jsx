@@ -118,9 +118,15 @@ function Feed() {
     >
       {/* Mobile header */}
       <div
-        className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-[var(--background)] border-b border-[var(--border)] text-[var(--text)]"
+        className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-2.5 bg-[var(--background)] border-b border-[var(--border)] text-[var(--text)] animate-fade-in"
       >
-        <h1 className="text-xl font-black connectly-gradient-text">CONNECTLY</h1>
+        <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+          <img
+            src="/favicon.png"
+            alt="Connectly Logo"
+            className="w-10 h-10 object-contain dark:invert transition-transform duration-300 active:scale-95"
+          />
+        </div>
         <div className="flex items-center gap-5">
           <button className="relative" onClick={() => navigate('/notifications')}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -144,42 +150,55 @@ function Feed() {
       <div className="w-full max-w-[620px] mx-auto px-4 py-6">
         {/* Create Post Bar */}
         {userData && (
-          <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 mb-5 flex items-center justify-between gap-3 shadow-xl">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-full bg-[var(--card)]/90 backdrop-blur-lg border border-[var(--border)] rounded-3xl p-5 mb-6 shadow-2xl flex flex-col gap-4 select-none">
+            {/* Input Row */}
+            <div className="flex items-center gap-3.5 w-full">
               <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-[var(--border)]">
-                  <img src={userData.profileImage || dp} alt="" className="w-full h-full object-cover" />
+                <div className="w-11 h-11 rounded-full p-[2px] bg-gradient-to-tr from-[#8B5CF6] via-[#EC4899] to-[#A855F7]">
+                  <div className="w-full h-full rounded-full overflow-hidden border border-[var(--card)] bg-[#0B1220]">
+                    <img src={userData.profileImage || dp} alt="" className="w-full h-full object-cover" />
+                  </div>
                 </div>
-                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-[var(--card)] bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
+                <div className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-[var(--card)] bg-green-500 shadow-[0_0_10px_#22c55e]" />
               </div>
               <button 
                 onClick={() => navigate('/upload?type=post')}
-                className="flex-1 bg-[var(--background-secondary)] hover:bg-[var(--hover)] border border-[var(--border)] text-left text-xs md:text-sm text-[var(--text-secondary)] py-2.5 px-4 rounded-xl transition-all outline-none truncate"
+                className="flex-1 bg-[var(--background-secondary)]/50 hover:bg-[var(--hover)]/20 border border-[var(--border)] text-left text-xs md:text-sm text-[var(--text-secondary)] hover:text-[var(--text)] py-3 px-5 rounded-2xl transition-all duration-300 outline-none truncate cursor-pointer shadow-inner"
               >
                 What's on your mind, {userData.name?.split(' ')[0]}?
               </button>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
+
+            {/* Separator line */}
+            <div className="h-[1px] w-full bg-[var(--border)]" />
+
+            {/* Quick Actions Row */}
+            <div className="flex items-center justify-around md:justify-start gap-4 flex-wrap w-full px-1">
               <button
                 onClick={() => navigate('/upload?type=post')}
-                className="p-2 hover:bg-[var(--hover)] rounded-xl text-gray-400 hover:text-[#8B5CF6] transition-all"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-[#3B82F6]/10 border border-transparent hover:border-[#3B82F6]/20 rounded-2xl text-[var(--text-secondary)] hover:text-[#3B82F6] transition-all duration-300 cursor-pointer text-xs font-bold"
                 title="Upload Photo/Media"
               >
-                <FiImage size={18} />
+                <FiImage size={16} className="text-[#3B82F6] drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+                <span>Image</span>
               </button>
+              
               <button
                 onClick={() => navigate('/upload?type=loop')}
-                className="p-2 hover:bg-[var(--hover)] rounded-xl text-gray-400 hover:text-[#EC4899] transition-all"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-[#EC4899]/10 border border-transparent hover:border-[#EC4899]/20 rounded-2xl text-[var(--text-secondary)] hover:text-[#EC4899] transition-all duration-300 cursor-pointer text-xs font-bold"
                 title="Upload Video"
               >
-                <FiVideo size={18} />
+                <FiVideo size={16} className="text-[#EC4899] drop-shadow-[0_0_8px_rgba(236,72,153,0.3)]" />
+                <span>Video</span>
               </button>
+
               <button
                 onClick={() => navigate('/upload?type=post&code=true')}
-                className="p-2 hover:bg-[var(--hover)] rounded-xl text-gray-400 hover:text-[#A855F7] transition-all"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-[#A855F7]/10 border border-transparent hover:border-[#A855F7]/20 rounded-2xl text-[var(--text-secondary)] hover:text-[#A855F7] transition-all duration-300 cursor-pointer text-xs font-bold"
                 title="Share Code Snippet"
               >
-                <FiCode size={18} />
+                <FiCode size={16} className="text-[#A855F7] drop-shadow-[0_0_8px_rgba(168,85,247,0.3)]" />
+                <span>Code</span>
               </button>
             </div>
           </div>

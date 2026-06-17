@@ -3,14 +3,25 @@ import { motion } from "framer-motion";
 import Sidebar from "./Sidebar";
 import { useIsMobile } from "../../hooks/useCustom";
 import FloatingMessenger from "../messages/FloatingMessenger";
+import { useSelector } from "react-redux";
 
 export const Layout = ({ children }) => {
   const isMobile = useIsMobile();
+  const { selectedUser } = useSelector((state) => state.message || {});
+
+  const isChatPage = window.location.pathname === "/messages" || 
+                     window.location.pathname === "/chat" || 
+                     window.location.pathname === "/messageArea";
+  
+  const isChatOpenOnMobile = isMobile && selectedUser && isChatPage;
 
   return (
     <div className="flex h-screen bg-[var(--background)] text-[var(--text)] overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto h-full relative" style={{ paddingBottom: isMobile ? "calc(72px + env(safe-area-inset-bottom))" : "0px" }}>
+      <main 
+        className={`flex-1 h-full relative ${isChatPage ? "overflow-hidden" : "overflow-y-auto"}`} 
+        style={{ paddingBottom: (isMobile && !isChatOpenOnMobile) ? "calc(72px + env(safe-area-inset-bottom))" : "0px" }}
+      >
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

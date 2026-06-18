@@ -181,7 +181,6 @@ export const Sidebar = () => {
             );
           })}
         </div>
-        <NewsModal isOpen={isNewsOpen} onClose={() => setIsNewsOpen(false)} />
       </>
     );
   }

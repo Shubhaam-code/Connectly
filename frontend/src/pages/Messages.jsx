@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import {
   FiArrowLeft,
-  FiMoreHorizontal,
   FiSmile,
   FiCornerUpLeft,
   FiEdit2,
@@ -15,8 +14,12 @@ import {
   FiGrid,
   FiMic,
   FiPlay,
-  FiPause
+  FiPause,
+  FiPhone,
+  FiVideo,
+  FiCamera
 } from 'react-icons/fi'
+import { startOutgoingCall } from '../redux/callSlice'
 import { GoSearch } from 'react-icons/go'
 import dp from "../assets/dp.webp"
 import axiosInstance, { SERVER_URL } from '../lib/axiosInstance'
@@ -34,6 +37,64 @@ const formatTimeStr = (secs) => {
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s < 10 ? '0' : ''}${s}`;
+};
+
+const formatBubbleTimestamp = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+
+  const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+  const timeStr = date.toLocaleTimeString([], timeOptions);
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  if (msgDate.getTime() === today.getTime()) {
+    return timeStr;
+  } else if (msgDate.getTime() === yesterday.getTime()) {
+    return `Yesterday ${timeStr}`;
+  } else {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+};
+
+const formatSidebarTimestamp = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return "now";
+  if (diffMins < 60) return `${diffMins}m`;
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  if (msgDate.getTime() === today.getTime()) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  }
+
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (msgDate.getTime() === yesterday.getTime()) {
+    return "Yesterday";
+  }
+
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yy = String(date.getFullYear()).slice(-2);
+  return `${dd}/${mm}/${yy}`;
 };
 
 // Reusable Voice Message Player Component
@@ -239,6 +300,167 @@ function Messages() {
   // Details panel toggle (desktop only)
   const [showDetails, setShowDetails] = useState(false)
 
+  // Camera capture state
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [capturedBlob, setCapturedBlob] = useState(null);
+  const [capturedUrl, setCapturedUrl] = useState(null);
+  const [cameraFacingMode, setCameraFacingMode] = useState("user"); // "user" | "environment"
+  const cameraVideoRef = useRef(null);
+
+  const handleStartCamera = async () => {
+    setShowCameraModal(true);
+    setCapturedBlob(null);
+    setCapturedUrl(null);
+    setCameraLoading(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: cameraFacingMode },
+        audio: false
+      });
+      setCameraStream(stream);
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Camera access failed:", err);
+      alert("Failed to access camera: " + err.message);
+      setShowCameraModal(false);
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  const handleToggleCameraFacing = async () => {
+    const nextMode = cameraFacingMode === "user" ? "environment" : "user";
+    setCameraFacingMode(nextMode);
+    
+    // Stop current stream
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+    setCameraStream(null);
+    setCameraLoading(true);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: nextMode },
+        audio: false
+      });
+      setCameraStream(stream);
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Camera switch failed:", err);
+      alert("Failed to switch camera: " + err.message);
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  const handleCapture = () => {
+    if (!cameraVideoRef.current) return;
+    const video = cameraVideoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    
+    const ctx = canvas.getContext("2d");
+    if (cameraFacingMode === "user") {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+
+    canvas.toBlob((blob) => {
+      setCapturedBlob(blob);
+      setCapturedUrl(URL.createObjectURL(blob));
+    }, "image/jpeg", 0.85);
+  };
+
+  const handleRetake = async () => {
+    setCapturedBlob(null);
+    setCapturedUrl(null);
+    setCameraLoading(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: cameraFacingMode },
+        audio: false
+      });
+      setCameraStream(stream);
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Camera retake failed:", err);
+      alert("Failed to access camera: " + err.message);
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  const handleCloseCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCameraModal(false);
+    setCapturedBlob(null);
+    setCapturedUrl(null);
+  };
+
+  const handleSendCaptured = async () => {
+    if (!capturedBlob || !selectedUser?._id) return;
+    setSending(true);
+    try {
+      const formData = new FormData();
+      formData.append("message", "📷 Photo captured");
+      formData.append("image", capturedBlob, "captured_photo.jpg");
+      
+      if (replyingToMessage) {
+        formData.append("replyTo", replyingToMessage._id);
+      }
+
+      const result = await axiosInstance.post(
+        `/api/message/send/${selectedUser._id}`,
+        formData
+      );
+
+      dispatch(setMessages([...messages, result.data]));
+      handleCloseCamera();
+      fetchPrevChats();
+    } catch (err) {
+      console.error("Failed to send captured photo:", err);
+      alert("Failed to send photo. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleStartCall = (type) => {
+    if (!selectedUser) return;
+    dispatch(
+      startOutgoingCall({
+        targetUser: selectedUser,
+        callType: type
+      })
+    );
+  };
+
+  // Bind video element stream on change
+  useEffect(() => {
+    if (cameraVideoRef.current && cameraStream && !capturedUrl) {
+      cameraVideoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream, capturedUrl]);
+
   const messagesEndRef = useRef()
   const fileInputRef = useRef()
   const typingTimeoutRef = useRef(null)
@@ -359,7 +581,19 @@ function Messages() {
       if (selectedUserRef.current && viewerId?.toString() === selectedUserRef.current._id?.toString()) {
         const updated = messagesRef.current.map(m =>
           m.sender === userData._id || m.sender?._id === userData._id
-            ? { ...m, seen: true }
+            ? { ...m, seen: true, delivered: true }
+            : m
+        )
+        dispatch(setMessages(updated))
+      }
+    }
+
+    const handleMessagesDelivered = ({ receiverId }) => {
+      // If the receiver is our currently active user, mark our sent messages as delivered
+      if (selectedUserRef.current && receiverId?.toString() === selectedUserRef.current._id?.toString()) {
+        const updated = messagesRef.current.map(m =>
+          m.sender === userData._id || m.sender?._id === userData._id
+            ? { ...m, delivered: true }
             : m
         )
         dispatch(setMessages(updated))
@@ -400,6 +634,7 @@ function Messages() {
     }
 
     socket.on("messagesSeen", handleMessagesSeen)
+    socket.on("messagesDelivered", handleMessagesDelivered)
     socket.on("messageReaction", handleMessageReaction)
     socket.on("messageEdited", handleMessageEdited)
     socket.on("messageDeleted", handleMessageDeleted)
@@ -408,6 +643,7 @@ function Messages() {
 
     return () => {
       socket.off("messagesSeen", handleMessagesSeen)
+      socket.off("messagesDelivered", handleMessagesDelivered)
       socket.off("messageReaction", handleMessageReaction)
       socket.off("messageEdited", handleMessageEdited)
       socket.off("messageDeleted", handleMessageDeleted)
@@ -906,7 +1142,7 @@ function Messages() {
                       <div
                         key={chatUser._id}
                         onClick={() => dispatch(setSelectedUser(chatUser))}
-                        className={`flex items-center gap-3.5 p-4 cursor-pointer transition-all border-l-2 ${isSelected ? "bg-[var(--hover)] border-purple-500 font-bold" : "hover:bg-[var(--hover)]/60 border-transparent"
+                        className={`flex items-center gap-3.5 p-4 cursor-pointer transition-all border-l-2 ${isSelected ? "bg-[var(--hover)] border-purple-500 font-semibold" : "hover:bg-[var(--hover)]/60 border-transparent"
                           }`}
                       >
                         <div className="relative flex-shrink-0">
@@ -916,24 +1152,39 @@ function Messages() {
                             className="w-12 h-12 rounded-full object-cover bg-[var(--background-secondary)]"
                           />
                           {isOnline && (
-                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full" />
+                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full animate-pulse" />
                           )}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold truncate text-[var(--text-primary)]">{chatUser.userName}</span>
-                            <span className="text-[10px] text-[var(--text-muted)]">
-                              {chat.lastMessageTimestamp ? formatTime(chat.lastMessageTimestamp) : ""}
+                            <span className={`text-sm truncate text-[var(--text-primary)] ${chat.unreadCount > 0 ? "font-bold" : "font-medium"}`}>
+                              {chatUser.name || chatUser.userName}
                             </span>
                           </div>
                           <div className="flex items-center justify-between mt-0.5">
-                            <p className={`text-xs truncate mr-2 ${chat.unreadCount > 0 ? "text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)]"}`}>
-                              {chat.lastMessageSender === userData._id ? "You: " : ""}
-                              {chat.lastMessage || (chat.lastMessageMedia ? `Sent a ${chat.lastMessageMedia}` : (isOnline ? "Online now" : "Offline"))}
-                            </p>
+                            <div className={`text-xs truncate flex items-center gap-1 min-w-0 ${
+                              chat.unreadCount > 0 ? "text-[var(--text-primary)] font-semibold" : "text-[var(--text-secondary)]"
+                            }`}>
+                              <span className="truncate">
+                                {chat.lastMessageSender === userData._id ? "You: " : ""}
+                                {chat.lastMessageMedia ? (
+                                  chat.lastMessageMedia === "image" ? "📷 Photo" :
+                                  chat.lastMessageMedia === "video" ? "🎥 Video" :
+                                  chat.lastMessageMedia === "audio" ? "🎤 Voice Message" : `Sent a ${chat.lastMessageMedia}`
+                                ) : (chat.lastMessage || (isOnline ? "Online now" : "Offline"))}
+                              </span>
+                              {chat.lastMessageTimestamp && (
+                                <>
+                                  <span className="text-[var(--text-muted)] flex-shrink-0">&middot;</span>
+                                  <span className="text-[var(--text-muted)] flex-shrink-0">
+                                    {formatSidebarTimestamp(chat.lastMessageTimestamp)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                             {chat.unreadCount > 0 && (
-                              <span className="bg-blue-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0">
+                              <span className="bg-blue-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ml-2 shadow-sm">
                                 {chat.unreadCount}
                               </span>
                             )}
@@ -976,20 +1227,33 @@ function Messages() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold truncate text-[var(--text-primary)]">Friend AI</span>
-                      {aiChatFromDb?.lastMessageTimestamp && (
-                        <span className="text-[10px] text-[var(--text-muted)]">
-                          {formatTime(aiChatFromDb.lastMessageTimestamp)}
-                        </span>
-                      )}
+                      <span className={`text-sm truncate text-[var(--text-primary)] ${aiChatFromDb?.unreadCount > 0 ? "font-bold" : "font-medium"}`}>
+                        Friend AI
+                      </span>
                     </div>
                     <div className="flex items-center justify-between mt-0.5">
-                      <p className={`text-xs truncate mr-2 ${aiChatFromDb?.unreadCount > 0 ? "text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)]"}`}>
-                        {aiChatFromDb?.lastMessageSender === userData._id ? "You: " : ""}
-                        {aiChatFromDb?.lastMessage || (aiChatFromDb?.lastMessageMedia ? `Sent a ${aiChatFromDb.lastMessageMedia}` : lastAIMessage)}
-                      </p>
+                      <div className={`text-xs truncate flex items-center gap-1 min-w-0 ${
+                        aiChatFromDb?.unreadCount > 0 ? "text-[var(--text-primary)] font-semibold" : "text-[var(--text-secondary)]"
+                      }`}>
+                        <span className="truncate">
+                          {aiChatFromDb?.lastMessageSender === userData._id ? "You: " : ""}
+                          {aiChatFromDb?.lastMessageMedia ? (
+                            aiChatFromDb.lastMessageMedia === "image" ? "📷 Photo" :
+                            aiChatFromDb.lastMessageMedia === "video" ? "🎥 Video" :
+                            aiChatFromDb.lastMessageMedia === "audio" ? "🎤 Voice Message" : `Sent a ${aiChatFromDb.lastMessageMedia}`
+                          ) : (aiChatFromDb?.lastMessage || lastAIMessage)}
+                        </span>
+                        {aiChatFromDb?.lastMessageTimestamp && (
+                          <>
+                            <span className="text-[var(--text-muted)] flex-shrink-0">&middot;</span>
+                            <span className="text-[var(--text-muted)] flex-shrink-0">
+                              {formatSidebarTimestamp(aiChatFromDb.lastMessageTimestamp)}
+                            </span>
+                          </>
+                        )}
+                      </div>
                       {aiChatFromDb?.unreadCount > 0 && (
-                        <span className="bg-blue-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0">
+                        <span className="bg-blue-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ml-2 shadow-sm">
                           {aiChatFromDb.unreadCount}
                         </span>
                       )}
@@ -1005,7 +1269,8 @@ function Messages() {
         {selectedUser ? (
           <div className="flex-1 h-full flex flex-col bg-[var(--background)] relative">
             {/* Header */}
-            <div className="h-16 px-4 border-b border-[var(--border)] flex items-center justify-between flex-shrink-0 sticky top-0 bg-[var(--background)]/90 backdrop-blur-md z-30">
+            <div className="h-16 px-4 border-b border-[var(--border)] flex items-center justify-between flex-shrink-0 sticky top-0 bg-[var(--background)]/95 backdrop-blur-md z-30">
+              {/* Left Section: Back (on mobile) + Avatar + Name/Status */}
               <div className="flex items-center gap-3">
                 {isMobile && (
                   <button
@@ -1015,32 +1280,39 @@ function Messages() {
                         navigate("/messages")
                       }
                     }}
-                    className="flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mr-2 cursor-pointer"
+                    className="p-1 -ml-1 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover)] transition-all cursor-pointer"
+                    title="Back"
                   >
-                    <FiArrowLeft size={20} />
-                    <span className="text-xs font-semibold">Back</span>
+                    <FiArrowLeft size={22} />
                   </button>
                 )}
-                {isAIFriend ? (
-                  <div className="relative w-11 h-11 md:w-14 md:h-14 flex-shrink-0">
+                
+                <div className="relative flex-shrink-0">
+                  {isAIFriend ? (
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-purple-500/20 shadow-md">
+                      <img
+                        src="/bot.png"
+                        alt="Friend AI"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
                     <img
-                      src="/bot.png"
-                      alt="Friend AI"
-                      className="w-full h-full rounded-full object-cover border border-purple-500/20 shadow-md"
+                      src={selectedUser.profileImage || dp}
+                      alt=""
+                      className="w-10 h-10 rounded-full object-cover cursor-pointer border border-[var(--border)] hover:opacity-90 transition-opacity"
+                      onClick={() => navigate(`/profile/${selectedUser.userName}`)}
                     />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[var(--background)] rounded-full animate-pulse" />
-                  </div>
-                ) : (
-                  <img
-                    src={selectedUser.profileImage || dp}
-                    alt=""
-                    className="w-9 h-9 rounded-full object-cover cursor-pointer"
-                    onClick={() => navigate(`/profile/${selectedUser.userName}`)}
-                  />
-                )}
-                <div>
+                  )}
+                  {/* Status Indicator Dot on Avatar */}
+                  <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-[var(--background)] rounded-full ${
+                    isAIFriend || onlineUsers?.includes(selectedUser._id) ? "bg-green-500" : "bg-gray-400"
+                  }`} />
+                </div>
+
+                <div className="flex flex-col min-w-0">
                   <h2
-                    className="text-sm font-bold hover:underline cursor-pointer text-[var(--text-primary)]"
+                    className="text-sm font-semibold truncate hover:underline cursor-pointer text-[var(--text-primary)] leading-tight"
                     onClick={() => {
                       if (!isAIFriend) {
                         navigate(`/profile/${selectedUser.userName}`)
@@ -1049,12 +1321,9 @@ function Messages() {
                   >
                     {selectedUser.name || selectedUser.userName}
                   </h2>
-                  <p className="text-[10px] text-[var(--text-secondary)]">
+                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 font-medium leading-none">
                     {isAIFriend ? (
-                      <span className="text-green-400 flex items-center gap-1 font-medium">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                        Online Companion
-                      </span>
+                      "Active Companion"
                     ) : (
                       onlineUsers?.includes(selectedUser._id) ? "Active now" : "Offline"
                     )}
@@ -1062,23 +1331,52 @@ function Messages() {
                 </div>
               </div>
 
-              {/* Action: Info Details / Clear Memory Trigger */}
-              {isAIFriend ? (
-                <button
-                  onClick={handleClearAIMemory}
-                  title="Clear Chat Memory"
-                  className="p-2 rounded-full transition-all cursor-pointer text-red-400 hover:text-red-500 hover:bg-red-500/10"
-                >
-                  <FiTrash2 size={20} />
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowDetails(!showDetails)}
-                  className={`p-2 rounded-full transition-all cursor-pointer ${showDetails ? "bg-[var(--hover)] text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
-                >
-                  <FiInfo size={20} />
-                </button>
-              )}
+              {/* Center: Empty for spacing */}
+              <div></div>
+
+              {/* Right Section: Call buttons + Details button */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {!isAIFriend && (
+                  <>
+                    <button
+                      onClick={() => handleStartCall("voice")}
+                      className="p-2 rounded-full text-[var(--text-secondary)] hover:text-green-500 hover:bg-green-500/10 transition-all cursor-pointer flex items-center justify-center"
+                      title="Voice Call"
+                    >
+                      <FiPhone size={20} />
+                    </button>
+                    <button
+                      onClick={() => handleStartCall("video")}
+                      className="p-2 rounded-full text-[var(--text-secondary)] hover:text-blue-500 hover:bg-blue-500/10 transition-all cursor-pointer flex items-center justify-center"
+                      title="Video Call"
+                    >
+                      <FiVideo size={20} />
+                    </button>
+                  </>
+                )}
+
+                {isAIFriend ? (
+                  <button
+                    onClick={handleClearAIMemory}
+                    title="Clear Chat Memory"
+                    className="p-2 rounded-full transition-all cursor-pointer text-red-400 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center"
+                  >
+                    <FiTrash2 size={20} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowDetails(!showDetails)}
+                    title="Conversation Details"
+                    className={`p-2 rounded-full transition-all cursor-pointer flex items-center justify-center ${
+                      showDetails
+                        ? "bg-purple-500/10 text-purple-500"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover)]"
+                    }`}
+                  >
+                    <FiInfo size={20} />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Messages Thread Container */}
@@ -1155,80 +1453,101 @@ function Messages() {
                             }`}
                         >
                           {/* Reply Quote preview inside bubble */}
-                          {msg.replyTo && (
-                            <div className="bg-[var(--background-secondary)]/85 border-l-2 border-purple-400 px-2.5 py-1 mb-2 rounded text-[11px] text-[var(--text-secondary)] max-w-full truncate">
-                              <span className="font-bold text-[var(--text-muted)] block text-[9px]">
-                                {msg.replyTo.sender === userData._id ? "You" : selectedUser.userName}
-                              </span>
-                              {msg.replyTo.message || "Media message"}
-                            </div>
-                          )}
-
-                          {/* Image rendering */}
-                          {msg.image && (
-                            <div className="mb-2 max-w-sm rounded-lg overflow-hidden border border-[var(--border)]">
-                              <img src={msg.image} alt="Shared media" className="w-full object-cover max-h-60" />
-                            </div>
-                          )}
-
-                          {/* Video rendering */}
-                          {msg.video && (
-                            <div className="mb-2 max-w-sm rounded-lg overflow-hidden border border-[var(--border)]">
-                              <video src={msg.video} controls className="w-full max-h-60" />
-                            </div>
-                          )}
-
-                          {/* Shared Post Card inside bubble */}
-                          {msg.sharedPost && (
-                            <div
-                              onClick={() => navigate(`/profile/${msg.sharedPost.author?.userName || ''}`)}
-                              className="cursor-pointer border border-[var(--border)] bg-[var(--card)] rounded-lg p-2.5 max-w-[240px] mt-1 space-y-2 hover:bg-[var(--hover)] transition-all text-left"
-                            >
-                              <div className="flex items-center gap-2">
-                                <img src={msg.sharedPost.author?.profileImage || dp} alt="" className="w-5 h-5 rounded-full object-cover" />
-                                <span className="text-[11px] font-bold text-[var(--text-secondary)]">{msg.sharedPost.author?.userName}</span>
+                          <div className="flex flex-col">
+                            {msg.replyTo && (
+                              <div className="bg-[var(--background-secondary)]/85 border-l-2 border-purple-400 px-2.5 py-1 mb-2 rounded text-[11px] text-[var(--text-secondary)] max-w-full truncate">
+                                <span className="font-bold text-[var(--text-muted)] block text-[9px]">
+                                  {msg.replyTo.sender === userData._id ? "You" : selectedUser.userName}
+                                </span>
+                                {msg.replyTo.message || "Media message"}
                               </div>
-                              <img src={msg.sharedPost.media} alt="" className="w-full h-32 object-cover rounded" />
-                              <p className="text-[10px] text-[var(--text-muted)] line-clamp-2">{msg.sharedPost.caption}</p>
-                            </div>
-                          )}
+                            )}
 
-                          {/* Voice Note rendering */}
-                          {(msg.messageType === "audio" || msg.audioUrl) ? (
-                            <VoicePlayer
-                              audioUrl={msg.audioUrl}
-                              duration={msg.audioDuration}
-                              isOwn={isOwn}
-                            />
-                          ) : editingMessageId === msg._id ? (
-                            <div className="flex flex-col gap-2 min-w-[150px] mt-1">
-                              <input
-                                type="text"
-                                value={editText}
-                                onChange={(e) => setEditText(e.target.value)}
-                                className="bg-[var(--background-secondary)] text-[var(--text-primary)] text-xs px-2 py-1 rounded outline-none border border-[var(--border)]"
-                                autoFocus
+                            {/* Image rendering */}
+                            {msg.image && (
+                              <div className="mb-2 max-w-sm rounded-lg overflow-hidden border border-[var(--border)]">
+                                <img src={msg.image} alt="Shared media" className="w-full object-cover max-h-60" />
+                              </div>
+                            )}
+
+                            {/* Video rendering */}
+                            {msg.video && (
+                              <div className="mb-2 max-w-sm rounded-lg overflow-hidden border border-[var(--border)]">
+                                <video src={msg.video} controls className="w-full max-h-60" />
+                              </div>
+                            )}
+
+                            {/* Shared Post Card inside bubble */}
+                            {msg.sharedPost && (
+                              <div
+                                onClick={() => navigate(`/profile/${msg.sharedPost.author?.userName || ''}`)}
+                                className="cursor-pointer border border-[var(--border)] bg-[var(--card)] rounded-lg p-2.5 max-w-[240px] mt-1 space-y-2 hover:bg-[var(--hover)] transition-all text-left"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <img src={msg.sharedPost.author?.profileImage || dp} alt="" className="w-5 h-5 rounded-full object-cover" />
+                                  <span className="text-[11px] font-bold text-[var(--text-secondary)]">{msg.sharedPost.author?.userName}</span>
+                                </div>
+                                <img src={msg.sharedPost.media} alt="" className="w-full h-32 object-cover rounded" />
+                                <p className="text-[10px] text-[var(--text-muted)] line-clamp-2">{msg.sharedPost.caption}</p>
+                              </div>
+                            )}
+
+                            {/* Voice Note rendering */}
+                            {(msg.messageType === "audio" || msg.audioUrl) ? (
+                              <VoicePlayer
+                                audioUrl={msg.audioUrl}
+                                duration={msg.audioDuration}
+                                isOwn={isOwn}
                               />
-                              <div className="flex justify-end gap-1.5">
-                                <button
-                                  onClick={() => setEditingMessageId(null)}
-                                  className="text-[10px] bg-[var(--hover)] hover:bg-[var(--background-secondary)] px-2 py-1 rounded font-semibold text-[var(--text-secondary)] cursor-pointer"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={() => handleSaveEdit(msg._id)}
-                                  className="text-[10px] bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded font-semibold cursor-pointer text-white"
-                                >
-                                  Save
-                                </button>
+                            ) : editingMessageId === msg._id ? (
+                              <div className="flex flex-col gap-2 min-w-[150px] mt-1">
+                                <input
+                                  type="text"
+                                  value={editText}
+                                  onChange={(e) => setEditText(e.target.value)}
+                                  className="bg-[var(--background-secondary)] text-[var(--text-primary)] text-xs px-2 py-1 rounded outline-none border border-[var(--border)]"
+                                  autoFocus
+                                />
+                                <div className="flex justify-end gap-1.5">
+                                  <button
+                                    onClick={() => setEditingMessageId(null)}
+                                    className="text-[10px] bg-[var(--hover)] hover:bg-[var(--background-secondary)] px-2 py-1 rounded font-semibold text-[var(--text-secondary)] cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleSaveEdit(msg._id)}
+                                    className="text-[10px] bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded font-semibold cursor-pointer text-white"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
                               </div>
+                            ) : (
+                              <p className={isDeleted ? "text-[var(--text-muted)] italic text-xs" : "leading-relaxed text-inherit"}>
+                                {isAIFriend && !isOwn ? renderMessageText(msg.message) : msg.message}
+                              </p>
+                            )}
+
+                            {/* WhatsApp Style Timestamp + Status Checkmarks */}
+                            <div className={`flex items-center justify-end gap-1 mt-1 text-[9px] self-end select-none ${
+                              isOwn ? "text-purple-200" : "text-[var(--text-muted)]"
+                            }`}>
+                              {isEdited && <span className="italic mr-0.5 opacity-70">(edited)</span>}
+                              <span>{formatBubbleTimestamp(msg.createdAt)}</span>
+                              {isOwn && (
+                                <span className="flex items-center font-bold text-[10px] ml-0.5 leading-none">
+                                  {msg.seen ? (
+                                    <span className="text-[#38BDF8]" title="Seen">✓✓</span>
+                                  ) : msg.delivered ? (
+                                    <span className="text-white/60" title="Delivered">✓✓</span>
+                                  ) : (
+                                    <span className="text-white/45" title="Sent">✓</span>
+                                  )}
+                                </span>
+                              )}
                             </div>
-                          ) : (
-                            <p className={isDeleted ? "text-[var(--text-muted)] italic text-xs" : "leading-relaxed text-inherit"}>
-                              {isAIFriend && !isOwn ? renderMessageText(msg.message) : msg.message}
-                            </p>
-                          )}
+                          </div>
 
                           {/* Reactions pills */}
                           {msg.reactions && msg.reactions.length > 0 && (
@@ -1278,20 +1597,6 @@ function Messages() {
                           ))}
                         </div>
                       )}
-
-                      {/* Seen / Edited receipts */}
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {isEdited && <span className="text-[9px] text-[var(--text-muted)]">(edited)</span>}
-                        {isOwn && (
-                          <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
-                            {msg.seen ? (
-                              <span className="text-blue-500 text-[9px] font-semibold">Seen</span>
-                            ) : (
-                              <FiCheck size={10} className="text-[var(--text-muted)]" />
-                            )}
-                          </span>
-                        )}
-                      </div>
                     </motion.div>
                   )
                 })}
@@ -1358,13 +1663,24 @@ function Messages() {
 
                 {/* Left image icon */}
                 {recordingState === "idle" && !isAIFriend && (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current.click()}
-                    className="p-2 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex-shrink-0"
-                  >
-                    <FiImage size={18} />
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current.click()}
+                      className="p-2 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex-shrink-0"
+                      title="Upload Image/Video"
+                    >
+                      <FiImage size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleStartCamera}
+                      className="p-2 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--hover)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex-shrink-0"
+                      title="Camera Capture"
+                    >
+                      <FiCamera size={18} />
+                    </button>
+                  </>
                 )}
 
                 {/* Dynamic Input area / recording wave / preview player */}
@@ -1559,6 +1875,101 @@ function Messages() {
               ) : (
                 <p className="text-xs text-[var(--text-muted)] italic">No media shared in this chat yet</p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Camera Modal */}
+        {showCameraModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-sans text-[var(--text-primary)]">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md p-5 flex flex-col gap-4 shadow-2xl relative">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black uppercase tracking-wider text-[var(--text-secondary)]">
+                  Camera Capture
+                </h3>
+                <button
+                  onClick={handleCloseCamera}
+                  className="text-gray-400 hover:text-white text-lg font-bold cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Video / Photo Preview Container */}
+              <div className="relative aspect-video w-full rounded-xl bg-black overflow-hidden border border-[var(--border)] flex items-center justify-center">
+                {cameraLoading && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30">
+                    <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                
+                {capturedUrl ? (
+                  <img
+                    src={capturedUrl}
+                    alt="Captured preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <video
+                    ref={cameraVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{ transform: cameraFacingMode === "user" ? "scaleX(-1)" : "none" }}
+                  />
+                )}
+
+                {/* Flip Camera Button */}
+                {!capturedUrl && !cameraLoading && (
+                  <button
+                    onClick={handleToggleCameraFacing}
+                    className="absolute top-3 right-3 p-2 bg-black/65 hover:bg-black/85 rounded-full text-white border border-white/10 transition-all cursor-pointer active:scale-90"
+                    title="Switch Camera"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Toolbar */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                {capturedUrl ? (
+                  <>
+                    <button
+                      onClick={handleRetake}
+                      className="px-4 py-2 text-xs font-bold bg-[var(--background-secondary)] hover:bg-[var(--border)] rounded-xl border border-[var(--border)] cursor-pointer"
+                    >
+                      Retake
+                    </button>
+                    <button
+                      onClick={handleSendCaptured}
+                      disabled={sending}
+                      className="px-5 py-2 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl cursor-pointer flex items-center gap-1.5 shadow-lg shadow-green-600/25 disabled:bg-gray-700"
+                    >
+                      <FiSend size={12} /> Send Photo
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleCloseCamera}
+                      className="px-4 py-2 text-xs font-bold bg-[var(--background-secondary)] hover:bg-[var(--border)] rounded-xl border border-[var(--border)] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCapture}
+                      disabled={cameraLoading}
+                      className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl cursor-pointer flex items-center gap-1.5 shadow-lg shadow-purple-600/25 disabled:bg-gray-700"
+                    >
+                      <FiCamera size={14} /> Capture
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}

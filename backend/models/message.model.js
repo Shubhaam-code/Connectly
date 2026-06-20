@@ -33,6 +33,10 @@ seen:{
     type:Boolean,
     default:false
 },
+delivered:{
+    type:Boolean,
+    default:false
+},
 reactions: [
     {
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

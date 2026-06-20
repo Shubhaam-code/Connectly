@@ -7,6 +7,7 @@ import messageSlice from "./messageSlice"
 import socketSlice from "./socketSlice"
 import commentSlice from "./commentSlice"
 import notificationSlice from "./notificationSlice"
+import callSlice from "./callSlice"
 
 const store = configureStore({
     reducer: {
@@ -18,6 +19,7 @@ const store = configureStore({
         socket: socketSlice,
         comment: commentSlice,
         notification: notificationSlice,
+        call: callSlice,
     }
 })
 

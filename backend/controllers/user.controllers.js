@@ -6,7 +6,7 @@ import Loop from "../models/loop.model.js"
 import Tracking from "../models/tracking.model.js"
 import Session from "../models/session.model.js"
 import SupportTicket from "../models/support.model.js"
-import { getSocketId, io, userSocketMap } from "../socket.js"
+import { getSocketId, io, userSocketMap, emitToUser } from "../socket.js"
 import redis from "../config/redis.js"
 
 export const getCurrentUser = async (req, res) => {
@@ -358,10 +358,7 @@ export const follow = async (req, res) => {
                 message: notiMessage
             })
             const populatedNotification = await Notification.findById(notification._id).populate("sender receiver")
-            const receiverSocketId = getSocketId(targetUser._id)
-            if (receiverSocketId) {
-                io.to(receiverSocketId).emit("newNotification", populatedNotification)
-            }
+            emitToUser(targetUser._id, "newNotification", populatedNotification)
 
             await Promise.all([currentUser.save(), targetUser.save()])
 

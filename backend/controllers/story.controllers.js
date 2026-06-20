@@ -1,7 +1,7 @@
 import uploadOnCloudinary from "../config/cloudinary.js"
 import Story from "../models/story.model.js"
 import User from "../models/user.model.js"
-import { io, getSocketId } from "../socket.js"
+import { io, getSocketId, emitToUser } from "../socket.js"
 
 export const uploadStory = async (req, res) => {
     try {
@@ -46,16 +46,10 @@ export const uploadStory = async (req, res) => {
             .populate("viewers", "name userName profileImage")
 
         // Real-time event: broadcast to the author and the author's followers
-        const authorSocketId = getSocketId(req.userId.toString())
-        if (authorSocketId) {
-            io.to(authorSocketId).emit("newStory", populatedStory)
-        }
+        emitToUser(req.userId.toString(), "newStory", populatedStory)
         if (user.followers && user.followers.length > 0) {
             user.followers.forEach(followerId => {
-                const followerSocketId = getSocketId(followerId.toString())
-                if (followerSocketId) {
-                    io.to(followerSocketId).emit("newStory", populatedStory)
-                }
+                emitToUser(followerId.toString(), "newStory", populatedStory)
             })
         }
 
@@ -150,18 +144,12 @@ export const deleteStory = async (req, res) => {
         })
 
         // Send to author's socket
-        const authorSocketId = getSocketId(req.userId.toString())
-        if (authorSocketId) {
-            io.to(authorSocketId).emit("storyDeleted", { storyId, userId: req.userId })
-        }
+        emitToUser(req.userId.toString(), "storyDeleted", { storyId, userId: req.userId })
         // Send to followers
         const user = await User.findById(req.userId)
         if (user && user.followers && user.followers.length > 0) {
             user.followers.forEach(followerId => {
-                const followerSocketId = getSocketId(followerId.toString())
-                if (followerSocketId) {
-                    io.to(followerSocketId).emit("storyDeleted", { storyId, userId: req.userId })
-                }
+                emitToUser(followerId.toString(), "storyDeleted", { storyId, userId: req.userId })
             })
         }
 

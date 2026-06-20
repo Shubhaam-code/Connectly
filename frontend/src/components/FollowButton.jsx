@@ -14,13 +14,24 @@ function FollowButton({ targetUserId, tailwind, onFollowChange }) {
   const isFollowing = following.some(id => id.toString() === targetUserId?.toString())
   const isFollower = userData?.followers?.some(f => (f._id || f).toString() === targetUserId?.toString())
 
+  const [loading, setLoading] = React.useState(false)
+
   const handleFollow = async () => {
+    if (loading) return
+    setLoading(true)
+    
+    // Optimistic Update
+    dispatch(toggleFollow({ targetUserId, currentUser: userData }))
+
     try {
       await axiosInstance.get(`/api/user/follow/${targetUserId}`)
       if (onFollowChange) onFollowChange()
-      dispatch(toggleFollow(targetUserId))
     } catch (error) {
       console.error("follow error:", error.message)
+      // Rollback on failure
+      dispatch(toggleFollow({ targetUserId, currentUser: userData }))
+    } finally {
+      setLoading(false)
     }
   }
 

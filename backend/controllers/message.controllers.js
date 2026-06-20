@@ -5,7 +5,7 @@ import Notification from "../models/notification.model.js";
 import Tracking from "../models/tracking.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
-import { getSocketId, io } from "../socket.js";
+import { getSocketId, io, emitToUser } from "../socket.js";
 
 export const sendMessage = async (req, res) => {
     try {
@@ -31,11 +31,14 @@ export const sendMessage = async (req, res) => {
             }
         }
 
+        const isReceiverOnline = !!getSocketId(receiverId)
+
         const messageData = {
             sender: senderId,
             receiver: receiverId,
             message,
-            messageType: messageType || "text"
+            messageType: messageType || "text",
+            delivered: isReceiverOnline
         }
 
         if (image) {
@@ -112,10 +115,8 @@ export const sendMessage = async (req, res) => {
             msgObj.sharedStoryDeleted = true
         }
 
-        const receiverSocketId = getSocketId(receiverId)
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit("newMessage", msgObj)
-        }
+        emitToUser(receiverId, "newMessage", msgObj)
+        emitToUser(senderId, "newMessage", msgObj)
 
         // Create a notification for the receiver
         const notiType = sharedStory ? "story_reaction" : "message"
@@ -132,9 +133,7 @@ export const sendMessage = async (req, res) => {
             .populate("sender", "name userName profileImage")
             .populate("receiver", "name userName profileImage")
 
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit("newNotification", populatedNotification)
-        }
+        emitToUser(receiverId, "newNotification", populatedNotification)
 
         return res.status(200).json(msgObj)
     } catch (error) {
@@ -265,13 +264,10 @@ export const markMessageAsSeen = async (req, res) => {
 
         await Message.updateMany(
             { sender: chatId, receiver: currentUserId, seen: false },
-            { $set: { seen: true } }
+            { $set: { seen: true, delivered: true } }
         )
 
-        const senderSocketId = getSocketId(chatId)
-        if (senderSocketId) {
-            io.to(senderSocketId).emit("messagesSeen", { viewerId: currentUserId })
-        }
+        emitToUser(chatId, "messagesSeen", { viewerId: currentUserId })
 
         return res.status(200).json({ message: "Messages marked as seen" })
     } catch (error) {
@@ -314,13 +310,14 @@ export const toggleReaction = async (req, res) => {
 
         // Broadcast to other participant
         const targetUserId = message.sender.toString() === currentUserId.toString() ? message.receiver : message.sender
-        const targetSocketId = getSocketId(targetUserId)
-        if (targetSocketId) {
-            io.to(targetSocketId).emit("messageReaction", {
-                messageId: message._id,
-                reactions: message.reactions
-            })
-        }
+        emitToUser(targetUserId, "messageReaction", {
+            messageId: message._id,
+            reactions: message.reactions
+        })
+        emitToUser(currentUserId, "messageReaction", {
+            messageId: message._id,
+            reactions: message.reactions
+        })
 
         return res.status(200).json(message)
     } catch (error) {
@@ -349,14 +346,16 @@ export const editMessage = async (req, res) => {
         await message.save()
 
         const targetUserId = message.receiver
-        const targetSocketId = getSocketId(targetUserId)
-        if (targetSocketId) {
-            io.to(targetSocketId).emit("messageEdited", {
-                messageId: message._id,
-                message: newText,
-                isEdited: true
-            })
-        }
+        emitToUser(targetUserId, "messageEdited", {
+            messageId: message._id,
+            message: newText,
+            isEdited: true
+        })
+        emitToUser(currentUserId, "messageEdited", {
+            messageId: message._id,
+            message: newText,
+            isEdited: true
+        })
 
         return res.status(200).json(message)
     } catch (error) {
@@ -386,13 +385,14 @@ export const deleteMessage = async (req, res) => {
         await message.save()
 
         const targetUserId = message.receiver
-        const targetSocketId = getSocketId(targetUserId)
-        if (targetSocketId) {
-            io.to(targetSocketId).emit("messageDeleted", {
-                messageId: message._id,
-                isDeleted: true
-            })
-        }
+        emitToUser(targetUserId, "messageDeleted", {
+            messageId: message._id,
+            isDeleted: true
+        })
+        emitToUser(currentUserId, "messageDeleted", {
+            messageId: message._id,
+            isDeleted: true
+        })
 
         return res.status(200).json(message)
     } catch (error) {

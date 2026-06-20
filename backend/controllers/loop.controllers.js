@@ -2,7 +2,7 @@ import uploadOnCloudinary from "../config/cloudinary.js";
 import Loop from "../models/loop.model.js";
 import Notification from "../models/notification.model.js";
 import User from "../models/user.model.js";
-import { getSocketId, io } from "../socket.js";
+import { getSocketId, io, emitToUser } from "../socket.js";
 
 export const uploadLoop=async (req,res)=>{
 try {
@@ -49,10 +49,7 @@ export const like=async (req,res)=>{
                                 message:"liked your loop"
                             })
                             const populatedNotification = await Notification.findById(notification._id).populate("sender receiver loop")
-                            const receiverSocketId=getSocketId(loop.author._id)
-                            if(receiverSocketId){
-                                io.to(receiverSocketId).emit("newNotification",populatedNotification)
-                            }
+                            emitToUser(loop.author._id, "newNotification", populatedNotification)
                         
                         }
         }
@@ -89,10 +86,7 @@ export const comment=async (req,res)=>{
                                 message:"commented on your loop"
                             })
                             const populatedNotification = await Notification.findById(notification._id).populate("sender receiver loop")
-                            const receiverSocketId=getSocketId(loop.author._id)
-                            if(receiverSocketId){
-                                io.to(receiverSocketId).emit("newNotification",populatedNotification)
-                            }
+                            emitToUser(loop.author._id, "newNotification", populatedNotification)
                         
                         }
         await loop.save()

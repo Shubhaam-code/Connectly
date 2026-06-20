@@ -3,7 +3,7 @@ import Notification from "../models/notification.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 import Tracking from "../models/tracking.model.js";
-import { getSocketId, io } from "../socket.js";
+import { getSocketId, io, emitToUser } from "../socket.js";
 
 // Helper to parse mentions like @username and create notifications
 const handleMentions = async (text, senderId, postId, type = "post") => {
@@ -25,10 +25,7 @@ const handleMentions = async (text, senderId, postId, type = "post") => {
                     message: type === "comment" ? "mentioned you in a comment" : "mentioned you in a post"
                 })
                 const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
-                const receiverSocketId = getSocketId(user._id)
-                if (receiverSocketId) {
-                    io.to(receiverSocketId).emit("newNotification", populatedNotification)
-                }
+                emitToUser(user._id, "newNotification", populatedNotification)
             }
         }
     }
@@ -136,10 +133,7 @@ export const like = async (req, res) => {
                     message: "liked your post"
                 })
                 const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
-                const receiverSocketId = getSocketId(post.author._id)
-                if (receiverSocketId) {
-                    io.to(receiverSocketId).emit("newNotification", populatedNotification)
-                }
+                emitToUser(post.author._id, "newNotification", populatedNotification)
             }
         }
 
@@ -191,10 +185,7 @@ export const comment = async (req, res) => {
                     message: "replied to your comment"
                 })
                 const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
-                const receiverSocketId = getSocketId(parentComment.author)
-                if (receiverSocketId) {
-                    io.to(receiverSocketId).emit("newNotification", populatedNotification)
-                }
+                emitToUser(parentComment.author, "newNotification", populatedNotification)
             }
         } else {
             // Top level comment
@@ -214,10 +205,7 @@ export const comment = async (req, res) => {
                 message: parentCommentId ? "replied to a comment on your post" : "commented on your post"
             })
             const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
-            const receiverSocketId = getSocketId(post.author._id)
-            if (receiverSocketId) {
-                io.to(receiverSocketId).emit("newNotification", populatedNotification)
-            }
+            emitToUser(post.author._id, "newNotification", populatedNotification)
         }
         // Parse and create mention notifications
         if (message) {
@@ -362,10 +350,7 @@ export const saved = async (req, res) => {
                     message: "saved your post"
                 })
                 const populatedNotification = await Notification.findById(notification._id).populate("sender receiver post")
-                const receiverSocketId = getSocketId(post.author)
-                if (receiverSocketId) {
-                    io.to(receiverSocketId).emit("newNotification", populatedNotification)
-                }
+                emitToUser(post.author, "newNotification", populatedNotification)
             }
         }
         await user.save()

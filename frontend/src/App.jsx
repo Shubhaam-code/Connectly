@@ -32,6 +32,7 @@ import Settings from './pages/Settings'
 import Explore from './pages/Explore'
 import axiosInstance, { SERVER_URL } from './lib/axiosInstance'
 import SplashScreen from './components/ui/SplashScreen'
+import CallManager from './components/calling/CallManager'
 
 // serverUrl is exported for any components that build URLs (not for axios calls)
 export const serverUrl = SERVER_URL
@@ -232,6 +233,13 @@ function App() {
 
     const handleNewMessage = (mess) => {
       console.log("[SOCKET DEBUG] New message received via socket:", mess)
+      
+      // Prevent duplicate messages in active chat list
+      if (messagesRef.current && messagesRef.current.some(m => m._id === mess._id)) {
+        console.log("[SOCKET DEBUG] Duplicate message ignored:", mess._id)
+        return
+      }
+
       const senderIdStr = (mess.sender?._id || mess.sender)?.toString()
       const receiverIdStr = (mess.receiver?._id || mess.receiver)?.toString()
       const currentUserIdStr = userData?._id?.toString()
@@ -291,7 +299,9 @@ function App() {
   }
 
   return (
-    <Routes>
+    <>
+      <CallManager />
+      <Routes>
       {/* Auth routes — logged in users ko redirect karo */}
       <Route path='/signup' element={(!userData || new URLSearchParams(window.location.search).get("addAccount") === "true") ? <SignUp /> : <Navigate to={"/"} />} />
       <Route path='/signin' element={(!userData || new URLSearchParams(window.location.search).get("addAccount") === "true") ? <SignIn /> : <Navigate to={"/"} />} />
@@ -313,6 +323,8 @@ function App() {
       <Route path='/explore' element={userData ? <Explore /> : <Navigate to={"/signin"} />} />
       <Route path='/news' element={userData ? <NewsFeed /> : <Navigate to={"/signin"} />} />
     </Routes>
+    </>
+
   )
 }
 

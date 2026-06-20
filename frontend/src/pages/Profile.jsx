@@ -462,7 +462,6 @@ function Profile() {
                     <>
                       <FollowButton
                         targetUserId={profileData?._id}
-                        onFollowChange={handleProfile}
                         tailwind="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] transition-all flex-shrink-0"
                       />
                       <button
@@ -561,7 +560,6 @@ function Profile() {
                   <>
                     <FollowButton
                       targetUserId={profileData?._id}
-                      onFollowChange={handleProfile}
                       tailwind="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#8B5CF6] hover:bg-[#A855F7] transition-all flex-shrink-0"
                     />
                     <button
@@ -1141,10 +1139,6 @@ function Profile() {
                         <FollowButton
                           targetUserId={user._id}
                           tailwind="px-3 py-1.5 rounded-lg text-[10px] font-bold btn-gradient hover-scale flex-shrink-0"
-                          onFollowChange={() => {
-                            // Update details to trigger re-render of profile counts
-                            handleProfile();
-                          }}
                         />
                       </div>
                     );

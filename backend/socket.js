@@ -91,6 +91,7 @@ io.on("connection",(socket)=>{
 
     // WebRTC call signaling events
     socket.on("callUser", ({ receiverId, callerName, callerProfileImage, callType }) => {
+        console.log(`[CALL EVENT RECEIVED] Server received callUser from ${userId} to ${receiverId}`);
         const receiverSockets = userSocketMap[receiverId] || []
         receiverSockets.forEach(socketId => {
             io.to(socketId).emit("incomingCall", {
@@ -103,6 +104,7 @@ io.on("connection",(socket)=>{
     })
 
     socket.on("acceptCall", ({ callerId }) => {
+        console.log(`[CALL EVENT RECEIVED] Server received acceptCall from ${userId} to ${callerId}`);
         const callerSockets = userSocketMap[callerId] || []
         callerSockets.forEach(socketId => {
             io.to(socketId).emit("callAccepted", { receiverId: userId })
@@ -110,6 +112,7 @@ io.on("connection",(socket)=>{
     })
 
     socket.on("rejectCall", ({ callerId }) => {
+        console.log(`[CALL EVENT RECEIVED] Server received rejectCall from ${userId} to ${callerId}`);
         const callerSockets = userSocketMap[callerId] || []
         callerSockets.forEach(socketId => {
             io.to(socketId).emit("callRejected", { receiverId: userId })
@@ -117,6 +120,7 @@ io.on("connection",(socket)=>{
     })
 
     socket.on("endCall", ({ targetUserId }) => {
+        console.log(`[CALL EVENT RECEIVED] Server received endCall from ${userId} to ${targetUserId}`);
         const targetSockets = userSocketMap[targetUserId] || []
         targetSockets.forEach(socketId => {
             io.to(socketId).emit("callEnded", { senderId: userId })
@@ -124,6 +128,7 @@ io.on("connection",(socket)=>{
     })
 
     socket.on("sdpOffer", ({ receiverId, sdp }) => {
+        console.log(`[OFFER SENT] Server relaying sdpOffer from ${userId} to ${receiverId}`);
         const receiverSockets = userSocketMap[receiverId] || []
         receiverSockets.forEach(socketId => {
             io.to(socketId).emit("sdpOffer", { callerId: userId, sdp })
@@ -131,6 +136,7 @@ io.on("connection",(socket)=>{
     })
 
     socket.on("sdpAnswer", ({ callerId, sdp }) => {
+        console.log(`[ANSWER SENT] Server relaying sdpAnswer from ${userId} to ${callerId}`);
         const callerSockets = userSocketMap[callerId] || []
         callerSockets.forEach(socketId => {
             io.to(socketId).emit("sdpAnswer", { receiverId: userId, sdp })
@@ -138,6 +144,7 @@ io.on("connection",(socket)=>{
     })
 
     socket.on("iceCandidate", ({ targetUserId, candidate }) => {
+        console.log(`[ICE SENT] Server relaying iceCandidate from ${userId} to ${targetUserId}`);
         const targetSockets = userSocketMap[targetUserId] || []
         targetSockets.forEach(socketId => {
             io.to(socketId).emit("iceCandidate", { senderId: userId, candidate })

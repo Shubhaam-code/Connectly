@@ -187,34 +187,6 @@ export const getPrevUserChats = async (req, res) => {
     try {
         const currentUserId = req.userId
 
-        // Ensure Friend AI database record exists
-        let friendAiUser = await User.findOne({ userName: "friend_ai" });
-        if (!friendAiUser) {
-            friendAiUser = await User.create({
-                name: "Friend AI",
-                userName: "friend_ai",
-                email: "friend_ai@connectly.ai",
-                password: "friend_ai_secure_password_groq_123",
-                profileImage: "🤖",
-                bio: "Your supportive AI companion powered by Llama 3.3",
-                profession: "AI Companion",
-                isAI: true
-            });
-            console.log("🤖 Auto-created Friend AI user in database.");
-        }
-
-        // Ensure Conversation record exists with Friend AI
-        let aiConversation = await Conversation.findOne({
-            participants: { $all: [currentUserId, friendAiUser._id] }
-        });
-        if (!aiConversation) {
-            aiConversation = await Conversation.create({
-                participants: [currentUserId, friendAiUser._id],
-                messages: []
-            });
-            console.log(`💬 Auto-created Conversation with Friend AI for user: ${currentUserId}`);
-        }
-
         const conversations = await Conversation.find({
             participants: currentUserId
         }).populate("participants")

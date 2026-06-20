@@ -128,14 +128,20 @@ export const CallManager = () => {
     if (!socket) return;
 
     const handleIncomingCall = ({ callerId, callerName, callerProfileImage, callType }) => {
+      console.log("[CALL EVENT RECEIVED] Received incomingCall event from caller:", callerId);
       // Don't take call if already in a call
       if (callState !== "idle") {
+        console.log("[CALL EVENT RECEIVED] Busy, rejecting incomingCall from caller:", callerId);
         socket.emit("rejectCall", { callerId });
         return;
       }
       
-      // Start ringtone
-      ringSoundRef.current = playRingSound();
+      // Start ringtone safely (handling AudioContext limitations on mobile)
+      try {
+        ringSoundRef.current = playRingSound();
+      } catch (audioErr) {
+        console.warn("[SOCKET DEBUG] Browser blocked initial ringtone autoplay:", audioErr.message);
+      }
 
       dispatch(
         receiveIncomingCall({
@@ -163,6 +169,7 @@ export const CallManager = () => {
 
     const handleCallAccepted = async () => {
       // Caller initiates WebRTC negotiation
+      console.log("[CALL EVENT RECEIVED] Receiver accepted call (callAccepted event)");
       dispatch(setCallConnected());
       if (ringSoundRef.current) {
         ringSoundRef.current.stop();
@@ -186,7 +193,22 @@ export const CallManager = () => {
         const pc = new RTCPeerConnection({
           iceServers: [
             { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" }
+            { urls: "stun:stun1.l.google.com:19302" },
+            {
+              urls: "turn:relay.metered.ca:80",
+              username: "openrelayproject",
+              credential: "openrelayproject"
+            },
+            {
+              urls: "turn:relay.metered.ca:443",
+              username: "openrelayproject",
+              credential: "openrelayproject"
+            },
+            {
+              urls: "turn:relay.metered.ca:443?transport=tcp",
+              username: "openrelayproject",
+              credential: "openrelayproject"
+            }
           ]
         });
         pcRef.current = pc;
@@ -199,6 +221,7 @@ export const CallManager = () => {
         // Set up ICE candidate handler
         pc.onicecandidate = (event) => {
           if (event.candidate && targetUser) {
+            console.log("[ICE SENT] Generated local ICE candidate, emitting to receiver:", targetUser._id);
             socket.emit("iceCandidate", {
               targetUserId: targetUser._id,
               candidate: event.candidate
@@ -216,6 +239,7 @@ export const CallManager = () => {
         // Create SDP Offer
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+        console.log("[OFFER SENT] Emitting sdpOffer to receiver:", targetUser._id);
         socket.emit("sdpOffer", {
           receiverId: targetUser._id,
           sdp: offer
@@ -231,6 +255,7 @@ export const CallManager = () => {
     };
 
     const handleSdpOffer = async ({ callerId, sdp }) => {
+      console.log("[OFFER RECEIVED] Received sdpOffer from caller:", callerId);
       if (callState !== "connected" && callState !== "incoming") return;
       
       try {
@@ -252,7 +277,22 @@ export const CallManager = () => {
         const pc = new RTCPeerConnection({
           iceServers: [
             { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" }
+            { urls: "stun:stun1.l.google.com:19302" },
+            {
+              urls: "turn:relay.metered.ca:80",
+              username: "openrelayproject",
+              credential: "openrelayproject"
+            },
+            {
+              urls: "turn:relay.metered.ca:443",
+              username: "openrelayproject",
+              credential: "openrelayproject"
+            },
+            {
+              urls: "turn:relay.metered.ca:443?transport=tcp",
+              username: "openrelayproject",
+              credential: "openrelayproject"
+            }
           ]
         });
         pcRef.current = pc;
@@ -263,6 +303,7 @@ export const CallManager = () => {
 
         pc.onicecandidate = (event) => {
           if (event.candidate) {
+            console.log("[ICE SENT] Generated local ICE candidate, emitting to caller:", callerId);
             socket.emit("iceCandidate", {
               targetUserId: callerId,
               candidate: event.candidate
@@ -288,6 +329,7 @@ export const CallManager = () => {
         }
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        console.log("[ANSWER SENT] Emitting sdpAnswer to caller:", callerId);
         socket.emit("sdpAnswer", {
           callerId,
           sdp: answer
@@ -302,6 +344,7 @@ export const CallManager = () => {
     };
 
     const handleSdpAnswer = async ({ sdp }) => {
+      console.log("[ANSWER RECEIVED] Received sdpAnswer from receiver");
       if (pcRef.current) {
         try {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(sdp));
@@ -321,6 +364,7 @@ export const CallManager = () => {
     };
 
     const handleIceCandidate = async ({ candidate }) => {
+      console.log("[ICE RECEIVED] Received iceCandidate from peer");
       if (pcRef.current && pcRef.current.remoteDescription && pcRef.current.remoteDescription.type) {
         try {
           await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
@@ -354,7 +398,15 @@ export const CallManager = () => {
   // Outgoing Call Side Effect (emit callUser request)
   useEffect(() => {
     if (callState === "outgoing" && socket && targetUser) {
-      ringSoundRef.current = playRingSound();
+      console.log("[CALL INITIATED] Outgoing call initiated to target:", targetUser._id);
+      
+      try {
+        ringSoundRef.current = playRingSound();
+      } catch (audioErr) {
+        console.warn("[SOCKET DEBUG] Browser blocked outgoing ringtone play:", audioErr.message);
+      }
+      
+      console.log("[CALL EVENT SENT] Emitting callUser to target:", targetUser._id);
       socket.emit("callUser", {
         receiverId: targetUser._id,
         callerName: userData.name || userData.userName,
@@ -376,6 +428,8 @@ export const CallManager = () => {
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream, callState]);
+
+
 
   // Action: Accept Call
   const handleAccept = () => {
@@ -572,6 +626,7 @@ export const CallManager = () => {
               </div>
             </div>
           )}
+
 
           {/* BOTTOM CONTROL TOOLBAR */}
           <div className="relative z-50 flex items-center gap-6 bg-black/40 backdrop-blur-md px-8 py-4 rounded-full border border-white/5 shadow-2xl">

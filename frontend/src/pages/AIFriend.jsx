@@ -114,7 +114,7 @@ function AIFriend() {
           <div className="flex flex-col items-center gap-3 mb-4">
             <div className="relative w-20 h-20 flex-shrink-0 ai-orb-pulse">
               <img
-                src="/bot.png"
+                src="./public/bot.png"
                 alt="Connectly AI"
                 className="w-full h-full rounded-full object-cover border-2 border-purple-500/30 shadow-lg"
               />

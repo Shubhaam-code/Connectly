@@ -18,13 +18,45 @@ export function SocketProvider({ children }) {
 
     useEffect(() => {
         if (userData) {
-            // Create socket connection when user logs in
             const newSocket = io(serverUrl, {
                 withCredentials: true,
                 transports: ["websocket", "polling"],
-                query: { userId: userData._id }
+                query: { userId: userData._id },
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000
             })
             setSocket(newSocket)
+
+            newSocket.on('connect', () => {
+                console.log("[SOCKET DEBUG] Socket connected successfully. ID:", newSocket.id);
+            })
+
+            newSocket.on('connect_error', (error) => {
+                console.error("[SOCKET DEBUG] Socket connection error:", error);
+            })
+
+            newSocket.on('disconnect', (reason) => {
+                console.warn("[SOCKET DEBUG] Socket disconnected. Reason:", reason);
+            })
+
+            newSocket.on('reconnect', (attemptNumber) => {
+                console.log("[SOCKET DEBUG] Socket reconnected successfully on attempt:", attemptNumber);
+            })
+
+            newSocket.on('reconnect_attempt', (attemptNumber) => {
+                console.log("[SOCKET DEBUG] Socket attempting reconnection:", attemptNumber);
+            })
+
+            newSocket.on('reconnect_error', (error) => {
+                console.error("[SOCKET DEBUG] Socket reconnection error:", error);
+            })
+
+            newSocket.on('reconnect_failed', () => {
+                console.error("[SOCKET DEBUG] Socket reconnection failed permanently.");
+            })
 
             newSocket.on('getOnlineUsers', (users) => {
                 dispatch(setOnlineUsers(users))

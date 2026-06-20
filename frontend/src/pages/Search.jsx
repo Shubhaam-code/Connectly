@@ -7,10 +7,13 @@ import dp from "../assets/dp.webp"
 import FollowButton from '../components/FollowButton'
 import Layout from '../components/layout/Layout'
 import { Avatar } from '../components/ui/UIComponents'
+import { useDebounce } from '../hooks/useCustom'
+import { setSelectedUser } from '../redux/messageSlice'
 
 // HINGLISH: Search/Discover page — trending creators, reels thumbnails, aur user search
 function Search() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [input, setInput] = useState("")
   const [searchData, setSearchData] = useState([])
   const [activeTab, setActiveTab] = useState("ForYou")
@@ -19,9 +22,11 @@ function Search() {
   const { postData } = useSelector(state => state.post)
   const { loopData } = useSelector(state => state.loop)
 
-  const handleSearch = async () => {
+  const debouncedInput = useDebounce(input, 300)
+
+  const handleSearch = async (query) => {
     try {
-      const result = await axiosInstance.get(`/api/user/search?keyWord=${input}`)
+      const result = await axiosInstance.get(`/api/user/search?keyWord=${query}`)
       setSearchData(result.data)
     } catch (error) {
       console.log(error)
@@ -29,12 +34,12 @@ function Search() {
   }
 
   useEffect(() => {
-    if (input) {
-      handleSearch()
+    if (debouncedInput) {
+      handleSearch(debouncedInput)
     } else {
       setSearchData([])
     }
-  }, [input])
+  }, [debouncedInput])
 
   const tabs = ["ForYou", "Trending", "Reels", "People"]
 
@@ -79,15 +84,27 @@ function Search() {
                       size="w-11 h-11"
                       className="bg-[var(--background)] flex-shrink-0" 
                     />
-                    <div className="truncate">
-                      <p className="text-xs font-semibold text-[var(--text)]">{user.userName}</p>
-                      <p className="text-[10px] text-[var(--text-secondary)]">{user.name}</p>
+                    <div className="truncate text-left">
+                      <p className="text-xs font-semibold text-[var(--text)]">{user.name}</p>
+                      <p className="text-[10px] text-[var(--text-secondary)]">@{user.userName}</p>
                     </div>
                   </div>
-                  <FollowButton
-                    targetUserId={user._id}
-                    tailwind="px-4 py-1.5 rounded-lg text-xs font-semibold btn-gradient"
-                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dispatch(setSelectedUser(user));
+                        navigate('/messages');
+                      }}
+                      className="px-3 py-1.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 rounded-lg text-xs font-semibold transition-all"
+                    >
+                      Chat
+                    </button>
+                    <FollowButton
+                      targetUserId={user._id}
+                      tailwind="px-4 py-1.5 rounded-lg text-xs font-semibold btn-gradient"
+                    />
+                  </div>
                 </div>
               ))
             )}
